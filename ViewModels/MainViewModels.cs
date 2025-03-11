@@ -7,7 +7,7 @@ namespace CivilProcessERP.ViewModels
 
         public MainViewModels(MainViewModel leaseAgreementViewModel)
         {
-            LeaseAgreementViewModel = leaseAgreementViewModel;
+            this.LeaseAgreementViewModel = leaseAgreementViewModel;
         }
     }
 }

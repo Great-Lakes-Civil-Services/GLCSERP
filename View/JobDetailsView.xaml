@@ -1,0 +1,69 @@
+<UserControl x:Class="CivilProcessERP.Views.JobDetailsView"
+            xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+            xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+            Height="600" Width="900">
+
+    <Grid Background="LightGray" Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header Section -->
+        <StackPanel Orientation="Horizontal" Grid.Row="0" Background="White" Margin="5">
+            <TextBlock Text="Great Lakes Civil Services" FontSize="22" FontWeight="Bold" Foreground="Blue"/>
+            <TextBlock Text=" > Landlord-Tenant > Job #" FontSize="14" Margin="10,0,5,0"/>
+            <TextBlock Text="{Binding Job.JobId}" FontSize="14" FontWeight="Bold"/>
+        </StackPanel>
+
+        <!-- Main Form Section -->
+        <Grid Grid.Row="1" Margin="10">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="3*"/>
+                <ColumnDefinition Width="2*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Left Side: Case Information -->
+            <StackPanel Grid.Column="0" Background="LightCyan"  Margin="5">
+                <TextBlock Text="Court" FontSize="16" FontWeight="Bold"/>
+                <TextBox Text="{Binding Job.Court}" FontSize="14" Margin="0,5,0,10"/>
+
+                <TextBlock Text="Plaintiff's Name" FontSize="16" FontWeight="Bold"/>
+                <TextBox Text="{Binding Job.Plaintiff}" FontSize="14" Margin="0,5,0,10"/>
+
+                <TextBlock Text="Defendant's Name" FontSize="16" FontWeight="Bold"/>
+                <TextBox Text="{Binding Job.Defendant}" FontSize="14" Margin="0,5,0,10"/>
+
+                <TextBlock Text="Defendant's Address" FontSize="16" FontWeight="Bold"/>
+                <TextBox Text="{Binding Job.Address}" FontSize="14" Margin="0,5,0,10"/>
+            </StackPanel>
+
+            <!-- Right Side: Status & Additional Information -->
+            <StackPanel Grid.Column="1" Background="LightGreen" Margin="5">
+                <TextBlock Text="Job Status" FontSize="16" FontWeight="Bold"/>
+                <TextBox Text="{Binding Job.Status}" FontSize="14" Margin="0,5,0,10"/>
+
+                <TextBlock Text="Type of Writ" FontSize="16" FontWeight="Bold"/>
+                <TextBox Text="SUMMONS LANDLORD TENANT" FontSize="14" Margin="0,5,0,10"/>
+
+                <TextBlock Text="Case #" FontSize="16" FontWeight="Bold"/>
+                <TextBox Text="{Binding Job.CaseNumber}" FontSize="14" Margin="0,5,0,10"/>
+
+                <TextBlock Text="Client Ref #" FontSize="16" FontWeight="Bold"/>
+                <TextBox Text="{Binding Job.ClientReference}" FontSize="14" Margin="0,5,0,10"/>
+            </StackPanel>
+        </Grid>
+
+        <!-- Bottom Section: Action Buttons -->
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="10">
+            <Button Content="SAVE" Width="100" Height="30" Background="Green" Foreground="White" Margin="5"/>
+            <Button Content="INVOICE" Width="100" Height="30" Background="Blue" Foreground="White" Margin="5"/>
+            <Button Content="OPTIONS" Width="100" Height="30" Background="DarkGray" Foreground="White" Margin="5"/>
+            <Button Content="CHANGE HISTORY" Width="150" Height="30" Background="DarkOrange" Foreground="White" Margin="5"/>
+            <Button Content="ATTACHMENTS" Width="150" Height="30" Background="Purple" Foreground="White" Margin="5"/>
+            <Button Content="CANCEL" Width="100" Height="30" Background="Red" Foreground="White" Margin="5"
+                    Click="CloseButton_Click"/>
+        </StackPanel>
+    </Grid>
+</UserControl> 
+ 

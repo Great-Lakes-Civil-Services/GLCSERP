@@ -1,11 +1,83 @@
 ﻿<Window x:Class="CivilProcessERP.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Civil Process ERP"
-        Height="720"
-        Width="1280"
-        WindowStartupLocation="CenterScreen">
+        Title="Civil Process ERP" Height="800" Width="1400">
+    
     <Grid>
-        <ContentControl Content="{Binding CurrentView}" />
+        <!-- Define Rows and Columns for Proper Layout -->
+        <Grid.RowDefinitions>
+            <RowDefinition Height="50"/> <!-- Top Navigation Bar -->
+            <RowDefinition Height="*"/>  <!-- Main Content Area -->
+        </Grid.RowDefinitions>
+
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>   <!-- Main Content Area (Left Side) -->
+            <ColumnDefinition Width="250"/> <!-- Right Sidebar -->
+        </Grid.ColumnDefinitions>
+
+        <!-- ✅ Top Navigation Bar -->
+        <DockPanel Grid.Row="0" Grid.ColumnSpan="2" Background="White">
+            <StackPanel Orientation="Horizontal" Background="White" Height="50" Width="1400">
+                <TextBlock Text="Great Lakes Civil Services" 
+                           FontSize="22" FontWeight="Bold" Foreground="Blue" 
+                           VerticalAlignment="Center" Margin="10"/>
+
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,10,0">
+                    <Button Content="Dashboard" Click="NavigateToPage" Tag="Dashboard"/>
+                    <Button Content="Administration" Click="NavigateToPage" Tag="Administration"/>
+                    <Button Content="HuronPortal" Click="NavigateToPage" Tag="HuronPortal"/>
+                    <Button Content="Courts" Click="NavigateToPage" Tag="Courts"/>
+                    <Button Content="Clients" Click="NavigateToPage" Tag="Clients"/>
+                    <Button Content="Employee's Corner" Click="NavigateToPage" Tag="EmployeesCorner"/>
+                </StackPanel>
+            </StackPanel>
+        </DockPanel>
+
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="10" Grid.Row="0">
+        <Button Content="← BACK" Click="GoBack" Name="GoBackBtn" 
+                Width="100" Height="30" Background="Blue" Foreground="White"/>
+        <Button Content="FORWARD →" Click="GoForward" Name="GoForwardBtn" 
+                Width="100" Height="30" Background="Blue" Foreground="White" Margin="10,0,0,0"/>
+        </StackPanel>
+
+
+        <!-- ✅ Main Content Area (Left Side) -->
+        <ContentControl x:Name="MainContentArea" Grid.Row="1" Grid.Column="0" Margin="20,10,10,10">
+            <TabControl x:Name="MainTabControl"
+                        ItemsSource="{Binding OpenTabs}"
+                        SelectedItem="{Binding SelectedTab}">
+                
+                <TabControl.ItemTemplate>
+                    <DataTemplate>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="{Binding Title}" Margin="5,0"/>
+                            <Button Content="X" FontWeight="Bold"
+                                    Command="{Binding DataContext.CloseTabCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                    CommandParameter="{Binding}" 
+                                    Background="Transparent" Foreground="Red"
+                                    BorderThickness="0" Margin="5,0"/>
+                        </StackPanel>
+                    </DataTemplate>
+                </TabControl.ItemTemplate>
+
+                <TabControl.ContentTemplate>
+                    <DataTemplate>
+                        <ContentControl Content="{Binding Content}"/>
+                    </DataTemplate>
+                </TabControl.ContentTemplate>
+            </TabControl>
+        </ContentControl>
+
+        <!-- ✅ Right-Side Navigation Panel -->
+        <Grid Grid.Row="1" Grid.Column="1" Background="#007272">
+            <StackPanel Margin="10" VerticalAlignment="Top">
+                <Button Content="Executions" Background="Black" Foreground="White" Click="NavigateToPage" Tag="Executions"/>
+                <Button Content="General Civil" Background="Black" Foreground="White" Click="NavigateToPage" Tag="GeneralCivil"/>
+                <Button Content="Landlord-Tenant" Background="Black" Foreground="White" Click="NavigateToPage" Tag="LandlordTenant"/>
+                <Button Content="Evictions" Background="Black" Foreground="White" Click="NavigateToPage" Tag="Evictions"/>
+                <Button Content="Server MGT" Background="Black" Foreground="White" Click="NavigateToPage" Tag="ServerMGT"/>
+                <Button Content="Logistics" Background="Black" Foreground="White" Click="NavigateToPage" Tag="Logistics"/>
+            </StackPanel>
+        </Grid>
     </Grid>
 </Window>

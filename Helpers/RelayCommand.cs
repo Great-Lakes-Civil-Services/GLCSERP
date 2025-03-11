@@ -5,13 +5,11 @@ namespace CivilProcessERP.Helpers
 {
     public class RelayCommand : ICommand
     {
-        private readonly Action<object> _execute;
-        private readonly Predicate<object> _canExecute;
+        private readonly Action<object?> _execute;
+        private readonly Predicate<object?>? _canExecute;
 
-        // Two constructors for convenience.
-        public RelayCommand(Action<object> execute) : this(execute, _ => true) { }
-
-        public RelayCommand(Action<object> execute, Predicate<object> canExecute)
+        // Single constructor supporting optional Predicate
+        public RelayCommand(Action<object?> execute, Predicate<object?>? canExecute = null)
         {
             _execute = execute ?? throw new ArgumentNullException(nameof(execute));
             _canExecute = canExecute;
@@ -19,18 +17,12 @@ namespace CivilProcessERP.Helpers
 
         public event EventHandler? CanExecuteChanged
         {
-            add { CommandManager.RequerySuggested += value; }
-            remove { CommandManager.RequerySuggested -= value; }
+            add => CommandManager.RequerySuggested += value;
+            remove => CommandManager.RequerySuggested -= value;
         }
 
-        public bool CanExecute(object? parameter)
-        {
-            return _canExecute == null || (parameter != null && _canExecute(parameter));
-        }
+        public bool CanExecute(object? parameter) => _canExecute?.Invoke(parameter) ?? true;
 
-        public void Execute(object? parameter)
-        {
-            _execute(parameter ?? throw new ArgumentNullException(nameof(parameter)));
-        }
+        public void Execute(object? parameter) => _execute(parameter);
     }
 }

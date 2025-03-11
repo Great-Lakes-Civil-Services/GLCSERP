@@ -10,11 +10,11 @@ none
 false
 TRACE;DEBUG;NET;NET9_0;NETCOREAPP
 C:\Users\GLCS\CivilProcessERP\App.xaml
-3-1660669330
+11-347512510
 
-17-2145859746
+301809415722
 241559377883
-MainWindow.xaml;View\LandlordTenantView.xaml;View\MainDashboard.xaml;
+MainWindow.xaml;View\AdministrationView.xaml;View\ClientsView.xaml;View\CourtsView.xaml;View\EmployeesCornerView.xaml;View\EvictionsView.xaml;View\ExecutionsView.xaml;View\HuronPortalView.xaml;View\JobDetailsView.xaml;View\LandlordTenantView.xaml;View\MainDashboard.xaml;
 
 False
 
