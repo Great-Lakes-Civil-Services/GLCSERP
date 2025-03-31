@@ -177,5 +177,21 @@ namespace CivilProcessERP
                 viewModel.SelectedTab = newTab; // Switch to the new tab
             }
         }
+
+
+// ✅ Close JobDetailsView when Close button is clicked
+public void RemoveTab(UserControl content)
+{
+    if (DataContext is MainDashboardViewModel viewModel)
+    {
+        var tabToRemove = viewModel.OpenTabs.FirstOrDefault(tab => tab.Content == content);
+        if (tabToRemove != null)
+        {
+            viewModel.OpenTabs.Remove(tabToRemove);
+            viewModel.SelectedTab = viewModel.OpenTabs.LastOrDefault();
+        }
+    }
+}
+
     }
 }

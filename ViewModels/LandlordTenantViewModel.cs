@@ -301,27 +301,24 @@ namespace CivilProcessERP.ViewModels
 //     }
 // }
 // }
-
-
-using System;
 using System.Collections.ObjectModel;
-using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Windows;
+using CivilProcessERP.ViewModels; // Ensures TabItemViewModel is referenced
     using global::CivilProcessERP.Views;
-    using HandyControl.Tools.Extension;
 
     namespace CivilProcessERP.ViewModels
 {
     public class LandlordTenantViewModel : INotifyPropertyChanged
     {
-        private readonly bool UseDatabase = false;  
+        private readonly bool UseDatabase = false;
 
         private string _doNotFlyClients;
         private string _pastDueInvoices;
         private string _casesNeedAttention;
         private string _searchJobNumber;
         private string _searchResult;
+        private Job _mockJob;
 
         public string DoNotFlyClients
         {
@@ -353,6 +350,12 @@ using System.Windows;
             set { _searchResult = value; OnPropertyChanged(); }
         }
 
+        public Job MockJob
+        {
+            get => _mockJob;
+            set { _mockJob = value; OnPropertyChanged(); }
+        }
+
         public ObservableCollection<string> JobList { get; set; } = new ObservableCollection<string>();
 
         public LandlordTenantViewModel()
@@ -373,31 +376,11 @@ using System.Windows;
             DoNotFlyClients = "Mock Client A, Mock Client B";
             PastDueInvoices = "3 Clients";
             CasesNeedAttention = "5 Cases";
-        }
 
-        private void LoadData()
-        {
-            if (!UseDatabase)
-                return;
-
-            Console.WriteLine("[INFO] Database Connection will be Implemented Later.");
-        }
-
-        // ✅ Search Job Functionality (Mocked)
-        public void SearchJob()
-        {
-            if (string.IsNullOrWhiteSpace(SearchJobNumber))
+            // ✅ Initialize Mock Job Data
+            MockJob = new Job
             {
-                SearchResult = "Please enter a job number.";
-                return;
-            }
-
-            Console.WriteLine($"[INFO] Searching for Job: {SearchJobNumber}");
-
-            // 🚀 Mock Job Data
-            var mockJob = new Job
-            {
-                JobId = SearchJobNumber,
+                JobId = "143", // Set a job number for testing
                 Court = "Michigan District Court",
                 Plaintiff = "John Doe",
                 Defendant = "Jane Smith",
@@ -414,15 +397,57 @@ using System.Windows;
                 Zone = "West",
                 LastServiceDate = "04/15/2025"
             };
+        }
 
-            // 🚀 Open the Job Details View with Mock Data
-            Application.Current.Dispatcher.Invoke(() =>
+        private void LoadData()
+        {
+            if (!UseDatabase)
+                return;
+
+            Console.WriteLine("[INFO] Database Connection will be Implemented Later.");
+        }
+
+        // ✅ Fixed: Search Job & Open in a New Tab
+        public void SearchJob()
+        {
+            if (string.IsNullOrWhiteSpace(SearchJobNumber))
             {
-                JobDetailsView jobDetailsView = new JobDetailsView(mockJob);
-                jobDetailsView.Show();
-            });
+                SearchResult = "Please enter a job number.";
+                return;
+            }
 
-            SearchResult = $"Job {SearchJobNumber} found (Mock Data Loaded)";
+            Console.WriteLine($"[INFO] Searching for Job: {SearchJobNumber}");
+
+            // ✅ Check if job exists in mock data
+            if (MockJob != null && MockJob.JobId == SearchJobNumber)
+            {
+                // ✅ Open Job Details View if match is found
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    var jobDetailsView = new JobDetailsView(MockJob);
+                    
+                    // Find MainWindow
+                    var mainWindow = Application.Current.MainWindow as MainWindow;
+                    
+                    if (mainWindow != null)
+                    {
+                        // Ensure DataContext is set to MainWindow ViewModel
+                        var mainViewModel = mainWindow.DataContext as MainDashboardViewModel;
+                        
+                        if (mainViewModel != null)
+                        {
+                            // ✅ Open Job Details in a New Tab
+                            mainViewModel.OpenNewTab(MockJob);
+                        }
+                    }
+                });
+
+                SearchResult = $"Job {SearchJobNumber} found (Mock Data Loaded)";
+            }
+            else
+            {
+                SearchResult = $"Job {SearchJobNumber} not found.";
+            }
         }
 
         // ✅ Add Job Functionality (Mocked)

@@ -140,17 +140,30 @@ namespace CivilProcessERP.Views
 {
     public partial class LandlordTenantView : UserControl
     {
+        private ViewModels.CivilProcessERP.ViewModels.LandlordTenantViewModel _viewModel;
+
         public LandlordTenantView()
         {
             InitializeComponent();
-            DataContext = new ViewModels.CivilProcessERP.ViewModels.LandlordTenantViewModel(); // ✅ Ensure ViewModel is attached
+            _viewModel = new ViewModels.CivilProcessERP.ViewModels.LandlordTenantViewModel();
+            DataContext = _viewModel; // ✅ Ensure ViewModel is attached
         }
 
+        
         private void SearchJobButton_Click(object sender, RoutedEventArgs e)
         {
-            if (DataContext is ViewModels.CivilProcessERP.ViewModels.LandlordTenantViewModel viewModel)
+            _viewModel.SearchJob();
+
+            // Open Job Details only if a job was found
+            if (_viewModel.MockJob != null)
             {
-                viewModel.SearchJob();
+                var jobDetailsView = new JobDetailsView(_viewModel.MockJob);
+                var mainWindow = Application.Current.MainWindow as MainWindow;
+                mainWindow?.AddNewTab(jobDetailsView, $"Job {_viewModel.MockJob.JobId}");
+            }
+            else
+            {
+                MessageBox.Show("No job found.", "Search Result", MessageBoxButton.OK, MessageBoxImage.Information);
             }
         }
 

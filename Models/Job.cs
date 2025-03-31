@@ -1,3 +1,4 @@
+
 namespace CivilProcessERP.Models.Job
 {
     public class Job
@@ -24,6 +25,7 @@ namespace CivilProcessERP.Models.Job
         public string Attorney { get; set; }
         public string TypeOfService { get; set; }
         public DateTime? DateOfService { get; set; }
-         
+        public List<AttachmentModel> Attachments { get; set; } = new List<AttachmentModel>();
+        public List<ChangeEntryModel> ChangeHistory { get; set; } = new List<ChangeEntryModel>();
     }
 }

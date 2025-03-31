@@ -44,53 +44,49 @@ namespace CivilProcessERP.ViewModels
         /// <summary>
         /// Opens a new tab dynamically. If a Job object is passed, it opens a JobDetailsView.
         /// </summary>
-     private void OpenNewTab(object? title)
-{
-    if (title == null) return;
+    
+        public void OpenNewTab(object? param)
+        {
+            if (param == null) return;
 
-    string tabTitle = title.ToString() ?? "New Tab";
+            string tabTitle = param is Job job ? $"Job #{job.JobId}" : param.ToString() ?? "New Tab";
 
-    // ✅ Log debug information
-    Console.WriteLine($"[DEBUG] Attempting to Open Tab: {tabTitle}");
-    Console.WriteLine($"[DEBUG] Current Open Tabs: {string.Join(", ", OpenTabs.Select(t => t.Title))}");
+            Console.WriteLine($"[DEBUG] Attempting to Open Tab: {tabTitle}");
 
-    // ✅ Prevent re-opening the same tab
-    var existingTab = OpenTabs.FirstOrDefault(tab => tab.Title == tabTitle);
-    if (existingTab != null)
-    {
-        Console.WriteLine($"[DEBUG] Tab '{tabTitle}' is already open. Switching focus.");
-        SelectedTab = existingTab; // Focus on already opened tab
-        return;
-    }
+            // ✅ Prevent re-opening the same tab
+            var existingTab = OpenTabs.FirstOrDefault(tab => tab.Title == tabTitle);
+            if (existingTab != null)
+            {
+                Console.WriteLine($"[DEBUG] Tab '{tabTitle}' is already open. Switching focus.");
+                SelectedTab = existingTab;
+                return;
+            }
 
-    // ✅ Prevent Dashboard from repeatedly opening itself
-    if (tabTitle == "Dashboard" && OpenTabs.Any(tab => tab.Title == "Dashboard"))
-    {
-        Console.WriteLine($"[WARNING] Dashboard tab is already open. Ignoring duplicate open request.");
-        return;
-    }
+            UserControl? view = null;
 
-    UserControl? view = _navService.GetView(tabTitle);
+            // ✅ Detect if we are opening JobDetails
+            if (param is Job jobData)
+            {
+                view = new JobDetailsView(jobData);
+            }
+            else
+            {
+                view = _navService.GetView(tabTitle);
+            }
 
-    if (tabTitle == "JobDetails" && title is Job job)
-    {
-        view = new JobDetailsView(job);
-    }
+            if (view != null)
+            {
+                var newTab = new TabItemViewModel(tabTitle, view);
+                OpenTabs.Add(newTab);
+                SelectedTab = newTab;
 
-    if (view != null)
-    {
-        var newTab = new TabItemViewModel(tabTitle, view);
-        OpenTabs.Add(newTab);
-        SelectedTab = newTab; // Switch to the new tab
-
-        Console.WriteLine($"[DEBUG] New Tab Opened: {tabTitle}");
-        Console.WriteLine($"[DEBUG] Updated Open Tabs: {string.Join(", ", OpenTabs.Select(t => t.Title))}");
-    }
-    else
-    {
-        Console.WriteLine($"[ERROR] Failed to open tab: {tabTitle}. No corresponding view found.");
-    }
-}
+                Console.WriteLine($"[DEBUG] New Tab Opened: {tabTitle}");
+            }
+            else
+            {
+                Console.WriteLine($"[ERROR] Failed to open tab: {tabTitle}. No corresponding view found.");
+            }
+        }
 
 
 
