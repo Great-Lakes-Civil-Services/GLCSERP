@@ -1,4 +1,6 @@
 
+using System.Collections.ObjectModel;
+
 namespace CivilProcessERP.Models.Job
 {
     public class Job
@@ -27,5 +29,26 @@ namespace CivilProcessERP.Models.Job
         public DateTime? DateOfService { get; set; }
         public List<AttachmentModel> Attachments { get; set; } = new List<AttachmentModel>();
         public List<ChangeEntryModel> ChangeHistory { get; set; } = new List<ChangeEntryModel>();
+        public object AdditionalComments { get; internal set; }
+        //public List<LogEntryModel> Comments { get; set; } = new List<LogEntryModel>();
+        public ObservableCollection<LogEntryModel> Comments { get; set; } = new();
+        public ObservableCollection<LogEntryModel> AttemptEntries { get; set; } = new();
+        
+    }
+
+    public class InvoiceModel
+    {
+        public string Item { get; set; }
+        public int Quantity { get; set; }
+        public decimal Rate { get; set; }
+        public decimal Amount { get; set; }
+    }
+
+     public class PaymentModel
+    {
+        public DateTime Date { get; set; }
+        public string Description { get; set; }
+        public string Method { get; set; }
+        public decimal Amount { get; set; }
     }
 }

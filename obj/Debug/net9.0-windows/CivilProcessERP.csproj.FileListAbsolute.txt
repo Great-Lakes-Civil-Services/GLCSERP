@@ -134,6 +134,9 @@ C:\Users\GLCS\CivilProcessERP\obj\Debug\net9.0-windows\MainWindow.baml
 C:\Users\GLCS\CivilProcessERP\obj\Debug\net9.0-windows\View\AdministrationView.baml
 C:\Users\GLCS\CivilProcessERP\obj\Debug\net9.0-windows\View\ClientsView.baml
 C:\Users\GLCS\CivilProcessERP\obj\Debug\net9.0-windows\View\CourtsView.baml
+C:\Users\GLCS\CivilProcessERP\obj\Debug\net9.0-windows\View\EditInvoiceWindow.baml
+C:\Users\GLCS\CivilProcessERP\obj\Debug\net9.0-windows\View\EditLogEntryWindow.baml
+C:\Users\GLCS\CivilProcessERP\obj\Debug\net9.0-windows\View\EditPaymentWindow.baml
 C:\Users\GLCS\CivilProcessERP\obj\Debug\net9.0-windows\View\EmployeesCornerView.baml
 C:\Users\GLCS\CivilProcessERP\obj\Debug\net9.0-windows\View\EvictionsView.baml
 C:\Users\GLCS\CivilProcessERP\obj\Debug\net9.0-windows\View\ExecutionsView.baml
@@ -146,6 +149,9 @@ C:\Users\GLCS\CivilProcessERP\obj\Debug\net9.0-windows\MainWindow.g.cs
 C:\Users\GLCS\CivilProcessERP\obj\Debug\net9.0-windows\View\AdministrationView.g.cs
 C:\Users\GLCS\CivilProcessERP\obj\Debug\net9.0-windows\View\ClientsView.g.cs
 C:\Users\GLCS\CivilProcessERP\obj\Debug\net9.0-windows\View\CourtsView.g.cs
+C:\Users\GLCS\CivilProcessERP\obj\Debug\net9.0-windows\View\EditInvoiceWindow.g.cs
+C:\Users\GLCS\CivilProcessERP\obj\Debug\net9.0-windows\View\EditLogEntryWindow.g.cs
+C:\Users\GLCS\CivilProcessERP\obj\Debug\net9.0-windows\View\EditPaymentWindow.g.cs
 C:\Users\GLCS\CivilProcessERP\obj\Debug\net9.0-windows\View\EmployeesCornerView.g.cs
 C:\Users\GLCS\CivilProcessERP\obj\Debug\net9.0-windows\View\EvictionsView.g.cs
 C:\Users\GLCS\CivilProcessERP\obj\Debug\net9.0-windows\View\ExecutionsView.g.cs
