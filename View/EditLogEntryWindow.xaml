@@ -5,6 +5,9 @@
     <StackPanel Margin="10">
         <TextBlock Text="Date:" />
         <DatePicker SelectedDate="{Binding Date}" />
+        
+        <TextBlock Text="Time:"/>
+        <TextBox Text="{Binding TimeOnly, Mode=TwoWay, StringFormat='t'}" />
 
         <TextBlock Text="Body:" Margin="0,10,0,0" />
         <TextBox Text="{Binding Body}" AcceptsReturn="True" Height="60" />

@@ -1,9 +1,12 @@
+using static System.Runtime.InteropServices.JavaScript.JSType;
+
 namespace CivilProcessERP.Models
 {
     public class LogEntryModel
 {
     public DateTime Date { get; set; }
-    public string Time => Date.ToString("h:mm tt");
+    public string Time => Date.ToShortTimeString();
+
     public string Body { get; set; }
 
     public bool Aff { get; set; }
@@ -35,6 +38,18 @@ public class PaymentEntryModel
 public string Description { get; set; }
 public string Method { get; set; }
 public DateTime Date { get; set; }
+
+public DateTime DateOnly
+{
+    get => Date.Date;
+    set => Date = new DateTime(value.Year, value.Month, value.Day, Date.Hour, Date.Minute, Date.Second);
+}
+
+public TimeSpan TimeOnly
+{
+    get => Date.TimeOfDay;
+    set => Date = Date.Date + value;
+}
 
 }
 
