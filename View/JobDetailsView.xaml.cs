@@ -5,6 +5,7 @@ using static CivilProcessERP.Models.PaymentEntryModel;
 using CivilProcessERP.Models;
 using System.Windows.Input;
 using System.Diagnostics;
+using System.ComponentModel;
 using CivilProcessERP.Models;
 using Microsoft.Win32;
 using System.Collections.ObjectModel;
@@ -15,7 +16,7 @@ using CivilProcessERP.Models.Job;
 
 namespace CivilProcessERP.Views
 {
-    public partial class JobDetailsView : UserControl
+    public partial class JobDetailsView : UserControl,INotifyPropertyChanged
     {
         public Job Job { get; set; }
 
@@ -284,6 +285,7 @@ private void AddInvoice_Click(object sender, RoutedEventArgs e)
     if (popup.ShowDialog() == true)
     {
         InvoiceEntries.Add(entry);
+         RecalculateTotals();
     }
 }
 
@@ -294,6 +296,7 @@ private void EditInvoice_Click(object sender, RoutedEventArgs e)
         var popup = new EditInvoiceWindow(selected) { Owner = Window.GetWindow(this) };
         popup.ShowDialog();
         InvoiceListView.Items.Refresh();
+         RecalculateTotals();
     }
 }
 
@@ -301,6 +304,7 @@ private void DeleteInvoice_Click(object sender, RoutedEventArgs e)
 {
     if (InvoiceListView.SelectedItem is InvoiceEntryModel selected)
         InvoiceEntries.Remove(selected);
+         RecalculateTotals();
 }
 
 private void AddPayment_Click(object sender, RoutedEventArgs e)
@@ -310,6 +314,7 @@ private void AddPayment_Click(object sender, RoutedEventArgs e)
     if (popup.ShowDialog() == true)
     {
         PaymentEntries.Add(entry);
+         RecalculateTotals();
     }
 }
 
@@ -320,6 +325,7 @@ private void EditPayment_Click(object sender, RoutedEventArgs e)
         var popup = new EditPaymentWindow(selected) { Owner = Window.GetWindow(this) };
         popup.ShowDialog();
         PaymentsListView.Items.Refresh();
+         RecalculateTotals();
     }
 }
 
@@ -327,14 +333,43 @@ private void DeletePayment_Click(object sender, RoutedEventArgs e)
 {
     if (PaymentsListView.SelectedItem is PaymentEntryModel selected)
         PaymentEntries.Remove(selected);
+         RecalculateTotals();
 }
 
+public void RecalculateTotals()
+{
+    OnPropertyChanged(nameof(TotalInvoiceAmount));
+    OnPropertyChanged(nameof(TotalPaymentsAmount));
+}
+
+
+
+public event PropertyChangedEventHandler PropertyChanged;
+protected void OnPropertyChanged(string name)
+{
+    PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+}
+
+private void AddInvoices_Click(object sender, RoutedEventArgs e)
+{
+    var entry = new InvoiceEntryModel();
+    var popup = new EditInvoiceWindow(entry) { Owner = Window.GetWindow(this) };
+    if (popup.ShowDialog() == true)
+    {
+        InvoiceEntries.Add(entry);
+        RecalculateTotals(); // 👈 Trigger UI update
+    }
+}
 
 
 public ObservableCollection<LogEntryModel> AttemptEntries { get; set; }
 public ObservableCollection<LogEntryModel> CommentEntries { get; set; }
 public ObservableCollection<InvoiceEntryModel> InvoiceEntries { get; set; } = new ObservableCollection<InvoiceEntryModel>();
 public ObservableCollection<PaymentEntryModel> PaymentEntries { get; set; } = new ObservableCollection<PaymentEntryModel>();
+
+public decimal TotalInvoiceAmount => InvoiceEntries?.Sum(x => x.Amount) ?? 0;
+public decimal TotalPaymentsAmount => PaymentEntries?.Sum(x => x.Amount) ?? 0;
+
 
 // private void LoadMockData()
 // {
