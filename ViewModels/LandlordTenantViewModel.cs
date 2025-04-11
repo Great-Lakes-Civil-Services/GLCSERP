@@ -311,7 +311,7 @@ using CivilProcessERP.ViewModels; // Ensures TabItemViewModel is referenced
 {
     public class LandlordTenantViewModel : INotifyPropertyChanged
     {
-        private readonly bool UseDatabase = false;
+        public bool UseDatabase { get; set; } = true;
 
         private string _doNotFlyClients;
         private string _pastDueInvoices;
@@ -338,11 +338,17 @@ using CivilProcessERP.ViewModels; // Ensures TabItemViewModel is referenced
             set { _casesNeedAttention = value; OnPropertyChanged(); }
         }
 
-        public string SearchJobNumber
-        {
-            get => _searchJobNumber;
-            set { _searchJobNumber = value; OnPropertyChanged(); }
-        }
+      public string SearchJobNumber
+{
+    get => _searchJobNumber;
+    set
+    {
+        _searchJobNumber = value;
+        Console.WriteLine($"[BINDING] SearchJobNumber set to: {_searchJobNumber}");
+        OnPropertyChanged();
+    }
+}
+
 
         public string SearchResult
         {
@@ -350,25 +356,35 @@ using CivilProcessERP.ViewModels; // Ensures TabItemViewModel is referenced
             set { _searchResult = value; OnPropertyChanged(); }
         }
 
-        public Job MockJob
-        {
-            get => _mockJob;
-            set { _mockJob = value; OnPropertyChanged(); }
-        }
+       public Job CurrentJob
+{
+    get => _mockJob;
+    set { _mockJob = value; OnPropertyChanged(); }
+}
+
 
         public ObservableCollection<string> JobList { get; set; } = new ObservableCollection<string>();
 
-        public LandlordTenantViewModel()
-        {
-            if (UseDatabase)
-            {
-                LoadData();
-            }
-            else
-            {
-                LoadMockData();
-            }
-        }
+       public LandlordTenantViewModel(bool useDb = true)
+{
+    UseDatabase = useDb;
+
+    PropertyChanged += (s, e) =>
+    {
+        Console.WriteLine($"[ViewModel] PropertyChanged: {e.PropertyName}");
+    };
+
+    if (UseDatabase)
+    {
+        Console.WriteLine("[INFO] Initialized in DB mode. Waiting for job search.");
+    }
+    else
+    {
+        LoadMockData();
+    }
+}
+
+
 
         private void LoadMockData()
         {
@@ -378,7 +394,7 @@ using CivilProcessERP.ViewModels; // Ensures TabItemViewModel is referenced
             CasesNeedAttention = "5 Cases";
 
             // ✅ Initialize Mock Job Data
-            MockJob = new Job
+            CurrentJob = new Job
             {
                 JobId = "143", // Set a job number for testing
                 Court = "Michigan District Court",
@@ -399,56 +415,122 @@ using CivilProcessERP.ViewModels; // Ensures TabItemViewModel is referenced
             };
         }
 
-        private void LoadData()
-        {
-            if (!UseDatabase)
-                return;
+       private void LoadData(string jobId)
+{
+    if (!UseDatabase)
+        return;
 
-            Console.WriteLine("[INFO] Database Connection will be Implemented Later.");
+    Console.WriteLine($"[INFO] 🔍 Loading job from DB: {jobId}");
+
+    try
+    {
+        JobService jobService = new();
+        var dbJob = jobService.GetJobById(jobId);
+
+        if (dbJob != null)
+        {
+            CurrentJob = dbJob;
+            SearchResult = $"Job {jobId} loaded from database.";
         }
+        else
+        {
+            SearchResult = $"No job found with ID: {jobId}";
+        }
+    }
+    catch (Exception ex)
+    {
+        SearchResult = $"Error loading job: {ex.Message}";
+    }
+}
+
 
         // ✅ Fixed: Search Job & Open in a New Tab
-        public void SearchJob()
-        {
-            if (string.IsNullOrWhiteSpace(SearchJobNumber))
-            {
-                SearchResult = "Please enter a job number.";
-                return;
-            }
+        // public void SearchJob()
+        // {
+        //     if (string.IsNullOrWhiteSpace(SearchJobNumber))
+        //     {
+        //         SearchResult = "Please enter a job number.";
+        //         return;
+        //     }
 
-            Console.WriteLine($"[INFO] Searching for Job: {SearchJobNumber}");
+        //     Console.WriteLine($"[INFO] Searching for Job: {SearchJobNumber}");
 
-            // ✅ Check if job exists in mock data
-            if (MockJob != null && MockJob.JobId == SearchJobNumber)
-            {
-                // ✅ Open Job Details View if match is found
-                Application.Current.Dispatcher.Invoke(() =>
-                {
-                    var jobDetailsView = new JobDetailsView(MockJob);
+        //     // ✅ Check if job exists in mock data
+        //     if (MockJob != null && MockJob.JobId == SearchJobNumber)
+        //     {
+        //         // ✅ Open Job Details View if match is found
+        //         Application.Current.Dispatcher.Invoke(() =>
+        //         {
+        //             var jobDetailsView = new JobDetailsView(MockJob);
                     
-                    // Find MainWindow
-                    var mainWindow = Application.Current.MainWindow as MainWindow;
+        //             // Find MainWindow
+        //             var mainWindow = Application.Current.MainWindow as MainWindow;
                     
-                    if (mainWindow != null)
-                    {
-                        // Ensure DataContext is set to MainWindow ViewModel
-                        var mainViewModel = mainWindow.DataContext as MainDashboardViewModel;
+        //             if (mainWindow != null)
+        //             {
+        //                 // Ensure DataContext is set to MainWindow ViewModel
+        //                 var mainViewModel = mainWindow.DataContext as MainDashboardViewModel;
                         
-                        if (mainViewModel != null)
-                        {
-                            // ✅ Open Job Details in a New Tab
-                            mainViewModel.OpenNewTab(MockJob);
-                        }
-                    }
-                });
+        //                 if (mainViewModel != null)
+        //                 {
+        //                     // ✅ Open Job Details in a New Tab
+        //                     mainViewModel.OpenNewTab(MockJob);
+        //                 }
+        //             }
+        //         });
 
-                SearchResult = $"Job {SearchJobNumber} found (Mock Data Loaded)";
-            }
-            else
+        //         SearchResult = $"Job {SearchJobNumber} found (Mock Data Loaded)";
+        //     }
+        //     else
+        //     {
+        //         SearchResult = $"Job {SearchJobNumber} not found.";
+        //     }
+        // }
+
+       public void SearchJob()
+       
+{
+     Console.WriteLine($"[DEBUG] Searching for Job: {SearchJobNumber}");
+    if (string.IsNullOrWhiteSpace(SearchJobNumber))
+    {
+        SearchResult = "Please enter a job number.";
+        return;
+    }
+
+    Console.WriteLine($"[INFO] Searching for Job: {SearchJobNumber}");
+
+    try
+    {
+        LoadData(SearchJobNumber); // dynamically load into MockJob
+        var dbJob = CurrentJob;
+
+        if (dbJob != null)
+        {
+            Application.Current.Dispatcher.Invoke(() =>
             {
-                SearchResult = $"Job {SearchJobNumber} not found.";
-            }
+                var jobDetailsView = new JobDetailsView(dbJob);
+                var mainWindow = Application.Current.MainWindow as MainWindow;
+
+                if (mainWindow?.DataContext is MainDashboardViewModel mainViewModel)
+                {
+                    mainViewModel.OpenNewTab(dbJob);
+                }
+            });
+
+            SearchResult = $"Job {SearchJobNumber} found from database.";
         }
+        else
+        {
+            SearchResult = $"Job {SearchJobNumber} not found.";
+        }
+    }
+    catch (Exception ex)
+    {
+        SearchResult = $"Error retrieving job: {ex.Message}";
+    }
+}
+
+
 
         // ✅ Add Job Functionality (Mocked)
         public void AddNewJob()

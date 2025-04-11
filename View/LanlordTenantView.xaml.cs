@@ -149,23 +149,42 @@ namespace CivilProcessERP.Views
             DataContext = _viewModel; // ✅ Ensure ViewModel is attached
         }
 
-        
-        private void SearchJobButton_Click(object sender, RoutedEventArgs e)
-        {
-            _viewModel.SearchJob();
+    private void SearchJobButton_Click(object sender, RoutedEventArgs e)
+{
+    Console.WriteLine("[DEBUG] SearchJob() triggered");
 
-            // Open Job Details only if a job was found
-            if (_viewModel.MockJob != null)
-            {
-                var jobDetailsView = new JobDetailsView(_viewModel.MockJob);
-                var mainWindow = Application.Current.MainWindow as MainWindow;
-                mainWindow?.AddNewTab(jobDetailsView, $"Job {_viewModel.MockJob.JobId}");
-            }
-            else
-            {
-                MessageBox.Show("No job found.", "Search Result", MessageBoxButton.OK, MessageBoxImage.Information);
-            }
-        }
+    // 🔁 Force the binding to push UI to ViewModel
+    var binding = JobSearchBox.GetBindingExpression(TextBox.TextProperty);
+    binding?.UpdateSource();
+
+    // ✅ Read and confirm right before search
+    Console.WriteLine($"[DEBUG] Value from UI TextBox: {JobSearchBox.Text}");
+    Console.WriteLine($"[DEBUG] ViewModel SearchJobNumber BEFORE fix: {_viewModel.SearchJobNumber}");
+
+    // 🚨 TEMP: Directly assign if ViewModel didn't get value
+    if (string.IsNullOrWhiteSpace(_viewModel.SearchJobNumber))
+    {
+        _viewModel.SearchJobNumber = JobSearchBox.Text;
+        Console.WriteLine("[DEBUG] 🛠️ ViewModel.SearchJobNumber was empty, manually set from UI");
+    }
+
+    Console.WriteLine($"[DEBUG] ViewModel SearchJobNumber AFTER fix: {_viewModel.SearchJobNumber}");
+
+    _viewModel.SearchJob();
+    Console.WriteLine("[DEBUG] SearchJob() Completed");
+
+    if (_viewModel.CurrentJob != null)
+    {
+        var jobDetailsView = new JobDetailsView(_viewModel.CurrentJob);
+        var mainWindow = Application.Current.MainWindow as MainWindow;
+        mainWindow?.AddNewTab(jobDetailsView, $"Job {_viewModel.CurrentJob.JobId}");
+    }
+    else
+    {
+        MessageBox.Show("No job found.", "Search Result", MessageBoxButton.OK, MessageBoxImage.Information);
+    }
+}
+
 
         private void AddJobButton_Click(object sender, RoutedEventArgs e)
         {

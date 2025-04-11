@@ -23,7 +23,30 @@ namespace CivilProcessERP.Views
         public JobDetailsView(Job job)
         {
             InitializeComponent();
-            LoadMockData();
+
+            
+    // Step 1: Fetch court from DB if needed
+    if (job != null && !string.IsNullOrEmpty(job.JobId) && string.IsNullOrEmpty(job.Court))
+    {
+        var jobService = new JobService();
+        try
+        {
+            var dbJob = jobService.GetJobById(job.JobId);
+            job.Court = dbJob.Court; // Just court for now
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Failed to load job from database: {ex.Message}");
+        }
+    }
+
+    // Step 2: Bind to UI
+    Job = job ?? new Job();
+    DataContext = this;
+
+    // Step 3: Load remaining fields from mock data
+    LoadMockData();
+    
             // If attachments are null, initialize with dummy data for testing
     if (job.Attachments == null || !job.Attachments.Any())
     {
