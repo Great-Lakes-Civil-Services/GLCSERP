@@ -5,6 +5,9 @@ namespace CivilProcessERP.Models.Job
 {
     public class Job
     {
+        public string ExpirationDate { get; set; }
+        public string SqlDateTimeCreated { get; set; }
+        public string LastDayToServe { get; set; }
         public string JobId { get; set; }
         public string Court { get; set; }
         public string Plaintiff { get; set; }
