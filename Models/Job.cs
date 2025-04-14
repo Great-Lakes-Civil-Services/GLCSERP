@@ -36,6 +36,8 @@ namespace CivilProcessERP.Models.Job
         //public List<LogEntryModel> Comments { get; set; } = new List<LogEntryModel>();
         public ObservableCollection<LogEntryModel> Comments { get; set; } = new();
         public ObservableCollection<LogEntryModel> AttemptEntries { get; set; } = new();
+        public string Client { get; set; }
+        public string ProcessServer { get; set; }
         
     }
 

@@ -132,6 +132,169 @@ if (!string.IsNullOrEmpty(typeServiceId))
         reader9.Close();
     }
 }
+// Step 10: Get caseserialnum from papers
+string caseSerialNum = null;
+using (var cmd10 = new NpgsqlCommand("SELECT caseserialnum FROM papers WHERE serialnum = @jobId", conn))
+{
+    cmd10.Parameters.AddWithValue("jobId", long.Parse(job.JobId));
+    using var reader10 = cmd10.ExecuteReader();
+    if (reader10.Read())
+    {
+        caseSerialNum = reader10["caseserialnum"]?.ToString();
+    }
+    reader10.Close();
+}
+
+// Step 11: Get casenum from cases table
+if (!string.IsNullOrEmpty(caseSerialNum))
+{
+    using (var cmd11 = new NpgsqlCommand("SELECT casenum FROM cases WHERE serialnum = @caseserialnum", conn))
+    {
+        cmd11.Parameters.AddWithValue("caseserialnum", int.Parse(caseSerialNum));
+        using var reader11 = cmd11.ExecuteReader();
+        if (reader11.Read())
+        {
+            job.CaseNumber = reader11["casenum"]?.ToString();  // ✅ correctly assign to CaseNumber
+        }
+        reader11.Close();
+    }
+}
+
+using (var cmd12 = new NpgsqlCommand("SELECT clientrefnum FROM papers WHERE serialnum = @jobId", conn))
+{
+    cmd12.Parameters.AddWithValue("jobId", long.Parse(job.JobId));// safely bind as string
+    using var reader12 = cmd12.ExecuteReader();
+    if (reader12.Read())
+    {
+        job.ClientReference = reader12["clientrefnum"]?.ToString();  // ✅ fixed column name
+    }
+    reader12.Close();
+}
+
+// Step 12: Get Plaintiff Name from entity table using serialnumber = case number
+if (!string.IsNullOrEmpty(caseSerialNum))
+{
+    using (var cmd13 = new NpgsqlCommand("SELECT \"FirstName\", \"LastName\"  FROM entity WHERE \"SerialNum\" = @caseSerialNum", conn))
+    {
+        cmd13.Parameters.AddWithValue("caseserialnum", int.Parse(caseSerialNum));
+        using var reader13 = cmd13.ExecuteReader();
+        if (reader13.Read())
+        {
+            var first = reader13["FirstName"]?.ToString();
+            var last = reader13["LastName"]?.ToString();
+            job.Plaintiff = $"{first} {last}".Trim();  // ✅ assign full name
+        }
+        reader13.Close();
+    }
+}
+
+
+// Step 13: Get attorneynum from papers table
+string attorneySerial = null;
+using (var cmd13 = new NpgsqlCommand("SELECT attorneynum FROM papers WHERE serialnum = @jobId", conn))
+{
+    cmd13.Parameters.AddWithValue("jobId", long.Parse(job.JobId));
+    using var reader13 = cmd13.ExecuteReader();
+    if (reader13.Read())
+    {
+        attorneySerial = reader13["attorneynum"]?.ToString();
+    }
+    reader13.Close();
+}
+
+// Step 14: Get Attorney's name from entity table
+if (!string.IsNullOrEmpty(attorneySerial))
+{
+    using (var cmd14 = new NpgsqlCommand("SELECT \"FirstName\", \"LastName\"  FROM entity WHERE \"SerialNum\" = @attorneySerial", conn))
+    {
+        cmd14.Parameters.AddWithValue("attorneySerial", int.Parse(attorneySerial));
+        using var reader14 = cmd14.ExecuteReader();
+        if (reader14.Read())
+        {
+            var first = reader14["FirstName"]?.ToString();
+            var last = reader14["LastName"]?.ToString();
+            job.Attorney = $"{first} {last}".Trim();  // ✅ assign full attorney name
+        }
+        reader14.Close();
+    }
+}
+
+
+// Step 15: Get clientnum from papers table
+string clientSerial = null;
+using (var cmd15 = new NpgsqlCommand("SELECT clientnum FROM papers WHERE serialnum = @jobId", conn))
+{
+    cmd15.Parameters.AddWithValue("jobId", long.Parse(job.JobId));
+    using var reader15 = cmd15.ExecuteReader();
+    if (reader15.Read())
+    {
+        clientSerial = reader15["clientnum"]?.ToString();
+    }
+    reader15.Close();
+}
+
+// Step 16: Get Client's name from entity table
+if (!string.IsNullOrEmpty(clientSerial))
+{
+    using (var cmd16 = new NpgsqlCommand("SELECT \"FirstName\", \"LastName\"  FROM entity WHERE \"SerialNum\" = @clientSerial", conn))
+    {
+        cmd16.Parameters.AddWithValue("clientSerial", int.Parse(clientSerial));
+        using var reader16 = cmd16.ExecuteReader();
+        if (reader16.Read())
+        {
+            var first = reader16["FirstName"]?.ToString();
+            var last = reader16["LastName"]?.ToString();
+            job.Client = $"{first} {last}".Trim();  // ✅ assign full client name
+        }
+        reader16.Close();
+    }
+}
+
+// // Step 17: Get Client Status from entity using clientnum
+// if (!string.IsNullOrEmpty(clientSerial))
+// {
+//     using (var cmd17 = new NpgsqlCommand("SELECT \"status\" FROM entity WHERE \"SerialNum\" = @clientSerial", conn))
+//     {
+//         cmd17.Parameters.AddWithValue("clientSerial", int.Parse(clientSerial));
+//         using var reader17 = cmd17.ExecuteReader();
+//         if (reader17.Read())
+//         {
+//             job.ClientStatus = reader17["status"]?.ToString();  // ✅ assign status
+//         }
+//         reader17.Close();
+//     }
+// }
+
+// Step 1: Get servercode from papers
+string serverCode = null;
+using (var cmd18 = new NpgsqlCommand("SELECT servercode FROM papers WHERE serialnum = @jobId", conn))
+{
+    cmd18.Parameters.AddWithValue("jobId", long.Parse(job.JobId));
+    using var reader18 = cmd18.ExecuteReader();
+    if (reader18.Read())
+    {
+        serverCode = reader18["servercode"]?.ToString();
+    }
+    reader18.Close();
+}
+
+// Step 2: Get Process Server name from entity table
+if (!string.IsNullOrEmpty(serverCode))
+{
+    using (var cmd19 = new NpgsqlCommand("SELECT \"FirstName\", \"LastName\"  FROM entity WHERE \"SerialNum\" = @servercode", conn))
+    {
+        cmd19.Parameters.AddWithValue("servercode", int.Parse(serverCode));
+        using var reader19 = cmd19.ExecuteReader();
+        if (reader19.Read())
+        {
+            var first = reader19["FirstName"]?.ToString();
+            var last = reader19["LastName"]?.ToString();
+            job.ProcessServer = $"{first} {last}".Trim(); // full name
+        }
+        reader19.Close();
+    }
+}
+
 
         Console.WriteLine($"[INFO] ✅ Job fetched from DB: {job.JobId}, Court: {job.Court}, Defendant: {job.Defendant}");
         return job;

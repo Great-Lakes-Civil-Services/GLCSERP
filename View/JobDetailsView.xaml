@@ -397,7 +397,7 @@
             <TextBox Text="{Binding Job.Plaintiff}" Margin="5"/>
 
             <TextBlock Text="Attorney Name" FontWeight="Bold" Margin="5"/>
-            <TextBox Text="{Binding Job.Plaintiff}" Margin="5"/>
+            <TextBox Text="{Binding Job.Attorney}" Margin="5"/>
 
             <TextBlock Text="Client" FontWeight="Bold" Margin="5"/>
             <TextBox Text="{Binding Job.Client}" Margin="5" AcceptsReturn="True" Height="10"/>
