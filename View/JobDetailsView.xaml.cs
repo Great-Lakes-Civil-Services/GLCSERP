@@ -46,7 +46,7 @@ namespace CivilProcessERP.Views
 
     // Step 3: Load remaining fields from mock data
     LoadMockData();
-    
+
             // If attachments are null, initialize with dummy data for testing
     if (job.Attachments == null || !job.Attachments.Any())
     {
@@ -129,8 +129,8 @@ namespace CivilProcessERP.Views
 
         AttemptEntries = new ObservableCollection<LogEntryModel>(allLogs.Where(x => x.Att));
         CommentEntries = new ObservableCollection<LogEntryModel>(allLogs.Where(x => !x.Att));
-        InvoiceEntries.Add(new InvoiceEntryModel { Description = "Filing Fee", Quantity = 1, Rate = 30 });
-InvoiceEntries.Add(new InvoiceEntryModel { Description = "Service Fee", Quantity = 2, Rate = 45 });
+        //InvoiceEntries.Add(new InvoiceEntryModel { Description = "Filing Fee", Quantity = 1, Rate = 30 });
+//InvoiceEntries.Add(new InvoiceEntryModel { Description = "Service Fee", Quantity = 2, Rate = 45 });
 
 PaymentEntries.Add(new PaymentEntryModel { Date = DateTime.Today.AddDays(-2), Method = "Credit", Description = "Initial", Amount = 30 });
 PaymentEntries.Add(new PaymentEntryModel { Date = DateTime.Today, Method = "Cash", Description = "Full Pay", Amount = 60 });
@@ -361,7 +361,7 @@ private void DeletePayment_Click(object sender, RoutedEventArgs e)
 
 public void RecalculateTotals()
 {
-    OnPropertyChanged(nameof(TotalInvoiceAmount));
+    //OnPropertyChanged(nameof(TotalInvoiceAmount));
     OnPropertyChanged(nameof(TotalPaymentsAmount));
 }
 
@@ -390,7 +390,7 @@ public ObservableCollection<LogEntryModel> CommentEntries { get; set; }
 public ObservableCollection<InvoiceEntryModel> InvoiceEntries { get; set; } = new ObservableCollection<InvoiceEntryModel>();
 public ObservableCollection<PaymentEntryModel> PaymentEntries { get; set; } = new ObservableCollection<PaymentEntryModel>();
 
-public decimal TotalInvoiceAmount => InvoiceEntries?.Sum(x => x.Amount) ?? 0;
+//public decimal TotalInvoiceAmount => InvoiceEntries?.Sum(x => x.Amount) ?? 0;
 public decimal TotalPaymentsAmount => PaymentEntries?.Sum(x => x.Amount) ?? 0;
 
 

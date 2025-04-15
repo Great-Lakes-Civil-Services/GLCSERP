@@ -1,10 +1,42 @@
 using System;
 using Npgsql;
 using CivilProcessERP.Models.Job;
+using static CivilProcessERP.Models.Job.InvoiceModel;
 
-public class JobService
+
+// Ensure JobLineItem is defined in the namespace CivilProcessERP.Models.Job
+
+using System.ComponentModel;
+
+public class JobService : INotifyPropertyChanged
 {
     private readonly string _connectionString = "Host=localhost;Port=5432;Database=mypg_database;Username=postgres;Password=7866";
+
+    public List<InvoiceModel> InvoiceEntries { get; set; } = new List<InvoiceModel>();
+
+    public event PropertyChangedEventHandler PropertyChanged;
+
+    public decimal TotalInvoiceAmounts
+    {
+        get
+        {
+            return InvoiceEntries?.Sum(x => x.Amount) ?? 0;
+        }
+    }
+
+    public void RecalculateTotals()
+{
+    OnPropertyChanged(nameof(TotalInvoiceAmounts));
+    //OnPropertyChanged(nameof(TotalPaymentsAmount));
+}
+
+public decimal TotalInvoiceAmount => InvoiceEntries?.Sum(x => x.Amount) ?? 0;
+
+
+    protected void OnPropertyChanged(string propertyName)
+    {
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+    }
 
    public Job GetJobById(string jobId)
 {
@@ -295,6 +327,118 @@ if (!string.IsNullOrEmpty(serverCode))
     }
 }
 
+using (var cmd20 = new NpgsqlCommand("SELECT typewrit FROM plongs WHERE serialnum = @jobId", conn))
+{
+    cmd20.Parameters.AddWithValue("jobId", long.Parse(job.JobId));
+    using var reader20 = cmd20.ExecuteReader();
+    if (reader20.Read())
+    {
+        job.TypeOfWrit = reader20["typewrit"]?.ToString();
+    }
+    reader20.Close();
+}
+
+if (!string.IsNullOrEmpty(caseSerialNum))
+{
+    using (var cmd21 = new NpgsqlCommand("SELECT \"status\" FROM entity WHERE \"SerialNum\" = @caseSerialNum", conn))
+    {
+        cmd21.Parameters.AddWithValue("caseserialnum", int.Parse(caseSerialNum));
+        using var reader21 = cmd21.ExecuteReader();
+        if (reader21.Read())
+        {
+            job.ClientStatus = reader21["status"]?.ToString();  // ✅ assign full name
+        }
+        reader21.Close();
+    }
+}
+string courtDateCodeRaw = null;
+string datetimeServedRaw = null;
+
+using (var cmd22 = new NpgsqlCommand("SELECT courtdatecode, datetimeserved FROM papers WHERE serialnum = @jobId", conn))
+{
+    cmd22.Parameters.AddWithValue("jobId", long.Parse(job.JobId));
+    using var reader22 = cmd22.ExecuteReader();
+    if (reader22.Read())
+    {
+        courtDateCodeRaw = reader22["courtdatecode"]?.ToString();
+        datetimeServedRaw = reader22["datetimeserved"]?.ToString();
+    }
+    reader22.Close();
+}
+
+// --- COURT DATE ---
+if (long.TryParse(courtDateCodeRaw, out long courtTimestamp) && courtTimestamp != 0)
+{
+    var courtDateTime = DateTimeOffset.FromUnixTimeSeconds(courtTimestamp).UtcDateTime;
+    job.Date = courtDateTime.ToString("yyyy-MM-dd");
+    job.Time = courtDateTime.ToString("HH:mm:ss");
+}
+else
+{
+    job.Date = "N/A";
+    job.Time = "N/A";
+}
+
+// --- DATETIME SERVED ---
+if (long.TryParse(datetimeServedRaw, out long servedTimestamp) && servedTimestamp != 0)
+{
+    var servedDateTime = DateTimeOffset.FromUnixTimeSeconds(servedTimestamp).UtcDateTime;
+    job.ServiceDate = servedDateTime.ToString("yyyy-MM-dd");
+    job.ServiceTime = servedDateTime.ToString("HH:mm:ss");
+}
+else
+{
+    job.ServiceDate = "N/A";
+    job.ServiceTime = "N/A";
+}
+
+ // Step 1: Get joblineitem details from the joblineitem table
+string description = null;
+int quantity = 0;
+decimal rate = 0m;
+decimal amount = 0m;
+using (var cmd23 = new NpgsqlCommand("SELECT description, quantity::decimal, rate::decimal, amount::decimal FROM joblineitem WHERE jobnumber = @jobId", conn))
+{
+    cmd23.Parameters.AddWithValue("jobId", long.Parse(job.JobId)); // Use jobId from papers table
+
+    using var reader23 = cmd23.ExecuteReader();
+    while (reader23.Read())
+    {
+        description = reader23["description"]?.ToString() ?? "No Description";
+        quantity = reader23["quantity"] != DBNull.Value ? (int)Convert.ToDecimal(reader23["quantity"]) : 0;
+        rate = reader23["rate"] != DBNull.Value ? Convert.ToDecimal(reader23["rate"]) : 0m;
+        amount = reader23["amount"] != DBNull.Value ? Convert.ToDecimal(reader23["amount"]) : 0m;
+
+        // If quantity, rate, or amount is zero, use a default message
+        if (quantity == 0m || rate == 0m || amount == 0m)
+        {
+            Console.WriteLine($"[INFO] Zero data found for description: {description}. Consider verifying database.");
+        }
+
+        var invoiceItem = new InvoiceModel
+        {
+            Description = description,
+            Quantity = (int)quantity, // Cast to int if needed
+            Rate = rate,
+            Amount = amount
+        };
+
+        job.InvoiceEntries.Add(invoiceItem);
+        // Removed JobDetailsView.RecalculateTotals(); as it is not defined in the current context
+        // Ensure to implement recalculation logic elsewhere if needed
+        RecalculateTotals();
+        
+
+    }
+
+    reader23.Close();
+
+    Console.WriteLine($"Description: {description}, Quantity: {quantity}, Rate: {rate}, Amount: {amount}");
+}
+
+
+// Now you have the values for description, quantity, rate, amount.
+// These can be used as needed, e.g., binding to the UI
 
         Console.WriteLine($"[INFO] ✅ Job fetched from DB: {job.JobId}, Court: {job.Court}, Defendant: {job.Defendant}");
         return job;
