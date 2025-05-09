@@ -1,26 +1,28 @@
 using System.Windows;
-using CivilProcessERP.Models;
-using CivilProcessERP.Models.Job;
+using CivilProcessERP.Models.Job;   // ✅ fix: import correct namespace
 
 namespace CivilProcessERP.Views
 {
     public partial class EditInvoiceWindow : Window
     {
-        public EditInvoiceWindow(InvoiceEntryModel invoice)
+        public EditInvoiceWindow(InvoiceModel invoice)
         {
             InitializeComponent();
-            DataContext = invoice;
+            txtDescription.Text = invoice.Description;
+            txtQuantity.Text = invoice.Quantity.ToString();
+            txtRate.Text = invoice.Rate.ToString();
+            txtAmount.Text = invoice.Amount.ToString();
         }
 
-        private void Save_Click(object sender, RoutedEventArgs e)
+        public string Description => txtDescription.Text;
+        public int Quantity => int.TryParse(txtQuantity.Text, out var q) ? q : 0;
+        public decimal Rate => decimal.TryParse(txtRate.Text, out var r) ? r : 0m;
+        public decimal Amount => decimal.TryParse(txtAmount.Text, out var a) ? a : 0m;
+
+        private void Ok_Click(object sender, RoutedEventArgs e)
         {
             DialogResult = true;
             Close();
-        }
-
-        private void Cancel_Click(object sender, RoutedEventArgs e)
-        {
-            DialogResult = false;
         }
     }
 }

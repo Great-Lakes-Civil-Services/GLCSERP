@@ -1,31 +1,37 @@
 <Window x:Class="CivilProcessERP.Views.EditLogEntryWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Edit Entry" Height="350" Width="450" WindowStartupLocation="CenterOwner">
+        Title="Edit Log Entry" Height="400" Width="400">
     <StackPanel Margin="10">
-        <TextBlock Text="Date:" />
-        <DatePicker SelectedDate="{Binding Date}" />
-        
+        <TextBlock Text="Edit Log Entry" FontWeight="Bold" FontSize="16" Margin="0,0,0,10"/>
+
+        <!-- Date -->
+        <TextBlock Text="Date:"/>
+        <DatePicker x:Name="datePicker" Margin="0,0,0,10"/>
+
+        <!-- Time -->
         <TextBlock Text="Time:"/>
-        <TextBox Text="{Binding TimeOnly, Mode=TwoWay, StringFormat='t'}" />
+        <TextBox x:Name="txtTime" Margin="0,0,0,10"/>
 
-        <TextBlock Text="Body:" Margin="0,10,0,0" />
-        <TextBox Text="{Binding Body}" AcceptsReturn="True" Height="60" />
+        <!-- Body -->
+        <TextBlock Text="Body:"/>
+        <TextBox x:Name="txtBody" Margin="0,0,0,10" AcceptsReturn="True" Height="60"/>
 
-        <TextBlock Text="Source:" Margin="0,10,0,0"/>
-        <TextBox Text="{Binding Source}" />
+        <!-- Checkboxes -->
+        <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+            <CheckBox x:Name="chkAff" Content="AFF" Margin="5"/>
+            <CheckBox x:Name="chkDs" Content="DS" Margin="5"/>
+            <CheckBox x:Name="chkAtt" Content="ATTY" Margin="5"/>
+        </StackPanel>
 
-        <!-- Checkboxes Row -->
-        <WrapPanel Margin="0,10,0,0">
-            <CheckBox Content="Aff" IsChecked="{Binding Aff}" Margin="5"/>
-            <CheckBox Content="DS" IsChecked="{Binding FS}" Margin="5"/>
-            <CheckBox Content="Att" IsChecked="{Binding Att}" Margin="5"/>
-        </WrapPanel>
+        <!-- Source -->
+        <TextBlock Text="Source:"/>
+        <TextBox x:Name="txtSource" Margin="0,0,0,10"/>
 
         <!-- Buttons -->
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-            <Button Content="Save" Width="75" Margin="5" IsDefault="True" Click="Save_Click"/>
-            <Button Content="Cancel" Width="75" Margin="5" IsCancel="True"/>
+            <Button Content="OK" Width="60" Margin="0,0,5,0" Click="Ok_Click" IsDefault="True"/>
+            <Button Content="Cancel" Width="60" IsCancel="True"/>
         </StackPanel>
     </StackPanel>
 </Window>

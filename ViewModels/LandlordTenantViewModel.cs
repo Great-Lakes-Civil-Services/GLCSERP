@@ -365,6 +365,7 @@ using CivilProcessERP.ViewModels; // Ensures TabItemViewModel is referenced
 
         public ObservableCollection<string> JobList { get; set; } = new ObservableCollection<string>();
 
+
        public LandlordTenantViewModel(bool useDb = true)
 {
     UseDatabase = useDb;
@@ -408,7 +409,7 @@ using CivilProcessERP.ViewModels; // Ensures TabItemViewModel is referenced
                 ServiceType = "Standard",
                 Date = "04/10/2025",
                 Time = "10:00 AM",
-                InvoiceDue = "$500",
+                //InvoiceDue = "$500",
                 ClientStatus = "Active",
                 Zone = "West",
                 LastServiceDate = "04/15/2025"

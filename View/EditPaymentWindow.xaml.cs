@@ -1,26 +1,31 @@
+using System;
 using System.Windows;
-using CivilProcessERP.Models;
-using CivilProcessERP.Models.Job;
+using CivilProcessERP.Models.Job;  // ✅ ensure correct namespace
 
 namespace CivilProcessERP.Views
 {
     public partial class EditPaymentWindow : Window
     {
-        public EditPaymentWindow(PaymentEntryModel payment)
+        public EditPaymentWindow(PaymentModel payment)
         {
             InitializeComponent();
-            DataContext = payment;
+            txtDate.Text = payment.Date.ToString("yyyy-MM-dd");
+            txtTime.Text = payment.TimeOnly;
+            txtMethod.Text = payment.Method;
+            txtDescription.Text = payment.Description;
+            txtAmount.Text = payment.Amount.ToString();
         }
 
-        private void Save_Click(object sender, RoutedEventArgs e)
+        public string Date => txtDate.Text;
+        public string Time => txtTime.Text;
+        public string Method => txtMethod.Text;
+        public string Description => txtDescription.Text;
+        public decimal Amount => decimal.TryParse(txtAmount.Text, out var a) ? a : 0m;
+
+        private void Ok_Click(object sender, RoutedEventArgs e)
         {
             DialogResult = true;
             Close();
-        }
-
-        private void Cancel_Click(object sender, RoutedEventArgs e)
-        {
-            DialogResult = false;
         }
     }
 }

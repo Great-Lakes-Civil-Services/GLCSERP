@@ -45,11 +45,7 @@ public DateTime DateOnly
     set => Date = new DateTime(value.Year, value.Month, value.Day, Date.Hour, Date.Minute, Date.Second);
 }
 
-public TimeSpan TimeOnly
-{
-    get => Date.TimeOfDay;
-    set => Date = Date.Date + value;
-}
+public TimeSpan Time { get; set; }
 
 }
 
