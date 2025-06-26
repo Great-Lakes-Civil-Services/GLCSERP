@@ -15,7 +15,7 @@
 <StackPanel Orientation="Horizontal" Margin="20" Grid.Row="0">
     <TextBlock Text="Search Job:" FontSize="16" FontWeight="Bold" Margin="5"/>
     <TextBox x:Name="JobSearchBox"
-         Text="{Binding SearchJobNumber, UpdateSourceTrigger=PropertyChanged}"
+         Text="{Binding SearchJobNumber, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
          Width="250" Height="40" FontSize="16" />
 
     <!-- 🔍 Search Button (Wider & More Readable) -->
@@ -47,12 +47,16 @@
             <!-- ✅ Left Side: Job Search Results -->
             <StackPanel Grid.Column="0">
                 <TextBlock Text="Job Results" FontSize="18" FontWeight="Bold" Margin="10"/>
-                <ListBox ItemsSource="{Binding FilteredJobs}" Margin="10">
+                <ListBox x:Name="JobListBox"
+                         ItemsSource="{Binding FilteredJobs}" 
+                         SelectedItem="{Binding SelectedJob, Mode=TwoWay}"
+                         SelectionChanged="JobListBox_SelectionChanged"
+                         Margin="10">
                     <ListBox.ItemTemplate>
                         <DataTemplate>
                             <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="{Binding JobNumber}" FontWeight="Bold" Margin="5"/>
-                                <TextBlock Text="{Binding JobTitle}" Margin="5"/>
+                                <TextBlock Text="{Binding JobId}" FontWeight="Bold" Margin="5"/>
+                                <TextBlock Text="{Binding CaseNumber}" Margin="5"/>
                             </StackPanel>
                         </DataTemplate>
                     </ListBox.ItemTemplate>

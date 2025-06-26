@@ -1,8 +1,183 @@
 <UserControl x:Class="CivilProcessERP.Views.AdministrationView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             Height="400" Width="600">
-    <Grid Background="LightGray">
-        <TextBlock Text="Administartion View" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="24"/>
-    </Grid>
+             xmlns:views="clr-namespace:CivilProcessERP.Views"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             d:DesignHeight="900" d:DesignWidth="1400">
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Background="LightCyan" Margin="20">
+            <!-- AWS-style Admin Action Panel -->
+            <WrapPanel HorizontalAlignment="Left" Margin="0,0,0,10" ItemHeight="40" ItemWidth="150">
+                <Button x:Name="CreateUserButton" Content="Create User" Background="Green" Foreground="White" Margin="5"  Click="CreateUserButton_Click"/>
+                <Button x:Name="EditUserButton" Content="Edit User" Background="DodgerBlue" Foreground="White" Margin="5" Click="EditUserButton_Click"/>
+                <Button x:Name="DeleteUserButton" Content="Delete User" Background="DarkRed" Foreground="White" Margin="5" Click= "DeleteUserButton_Click"/>
+                <Button x:Name="ToggleUserStatusButton" Content="Enable/Disable User" Background="Gray" Foreground="White" Margin="5" Click= "ToggleUserStatusButton_Click"/>
+                <Button x:Name="AssignPermissionsButton" Content="Assign Permissions" Background="Orange" Foreground="White" Margin="5" Click = "AssignPermissionsButton_Click"/>
+                <Button x:Name="ManageOrgsButton" Content="Manage Organizations" Background="SlateBlue" Foreground="White" Margin="5" Click = "FreezeOrgButton_Click"/>
+                <Button x:Name="DeleteGroupButton"
+        Content="Delete Group"
+        Background="Firebrick"
+        Foreground="White"
+        Margin="5"
+        Click="DeleteGroupButton_Click" />
+
+<Button x:Name="ManagePermissionsButton"
+        Content="Manage Permissions"
+        Background="DarkSlateGray"
+        Foreground="White"
+        Margin="5"
+        Click="ManagePermissionsButton_Click" />
+
+        <Button x:Name="ManageRolePermissionsButton"
+        Content="Manage Role Permissions"
+        Background="Indigo"
+        Foreground="White"
+        Margin="5"
+        Click="ManageRolePermissionsButton_Click" />
+
+
+            </WrapPanel>
+
+            <!-- Group Sections Neatly -->
+            <Grid Margin="0,0,0,10">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="2*"/>
+                    <ColumnDefinition Width="3*"/>
+                </Grid.ColumnDefinitions>
+
+                <GroupBox Header="User Directory" Grid.Column="0" Margin="10">
+                    <StackPanel>
+                        <TextBlock Text="Search User:" Margin="5"/>
+                       <ComboBox x:Name="UserSearchComboBox"
+          IsEditable="True"
+          IsTextSearchEnabled="False"
+          StaysOpenOnEdit="True"
+          Height="30"
+          Margin="5"
+          DisplayMemberPath="LoginName"
+          KeyUp="UserSearchComboBox_KeyUp"
+          SelectionChanged="UserSearchComboBox_SelectionChanged">
+</ComboBox>
+
+                    </StackPanel>
+                </GroupBox>
+
+                <GroupBox Header="Selected User Permissions" Grid.Column="1" Margin="10">
+                    <DataGrid x:Name="SelectedUserPermissionsGrid" AutoGenerateColumns="False" IsReadOnly="True" Height="200">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Permission" Binding="{Binding Permission}" Width="2*"/>
+                            <DataGridCheckBoxColumn Header="Granted" Binding="{Binding IsGranted}"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </GroupBox>
+            </Grid>
+
+            <GroupBox Header="User Activity Log" Margin="10">
+                <DataGrid x:Name="UserAuditLogDataGrid" AutoGenerateColumns="False" IsReadOnly="True" Height="200">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Timestamp" Binding="{Binding Timestamp}" Width="*"/>
+                        <DataGridTextColumn Header="User" Binding="{Binding Username}" Width="*"/>
+                        <DataGridTextColumn Header="Action" Binding="{Binding Action}" Width="*"/>
+                        <DataGridTextColumn Header="Detail" Binding="{Binding Detail}" Width="2*"/>
+                        <DataGridTextColumn Header="Changed By" Binding="{Binding ChangedBy}" Width="*"/>
+                    </DataGrid.Columns>
+                </DataGrid>
+            </GroupBox>
+
+           <Grid Margin="0,0,0,10">
+    <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="1.5*"/>
+        <ColumnDefinition Width="2.5*"/>
+    </Grid.ColumnDefinitions>
+
+    <GroupBox Header="Permission Templates" Grid.Column="0" Margin="10">
+        <StackPanel Margin="10">
+            <TextBlock Text="Apply Template:" Margin="0,0,0,5"/>
+            <ComboBox x:Name="PermissionTemplateComboBox" Width="200">
+                <ComboBoxItem Content="ReadOnlyAccess"/>
+                <ComboBoxItem Content="AdminAccess"/>
+                <ComboBoxItem Content="BillingOnly"/>
+                <ComboBoxItem Content="Custom"/>
+            </ComboBox>
+            <Button Content="Apply" Width="100" Margin="10,10,0,0" Background="Teal" Foreground="White"/>
+        </StackPanel>
+    </GroupBox>
+
+    <GroupBox Header="Manage Groups, Users, and Permissions" Grid.Column="1" Margin="10">
+    <StackPanel Margin="10">
+        <!-- Create group -->
+        <TextBlock Text="Create or Select Group:" FontWeight="Bold" Margin="0,0,0,5"/>
+        <StackPanel Orientation="Horizontal">
+            <TextBox x:Name="NewGroupNameTextBox" Width="200"/>
+            <Button Content="Create Group" Click="CreateGroupButton_Click" Margin="10,0,0,0" Background="DarkSlateBlue" Foreground="White"/>
+        </StackPanel>
+
+        <!-- Select existing group (change ComboBox to ListBox) -->
+        <TextBlock Text="Select Existing Group:" Margin="10,10,0,5"/>
+        <ListBox x:Name="GroupListBox"
+                 Height="100"
+                 SelectionMode="Single"
+                 DisplayMemberPath="."
+                 SelectionChanged="GroupListBox_SelectionChanged"
+                 Background="White"/>
+
+        <!-- Select Users -->
+        <TextBlock Text="Select Users for Group:" Margin="10,10,0,5"/>
+        <ListBox x:Name="UserAssignmentListBox"
+                 Height="120"
+                 SelectionMode="Multiple"
+                 DisplayMemberPath="LoginName"
+                 Background="White"/>
+
+        <!-- Select Permissions -->
+        <TextBlock Text="Assign Permissions to Group:" Margin="10,10,0,5"/>
+        <ListBox x:Name="GroupPermissionsListBox"
+                 Height="120"
+                 SelectionMode="Multiple"
+                 Background="White"
+                 FontSize="14"/>
+
+        <!-- Save all -->
+        <Button Content="Save Group + Users + Permissions"
+                Click="SaveGroupUsersPermissions_Click"
+                Width="250"
+                Margin="10,15,0,0"
+                Background="DarkGreen"
+                Foreground="White"/>
+    </StackPanel>
+</GroupBox>
+
+            </Grid>
+
+            <GroupBox Header="Security Info" Margin="10">
+                <Grid Margin="10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel>
+                        <TextBlock Text="MFA Enabled:"/>
+                        <CheckBox x:Name="MfaEnabledCheckBox" Content="Require MFA on Login"/>
+                    </StackPanel>
+                    <StackPanel Grid.Column="1">
+                        <TextBlock Text="Last Login:"/>
+                        <TextBox x:Name="LastLoginTextBox" IsReadOnly="True"/>
+                    </StackPanel>
+                </Grid>
+            </GroupBox>
+
+            <GroupBox Header="API Credential Management" Margin="10">
+                <StackPanel Margin="10">
+                    <Button Content="Generate New Access Key"  Click="GenerateNewAccessKey_Click" Width="200" Background="DarkSlateGray" Foreground="White" Margin="0,0,0,10"/>
+                    <TextBlock Text="Access Key:"/>
+                    <TextBox x:Name="AccessKeyTextBox" IsReadOnly="True"/>
+                    <TextBlock Text="Secret Key:" Margin="10,10,0,0"/>
+                    <TextBox x:Name="SecretKeyTextBox" IsReadOnly="True"/>
+                </StackPanel>
+            </GroupBox>
+        </StackPanel>
+    </ScrollViewer>
 </UserControl>

@@ -6,17 +6,19 @@ namespace CivilProcessERP.Data
 {
     public class JobRepository
     {
-        private readonly string connectionString = "Host=your_host;Port=5432;Database=your_db;Username=your_user;Password=your_password";
+        private readonly string connectionString = "Host=localhost;Port=5432;Database=mypg_database;Username=postgres;Password=7866";
 
         public Job GetJobDetails(string jobNumber)
         {
             Job job = new Job();
-            string query = "SELECT * FROM Jobs WHERE JobNumber = @JobNumber";
+            
+            // Use the same query structure as JobService for consistency
+            string query = "SELECT serialnum, caseserialnum FROM papers WHERE serialnum = @JobNumber";
 
             using (NpgsqlConnection conn = new NpgsqlConnection(connectionString))
             {
                 NpgsqlCommand cmd = new NpgsqlCommand(query, conn);
-                cmd.Parameters.AddWithValue("@JobNumber", jobNumber);
+                cmd.Parameters.AddWithValue("@JobNumber", long.Parse(jobNumber));
 
                 conn.Open();
                 NpgsqlDataReader reader = cmd.ExecuteReader();
@@ -25,12 +27,10 @@ namespace CivilProcessERP.Data
                 {
                     job = new Job
                     {
-                        JobNumber = reader["JobNumber"]?.ToString() ?? string.Empty,
-                        ClientRef = reader["ClientRef"]?.ToString() ?? string.Empty,
-                        Attorney = reader["Attorney"]?.ToString() ?? string.Empty,
-                        TypeOfService = reader["TypeOfService"]?.ToString() ?? string.Empty,
-                        DateOfService = reader["DateOfService"] != DBNull.Value ? Convert.ToDateTime(reader["DateOfService"]) : (DateTime?)null,
-                        Status = reader["Status"]?.ToString() ?? string.Empty
+                        JobId = reader["serialnum"]?.ToString() ?? string.Empty,
+                        JobNumber = reader["serialnum"]?.ToString() ?? string.Empty, // Keep both for compatibility
+                        CaseNumber = reader["caseserialnum"]?.ToString() ?? string.Empty,
+                        Status = "Active" // Default status
                     };
                 }
             }

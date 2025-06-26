@@ -1,12 +1,10 @@
 using System;
 using System.Windows;
-using System.Windows.Controls;
 
 namespace CivilProcessERP.Views
 {
     public partial class EditDateDialog : Window
     {
-        //private DatePicker datePicker = new DatePicker();
         public DateTime? SelectedDate => datePicker.SelectedDate;
 
         public EditDateDialog(string fieldTitle, DateTime? currentDate)
@@ -20,7 +18,7 @@ namespace CivilProcessERP.Views
         {
             if (SelectedDate == null)
             {
-                MessageBox.Show("Please select a valid date.");
+                MessageBox.Show("Please select a valid date.", "Validation Error", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 

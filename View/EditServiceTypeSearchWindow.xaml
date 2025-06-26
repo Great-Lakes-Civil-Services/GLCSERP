@@ -1,0 +1,13 @@
+<Window x:Class="CivilProcessERP.Views.EditServiceTypeSearchWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Search Service Type" Height="400" Width="400">
+    <StackPanel Margin="10">
+        <TextBox x:Name="txtSearch" TextChanged="txtSearch_TextChanged" Margin="0,0,0,10"/>
+        <ListBox x:Name="lstServiceTypes" Height="250" MouseDoubleClick="lstServiceTypes_MouseDoubleClick"/>
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
+            <Button Content="Select" Width="75" Margin="5" Click="Select_Click"/>
+            <Button Content="Cancel" Width="75" Margin="5" Click="Close_Click"/>
+        </StackPanel>
+    </StackPanel>
+</Window>

@@ -1,11 +1,14 @@
+using System;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows;
 using CivilProcessERP.Helpers;
-using CivilProcessERP.Views;
-using CivilProcessERP.Services;
 using CivilProcessERP.Models.Job;
+using CivilProcessERP.Services;
+using CivilProcessERP.Views;
 
 namespace CivilProcessERP.ViewModels
 {
@@ -15,6 +18,7 @@ namespace CivilProcessERP.ViewModels
 
         public ObservableCollection<TabItemViewModel> OpenTabs { get; set; } = new();
         private TabItemViewModel? _selectedTab;
+        private string _searchText = "";
 
         public TabItemViewModel? SelectedTab
         {
@@ -22,80 +26,158 @@ namespace CivilProcessERP.ViewModels
             set
             {
                 _selectedTab = value;
-                OnPropertyChanged(nameof(SelectedTab));
+                OnPropertyChanged();
             }
         }
 
+        public string SearchText
+        {
+            get => _searchText;
+            set
+            {
+                _searchText = value;
+                OnPropertyChanged();
+            }
+        }
+
+        //public string TestProperty => "DataContext is working!";
+
         public ICommand OpenNewTabCommand { get; }
-        public ICommand CloseTabCommand { get; }
+        //public ICommand CloseTabCommand { get; }
 
         public MainDashboardViewModel(NavigationService navigationService)
         {
             _navService = navigationService;
-            OpenNewTabCommand = new RelayCommand(param => OpenNewTab(param));
-            CloseTabCommand = new RelayCommand(param => CloseTab(param));
+            OpenNewTabCommand = new RelayCommand(async param => await OpenNewTabAsync(param));
+
+            
+            //CloseTabCommand = new RelayCommand(param => 
+            // {
+            //     Console.WriteLine("[DEBUG] CloseTabCommand.Execute called");
+            //     CloseTab(param);
+            // });
+
+            Console.WriteLine("[DEBUG] MainDashboardViewModel initialized with CloseTabCommand");
 
             if (!OpenTabs.Any(tab => tab.Title == "Dashboard"))
             {
-                OpenNewTab("Dashboard");
+                _ = OpenNewTabAsync("Dashboard"); // Fire and forget on startup
             }
         }
+        
+       
 
-        /// <summary>
-        /// Opens a new tab dynamically. If a Job object is passed, it opens a JobDetailsView.
-        /// </summary>
+ public ICommand CloseTabCommand => new RelayCommand(tab =>
+{
+    Console.WriteLine("[DEBUG] CloseTabCommand triggered");
+
+    if (tab is TabItemViewModel tabVM)
+    {
+        Console.WriteLine($"[DEBUG] Removing tab: {tabVM.Title}");
+        OpenTabs.Remove(tabVM);
+        SelectedTab = OpenTabs.LastOrDefault();
+    }
+    else
+    {
+        Console.WriteLine("[DEBUG] Invalid parameter to CloseTabCommand");
+    }
+});
+
     
-        public void OpenNewTab(object? param)
+       public async Task OpenNewTabAsync(object? param)
         {
-            if (param == null) return;
+            if (param == null)
+            {
+                Console.WriteLine("[ERROR] OpenNewTabAsync() called with null param.");
+                return;
+            }
+
+            // ✅ Add 6-tab limit check
+            if (OpenTabs.Count >= 6)
+            {
+                MessageBox.Show("You can only have 6 tabs open at a time. Please close one before opening a new tab.",
+                    "Tab Limit Reached", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
 
             string tabTitle = param is Job job ? $"Job #{job.JobId}" : param.ToString() ?? "New Tab";
+            Console.WriteLine($"[DEBUG] Attempting to open tab: {tabTitle}");
 
-            Console.WriteLine($"[DEBUG] Attempting to Open Tab: {tabTitle}");
-
-            // ✅ Prevent re-opening the same tab
+            // Prevent duplicates
             var existingTab = OpenTabs.FirstOrDefault(tab => tab.Title == tabTitle);
             if (existingTab != null)
             {
-                Console.WriteLine($"[DEBUG] Tab '{tabTitle}' is already open. Switching focus.");
+                Console.WriteLine($"[DEBUG] Tab '{tabTitle}' already open. Focusing it.");
                 SelectedTab = existingTab;
                 return;
             }
 
             UserControl? view = null;
 
-            // ✅ Detect if we are opening JobDetails
-            if (param is Job jobData)
-            {
-                view = new JobDetailsView(jobData);
-            }
+if (param is Job jobData)
+{
+    Console.WriteLine($"[DEBUG] Creating JobDetailsView for: {jobData.JobId}");
+    view = new JobDetailsView(jobData); // ✅ new ViewModel per tab
+
+    var newTab = new TabItemViewModel($"Job #{jobData.JobId}", view);
+
+    newTab.TabCloseRequested += (_, __) =>
+    {
+        OpenTabs.Remove(newTab);
+        SelectedTab = OpenTabs.LastOrDefault();
+    };
+
+    OpenTabs.Add(newTab);
+    SelectedTab = newTab;
+
+    Console.WriteLine($"[DEBUG] ✅ New tab added: Job #{jobData.JobId}. Total open tabs: {OpenTabs.Count}");
+    return;
+}
             else
             {
+                Console.WriteLine($"[DEBUG] Creating generic view for: {tabTitle}");
                 view = _navService.GetView(tabTitle);
             }
 
             if (view != null)
-            {
-                var newTab = new TabItemViewModel(tabTitle, view);
-                OpenTabs.Add(newTab);
-                SelectedTab = newTab;
+{
+    var newTab = new TabItemViewModel(tabTitle, view);
 
-                Console.WriteLine($"[DEBUG] New Tab Opened: {tabTitle}");
-            }
+    // ✅ FIX: Hook up the close event to remove the tab when close is requested
+    newTab.TabCloseRequested += (_, __) =>
+    {
+        OpenTabs.Remove(newTab);
+        SelectedTab = OpenTabs.LastOrDefault();
+    };
+
+    OpenTabs.Add(newTab);
+    SelectedTab = newTab;
+
+    Console.WriteLine($"[DEBUG] ✅ New tab added: {tabTitle}. Total open tabs: {OpenTabs.Count}");
+}
+
             else
             {
-                Console.WriteLine($"[ERROR] Failed to open tab: {tabTitle}. No corresponding view found.");
+                Console.WriteLine($"[ERROR] View for '{tabTitle}' is null. Could not open tab.");
             }
         }
 
-
-
         private void CloseTab(object? tab)
         {
+            Console.WriteLine($"[DEBUG] CloseTab called with parameter: {tab?.GetType().Name}");
+            
             if (tab is TabItemViewModel tabToClose)
             {
+                Console.WriteLine($"[DEBUG] Closing tab: {tabToClose.Title}");
                 OpenTabs.Remove(tabToClose);
-                SelectedTab = OpenTabs.LastOrDefault(); // Switch to the last opened tab
+                
+                // Select the last remaining tab, or null if no tabs left
+                SelectedTab = OpenTabs.Count > 0 ? OpenTabs.Last() : null;
+                Console.WriteLine($"[DEBUG] Tab closed. Remaining tabs: {OpenTabs.Count}");
+            }
+            else
+            {
+                Console.WriteLine($"[DEBUG] CloseTab called with invalid parameter type: {tab?.GetType().Name}");
             }
         }
     }
@@ -104,11 +186,20 @@ namespace CivilProcessERP.ViewModels
     {
         public string Title { get; }
         public UserControl Content { get; }
+        public ICommand CloseCommand { get; }
+        public event EventHandler? TabCloseRequested;
 
         public TabItemViewModel(string title, UserControl content)
         {
             Title = title;
             Content = content;
+
+            CloseCommand = new RelayCommand(_ =>
+            {
+                Console.WriteLine($"[DEBUG] CloseCommand triggered for {Title}");
+                // Let MainWindow handle tab closure via event
+                TabCloseRequested?.Invoke(this, EventArgs.Empty);
+            });
         }
     }
 }

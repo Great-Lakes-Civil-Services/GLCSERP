@@ -21,7 +21,7 @@ namespace CivilProcessERP
                     services.AddSingleton<NavigationService>();
                     services.AddSingleton<MainDashboardViewModel>(); // ViewModel is still registered
                     services.AddSingleton<MainWindow>(); 
-                    services.AddSingleton<ViewModels.CivilProcessERP.ViewModels.LandlordTenantViewModel>();// Only inject MainWindow, no direct ViewModel
+                    services.AddSingleton<LandlordTenantViewModel>();// Only inject MainWindow, no direct ViewModel
                 })
                 .Build();
 

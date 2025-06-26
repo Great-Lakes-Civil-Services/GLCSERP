@@ -1,6 +1,8 @@
 using System.Windows.Controls;
+using System.Windows; // Add this line to use MessageBoxButton and MessageBoxImage
 using CivilProcessERP.Views; // Add this line to include the namespace where MainDashboard is defined
 using CivilProcessERP.ViewModels; // Add this line to include the namespace where LandlordTenantViewModel is defined
+using CivilProcessERP.Models.Job; // Add this line to include the namespace where Job is defined
 using CivilProcessERP.ViewModels; // Add this line to include the namespace where LandlordTenantViewModel is defined
 
 public class NavigationService
@@ -15,11 +17,21 @@ public class NavigationService
             { "Dashboard", GetDashboardInstance }, // ✅ Use the singleton instance method
             { "Executions", () => new ExecutionsView() },
             { "GeneralCivil", () => new GeneralCivilView() },
-            { "LandlordTenant", () => new LandlordTenantView() { DataContext = new CivilProcessERP.ViewModels.CivilProcessERP.ViewModels.LandlordTenantViewModel() } },
+            { "LandlordTenant", () => new LandlordTenantView(new Job()) { DataContext = new LandlordTenantViewModel(new Job(), false) } },
             { "Evictions", () => new EvictionsView() },
             { "ServerMGT", () => new ServerManagementView() },
             { "Logistics", () => new LogisticsView() },
-            { "Administration", () => new AdministrationView() },
+             { "Administration", () => 
+        {
+            if (SessionManager.CurrentUser == null)
+            {
+                MessageBox.Show("No user session. Please login again.", "Access Denied", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return new UserControl(); // Or redirect to login
+            }
+
+            return new AdministrationView(SessionManager.CurrentUser);
+        }
+    },
             { "HuronPortal", () => new HuronPortalView() },
             { "Courts", () => new CourtsView() },
             { "Clients", () => new ClientsView() },

@@ -7,9 +7,19 @@ namespace CivilProcessERP.Models.Job
     public class Job : INotifyPropertyChanged
     {    
         //public decimal TotalInvoiceAmount { get; set; }
+        public Guid? DeletedInvoiceId { get; set; } = null;
+        public Guid? DeletedPaymentId { get; set; }
+        public Guid? DeletedAttachmentId { get; set; }
+
+
+
         public string ExpirationDate { get; set; }
         public string SqlDateTimeCreated { get; set; }
         public string LastDayToServe { get; set; }
+
+        public string CaseSerial { get; set; }  // This holds the numeric `cases.serialnum`
+public string CaseNumber { get; set; }  // This holds the public display number e.g., "2230638GC"
+
         public string JobId { get; set; }
         public string Court { get; set; }
         public string Plaintiff { get; set; }
@@ -18,7 +28,7 @@ namespace CivilProcessERP.Models.Job
         public string Defendant { get; set; }
         public string Address { get; set; }
         public string? Status { get; set; }
-        public string CaseNumber { get; set; }
+        //public string CaseNumber { get; set; }
         public string ClientReference { get; set; }
         public string TypeOfWrit { get; set; }
         public string ServiceType { get; set; }
@@ -29,12 +39,15 @@ namespace CivilProcessERP.Models.Job
         public string Zone { get; set; }
         public string LastServiceDate { get; set; }
 
+        public string CourtSerial { get; set; }
+
         public string JobNumber { get; set; }
         public string ClientRef { get; set; }
         public string Attorney { get; set; }
         public string TypeOfService { get; set; }
         public DateTime? DateOfService { get; set; }
         //public List<AttachmentModel> Attachments { get; set; } = new List<AttachmentModel>();
+
         public List<ChangeEntryModel> ChangeHistory { get; set; } = new List<ChangeEntryModel>();
          //public List<PaymentModel> PaymentEntries { get; set; } = new List<PaymentModel>();
         
@@ -56,6 +69,42 @@ namespace CivilProcessERP.Models.Job
         public decimal TotalInvoiceAmount => InvoiceEntries?.Sum(x => x.Amount) ?? 0;
         public decimal TotalPaymentsAmount => Payments?.Sum(x => x.Amount) ?? 0;
 
+         public Job Clone()
+    {
+        return new Job
+        {
+            JobId = this.JobId,
+            Court = this.Court,
+            Defendant = this.Defendant,
+            Plaintiffs = this.Plaintiffs,
+            Plaintiff = this.Plaintiff,
+            Address = this.Address,
+            Zone = this.Zone,
+            SqlDateTimeCreated = this.SqlDateTimeCreated,
+            ExpirationDate = this.ExpirationDate,
+            LastDayToServe = this.LastDayToServe,
+            TypeOfWrit = this.TypeOfWrit,
+            ClientReference = this.ClientReference,
+            ServiceType = this.ServiceType,
+            ServiceDate = this.ServiceDate,
+            ServiceTime = this.ServiceTime,
+            Date = this.Date,
+            Time = this.Time,
+            Attorney = this.Attorney,
+            Client = this.Client,
+            ProcessServer = this.ProcessServer,
+            ClientStatus = this.ClientStatus,
+            CaseNumber = this.CaseNumber,
+
+            // ❗ DO NOT CLONE InvoiceDue – it's a computed property
+            InvoiceEntries = new ObservableCollection<InvoiceModel>(this.InvoiceEntries.Select(x => x.Clone())),
+            Payments = new ObservableCollection<PaymentModel>(this.Payments.Select(x => x.Clone())),
+            Comments = new ObservableCollection<CommentModel>(this.Comments.Select(x => x.Clone())),
+            Attempts = new ObservableCollection<AttemptsModel>(this.Attempts.Select(x => x.Clone())),
+            ChangeHistory = new List<ChangeEntryModel>(this.ChangeHistory),
+            Attachments = new ObservableCollection<AttachmentModel>(this.Attachments.Select(x => x.Clone()))
+                };
+            }
 public string InvoiceDue 
 {
     get
@@ -103,21 +152,50 @@ protected void OnPropertyChanged(string propertyName)
 
     public class InvoiceModel
     {
+        public Guid Id { get; set; }
        public string Description { get; set; } 
         public int Quantity { get; set; }
         public decimal Rate { get; set; }
         public decimal Amount { get; set; }
-
-    }
-
-     public class PaymentModel
+    public InvoiceModel Clone()
     {
-        public DateTime Date { get; set; }
-        public string Description { get; set; }
-        public string Method { get; set; }
-        public decimal Amount { get; set; }
-        public string TimeOnly { get; internal set; }
+        return new InvoiceModel
+        {
+            Id = this.Id,
+            Description = this.Description,
+            Quantity = this.Quantity,
+            Rate = this.Rate,
+            Amount = this.Amount
+        };
     }
+}
+
+
+ public class PaymentModel
+{
+    public Guid Id { get; set; }
+    public DateTime Date { get; set; }
+    public string Description { get; set; }
+    public string Method { get; set; }
+    public decimal Amount { get; set; }
+    public string TimeOnly { get; internal set; }
+
+    public PaymentModel Clone()
+    {
+        return new PaymentModel
+        {
+            Id = this.Id,
+            Date = this.Date,
+            Description = this.Description,
+            Method = this.Method,
+            Amount = this.Amount,
+            TimeOnly = this.TimeOnly
+        };
+    }
+}
+
+
+
 
     public class CommentModel
 {
@@ -132,8 +210,21 @@ protected void OnPropertyChanged(string propertyName)
 
 
     public string Source { get; set; }
-}
 
+    public CommentModel Clone()
+    {
+        return new CommentModel
+        {
+            Date = this.Date,
+            Time = this.Time,
+            Body = this.Body,
+            Aff = this.Aff,
+            FS = this.FS,
+            Att = this.Att,
+            Source = this.Source
+        };
+    }
+}
 
     public class AttemptsModel
 {
@@ -148,18 +239,53 @@ protected void OnPropertyChanged(string propertyName)
 
 
     public string Source { get; set; }
+    public AttemptsModel Clone()
+    {
+        return new AttemptsModel
+        {
+            Date = this.Date,
+            Time = this.Time,
+            Body = this.Body,
+            Aff = this.Aff,
+            FS = this.FS,
+            Att = this.Att,
+            Source = this.Source
+        };
+    }
 }
 
 public class AttachmentModel
 {
+    public Guid Id { get; set; }              // ✅ Unique ID for attachment
+    public Guid BlobId { get; set; }          // ✅ ID for blob storage
     public string Purpose { get; set; }
     public string Description { get; set; }
     public string Format { get; set; }
     public string FileExtension { get; set; }
+    public byte[] FileData { get; set; }      // ✅ Stores binary file data
+    public string BlobMetadataId { get; set; } // ✅ Optional: string identifier for blobmetadata
 
-    // Add FileData property to store file data as a byte array
-    public byte[] FileData { get; set; }
-     public string BlobMetadataId { get; set; }
+    public string FilePath { get; set; }      // ✅ Local path used for display/editing (not stored in DB)
+    public string Status { get; set; }        // ✅ "New", "Edited", "Synced", etc.
+
+    public AttachmentModel Clone()
+    {
+        return new AttachmentModel
+        {
+            Id = this.Id,
+            BlobId = this.BlobId,
+            Purpose = this.Purpose,
+            Description = this.Description,
+            Format = this.Format,
+            FileExtension = this.FileExtension,
+            FileData = this.FileData,
+            BlobMetadataId = this.BlobMetadataId,
+            FilePath = this.FilePath,
+            Status = this.Status
+        };
+    }
 }
 
 }
+
+

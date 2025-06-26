@@ -7,12 +7,11 @@ namespace CivilProcessERP.Views
         private string originalFirstName = "";
         private string originalLastName = "";
 
-        // ✅ These properties are now exposed to be accessed from outside
         public string FirstName => txtFirstName.Text.Trim();
         public string LastName => txtLastName.Text.Trim();
         public string EditedFullName => $"{FirstName} {LastName}".Trim();
 
-        // ✅ Original constructor (2 args - keeps backward compatibility)
+        // Constructor with full name string
         public EditFieldDialog(string fieldTitle, string currentFullName)
         {
             InitializeComponent();
@@ -26,7 +25,7 @@ namespace CivilProcessERP.Views
             txtLastName.Text = originalLastName;
         }
 
-        // ✅ NEW constructor with 3 args (this is what your code is expecting)
+        // Constructor with separate first and last name
         public EditFieldDialog(string fieldTitle, string firstName, string lastName)
         {
             InitializeComponent();
@@ -47,9 +46,9 @@ namespace CivilProcessERP.Views
 
         private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
-            // Optional: this block is useful if you modify the fields and press X (close)
             if (DialogResult != true)
             {
+                // Restore original values if user presses X or cancels
                 txtFirstName.Text = originalFirstName;
                 txtLastName.Text = originalLastName;
             }

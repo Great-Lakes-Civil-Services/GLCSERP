@@ -11,230 +11,222 @@ using Microsoft.Win32;
 using System.Collections.ObjectModel;
 using CivilProcessERP.Models.Job;
 using System.IO;
+using CivilProcessERP.ViewModels;
 using Npgsql;
+using CivilProcessERP.Services;
 
 // Ensure this namespace contains AttachmentModel
 
 
 namespace CivilProcessERP.Views
 {
-    public partial class JobDetailsView : UserControl,INotifyPropertyChanged
+    public partial class JobDetailsView : UserControl, INotifyPropertyChanged
     {
-       //
+        private readonly SemaphoreSlim _blobLock = new SemaphoreSlim(1, 1); // 🔒 Thread-safe guard for blob preview
+        private readonly SemaphoreSlim _fileAccessLock = new SemaphoreSlim(1, 1); // 🔒 Thread-safe guard for file access
+
+        private string _loggedInRoleName;
+        private Job _originalJob;
         public Job Job { get; set; }
 
         public JobDetailsView(Job job)
-        {
-            InitializeComponent();
+{
+             InitializeComponent();
+            DataContext = new LandlordTenantViewModel(job);
 
-            
-    // Step 1: Fetch court from DB if needed
-    if (job != null && !string.IsNullOrEmpty(job.JobId) && string.IsNullOrEmpty(job.Court))
-    {
-        var jobService = new JobService();
-        try
-        {
-            var dbJob = jobService.GetJobById(job.JobId);
-            job.Court = dbJob.Court; // Just court for now
-        }
-        catch (Exception ex)
-        {
-            MessageBox.Show($"Failed to load job from database: {ex.Message}");
-        }
-    }
-
-    // Step 2: Bind to UI
-    Job = job ?? new Job();
+    // Initialize job object
+            Job = job ?? new Job();
+    _originalJob = Job.Clone();
     DataContext = this;
 
-    // Step 3: Load remaining fields from mock data
-    LoadMockData();
-
-            // If attachments are null, initialize with dummy data for testing
-    // if (job.Attachments == null || !job.Attachments.Any())
-    {
-        // job.Attachments = new List<AttachmentModel>
-        // {
-        //     new AttachmentModel
-        //     {
-        //         Purpose = "Invoice",
-        //         Format = "PDF",
-        //         Description = "Sample Invoice File",
-        //         Status = "Ready",
-        //         FilePath = @"C:\Users\GLCS\CivilProcessERP\Assets\sample-invoice.pdf"
-        //     },
-        //     new AttachmentModel
-        //     {
-        //         Purpose = "Picture",
-        //         Format = "JPG",
-        //         Description = "Test Picture",
-        //         Status = "Available",
-        //         FilePath = @"C:\Users\GLCS\CivilProcessERP\Assets\img.png"
-        //     }
-        // };
-    }
-
-    if (job.ChangeHistory == null || !job.ChangeHistory.Any())
-{
-    job.ChangeHistory = new List<ChangeEntryModel>
-    {
-        new ChangeEntryModel
-        {
-            Date = DateTime.Now.AddDays(-3),
-            FieldName = "Client",
-            OldValue = "ABC Corp",
-            NewValue = "XYZ LLC",
-            ChangedBy = "Admin"
-        },
-        new ChangeEntryModel
-        {
-            Date = DateTime.Now.AddDays(-1),
-            FieldName = "Zone",
-            OldValue = "North",
-            NewValue = "West",
-            ChangedBy = "System"
-        }
-    };
+    Loaded += JobDetailsView_Loaded; // ✅ async logic will run after control is loaded
 }
 
-            Job = job ?? new Job();
-            DataContext = this;
+      private async void JobDetailsView_Loaded(object sender, RoutedEventArgs e)
+{
+    try
+    {
+        var roleService = new RolePermissionService();
+        _loggedInRoleName = await roleService.GetRoleNameByIdAsync(SessionManager.CurrentUser.RoleNumber);
+
+        DisableFinancialControlsIfUnauthorized();
+
+        if (!string.IsNullOrEmpty(Job.JobId) && string.IsNullOrEmpty(Job.Court))
+        {
+            await FetchCourtFromDatabaseAsync(Job.JobId);
+        }
+
+        EnsureChangeHistoryExists(Job);
+    }
+    catch (Exception ex)
+    {
+        MessageBox.Show($"Initialization failed: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+    }
+}
+
+
+
+        private async Task FetchCourtFromDatabaseAsync(string jobId)
+        {
+            try
+            {
+                var jobService = new JobService();
+                var dbJob = await Task.Run(() => jobService.GetJobById(jobId));
+                if (!string.IsNullOrEmpty(dbJob?.Court))
+                {
+                    Application.Current.Dispatcher.Invoke(() =>
+                    {
+                        Job.Court = dbJob.Court;
+                        OnPropertyChanged(nameof(Job));
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Failed to load job from DB: {ex.Message}", "Database Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private void EnsureChangeHistoryExists(Job job)
+        {
+            if (job.ChangeHistory == null || !job.ChangeHistory.Any())
+            {
+                job.ChangeHistory = new List<ChangeEntryModel>
+            {
+                new ChangeEntryModel
+                {
+                    Date = DateTime.Now.AddDays(-3),
+                    FieldName = "Client",
+                    OldValue = "ABC Corp",
+                    NewValue = "XYZ LLC",
+                    ChangedBy = "Admin"
+                },
+                new ChangeEntryModel
+                {
+                    Date = DateTime.Now.AddDays(-1),
+                    FieldName = "Zone",
+                    OldValue = "North",
+                    NewValue = "West",
+                    ChangedBy = "System"
+                }
+            };
+            }
         }
 
         private void CloseButton_Click(object sender, RoutedEventArgs e)
         {
-            var mainWindow = Application.Current.MainWindow as MainWindow;
-            mainWindow?.RemoveTab(this);
+            if (Application.Current.MainWindow is MainWindow mainWindow)
+                mainWindow.RemoveTab(this);
         }
 
-        private void LoadMockData()
-    {
-        var allLogs = new List<LogEntryModel>
+        private void DisableFinancialControlsIfUnauthorized()
         {
-            new LogEntryModel
-            {
-                Date = new DateTime(2025, 1, 16, 21, 58, 0),
-                Body = "Assigned Type of Service: PERSONAL",
-                Att = true,
-                Aff = false,
-                FS = true,
-                Source = "Office FLI"
-            },
-            new LogEntryModel
-            {
-                Date = new DateTime(2025, 1, 16, 18, 55, 0),
-                Body = "Assigned Type of Service: PERSONAL SERVICE",
-                Aff = true,
-                FS = false,
-                Source = "Field Agent"
-            }
-        };
+            bool isAuthorized = _loggedInRoleName == "Admin" || _loggedInRoleName == "LT Manager";
 
-        AttemptEntries = new ObservableCollection<LogEntryModel>(allLogs.Where(x => x.Att));
-        CommentEntries = new ObservableCollection<LogEntryModel>(allLogs.Where(x => !x.Att));
-        //InvoiceEntries.Add(new InvoiceEntryModel { Description = "Filing Fee", Quantity = 1, Rate = 30 });
-//InvoiceEntries.Add(new InvoiceEntryModel { Description = "Service Fee", Quantity = 2, Rate = 45 });
+            AddInvoiceButton.IsEnabled = isAuthorized;
+            EditInvoiceButton.IsEnabled = isAuthorized;
+            DeleteInvoiceButton.IsEnabled = isAuthorized;
 
-//PaymentEntries.Add(new PaymentEntryModel { Date = DateTime.Today.AddDays(-2), Method = "Credit", Description = "Initial", Amount = 30 });
-//PaymentEntries.Add(new PaymentEntryModel { Date = DateTime.Today, Method = "Cash", Description = "Full Pay", Amount = 60 });
+            AddPaymentButton.IsEnabled = isAuthorized;
+            EditPaymentButton.IsEnabled = isAuthorized;
+            DeletePaymentButton.IsEnabled = isAuthorized;
+        }
 
-    }
 
-// private void AttachmentsListView_MouseDoubleClick(object sender, MouseButtonEventArgs e)
-// {
-//     if (sender is ListView listView && listView.SelectedItem is AttachmentModel attachment)
-//     {
-//         try
-//         {
-//             Process.Start(new ProcessStartInfo
-//             {
-//                 FileName = attachment.FilePath, // FilePath or URI
-//                 UseShellExecute = true
-//             });
-//         }
-//         catch (Exception ex)
-//         {
-//             MessageBox.Show($"Failed to open attachment: {ex.Message}");
-//         }
-//     }
-// }
-private void AttachmentsListView_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+
+   // ⚙️ Step 1: Load mock data (used in design-time or fallback)
+private async Task LoadMockDataAsync()
+{
+    Console.WriteLine("🔧 Loading mock data into AttemptEntries and CommentEntries...");
+
+    await Task.Delay(50); // Optional: Simulate async for uniformity
+
+    var allLogs = new List<LogEntryModel>
+    {
+        new LogEntryModel
+        {
+            Date = new DateTime(2025, 1, 16, 21, 58, 0),
+            Body = "Assigned Type of Service: PERSONAL",
+            Att = true,
+            Aff = false,
+            FS = true,
+            Source = "Office FLI"
+        },
+        new LogEntryModel
+        {
+            Date = new DateTime(2025, 1, 16, 18, 55, 0),
+            Body = "Assigned Type of Service: PERSONAL SERVICE",
+            Att = true,
+            Aff = true,
+            FS = false,
+            Source = "Field Agent"
+        }
+    };
+
+    AttemptEntries = new ObservableCollection<LogEntryModel>(allLogs.Where(x => x.Att));
+    CommentEntries = new ObservableCollection<LogEntryModel>(allLogs.Where(x => !x.Att));
+
+    Console.WriteLine($"✅ Loaded {AttemptEntries.Count} attempts and {CommentEntries.Count} comments.");
+}
+// ⚙️ Step 2: Double-click file preview handler for attachments (Async-safe)
+private async void AttachmentsListView_MouseDoubleClick(object sender, MouseButtonEventArgs e)
 {
     var selectedAttachment = AttachmentsListView.SelectedItem as CivilProcessERP.Models.Job.AttachmentModel;
     if (selectedAttachment == null)
+    {
+        Console.WriteLine("⚠️ No attachment selected.");
         return;
+    }
 
     string blobmetadataId = selectedAttachment.BlobMetadataId;
     string fileExtension = selectedAttachment.FileExtension?.Trim().ToLower();
 
-    // 🔍 Debug: Output values before the validation check
-    Console.WriteLine($"[DEBUG] Selected BlobMetadataId: {blobmetadataId}");
-    Console.WriteLine($"[DEBUG] Selected FileExtension: {fileExtension}");
+    Console.WriteLine($"🔍 [DEBUG] BlobMetadataId: {blobmetadataId}");
+    Console.WriteLine($"🔍 [DEBUG] FileExtension: {fileExtension}");
 
     if (string.IsNullOrEmpty(blobmetadataId))
     {
         MessageBox.Show("Invalid attachment metadata.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        Console.WriteLine("❌ Attachment missing BlobMetadataId.");
         return;
     }
 
-    byte[] fileData = FetchBlobData(blobmetadataId);
-
-    if (fileData == null || fileData.Length == 0)
-    {
-        MessageBox.Show("Failed to retrieve file data.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-        return;
-    }
-
+    await _blobLock.WaitAsync(); // 🔒 Lock access to shared blob preview
     try
     {
+        byte[] fileData = await FetchBlobDataAsync(blobmetadataId); // 📥 Fetch asynchronously
+
+        if (fileData == null || fileData.Length == 0)
+        {
+            MessageBox.Show("Failed to retrieve file data.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            Console.WriteLine("❌ No file data retrieved.");
+            return;
+        }
+
         string tempFileName = $"attachment_{Guid.NewGuid()}.{fileExtension}";
         string tempFilePath = Path.Combine(Path.GetTempPath(), tempFileName);
-        File.WriteAllBytes(tempFilePath, fileData);
+        await File.WriteAllBytesAsync(tempFilePath, fileData);
+        Console.WriteLine($"📄 Temporary file written: {tempFilePath}");
 
         Process.Start(new ProcessStartInfo("chrome.exe", tempFilePath)
-{
-    UseShellExecute = true
-});
+        {
+            UseShellExecute = true
+        });
+
+        Console.WriteLine("🚀 Opened file in Chrome.");
     }
     catch (Exception ex)
     {
         MessageBox.Show($"Could not open file: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        Console.WriteLine($"🔥 File open error: {ex.Message}");
+    }
+    finally
+    {
+        _blobLock.Release(); // 🔓 Unlock
     }
 }
 
-// private byte[] FetchBlobData(string blobmetadataId)
-// {
-//     byte[] fileData = null;
-
-//     string query = @"
-//         SELECT b.blob
-//         FROM blobs b
-//         JOIN blobmetadata bm ON bm.id = b.id
-//         WHERE bm.id = @blobmetadataId::uuid;
-//     ";
-
-//     string connectionString = "Host=localhost;Port=5432;Database=mypg_database;Username=postgres;Password=7866";
-
-//     try
-//     {
-//         using (var conn = new NpgsqlConnection(connectionString))
-//         {
-//             conn.Open();
-//             using (var cmd = new NpgsqlCommand(query, conn))
-//             {
-//                 cmd.Parameters.AddWithValue("blobmetadataId", Guid.Parse(blobmetadataId)); // Use Guid.Parse for UUID
-//                 fileData = cmd.ExecuteScalar() as byte[];
-//             }
-//         }
-//     }
-//     catch (Exception ex)
-//     {
-//         MessageBox.Show($"Database error: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-//     }
-
-//     return fileData;
-// }
-private byte[] FetchBlobData(string blobmetadataId)
+private async Task<byte[]> FetchBlobDataAsync(string blobmetadataId)
 {
     byte[] fileData = null;
 
@@ -247,166 +239,243 @@ private byte[] FetchBlobData(string blobmetadataId)
 
     string connectionString = "Host=localhost;Port=5432;Database=mypg_database;Username=postgres;Password=7866";
 
-    using (var conn = new NpgsqlConnection(connectionString))
+    await _fileAccessLock.WaitAsync();
+    try
     {
-        conn.Open();
-        using (var cmd = new NpgsqlCommand(query, conn))
-        {
-            cmd.Parameters.AddWithValue("blobmetadataId", Guid.Parse(blobmetadataId));
-            fileData = cmd.ExecuteScalar() as byte[];  // Retrieves the blob data as a byte array
-        }
+        await using var conn2 = new NpgsqlConnection(connectionString);
+        await conn2.OpenAsync();
+
+        await using var cmd = new NpgsqlCommand(query, conn2);
+        cmd.Parameters.AddWithValue("blobmetadataId", Guid.Parse(blobmetadataId));
+
+        var result = await cmd.ExecuteScalarAsync();
+        fileData = result as byte[];
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"🔥 ERROR fetching blob: {ex.Message}");
+    }
+    finally
+    {
+        _fileAccessLock.Release();
     }
 
-    return fileData;
+    return fileData ?? Array.Empty<byte>();
 }
 
-
-
-private void AddAttachment_Click(object sender, RoutedEventArgs e)
+private async void AddAttachment_Click(object sender, RoutedEventArgs e)
 {
-    // var openFileDialog = new OpenFileDialog
-    // {
-    //     Title = "Select a file to attach",
-    //     Filter = "All Files|*.*",
-    //     Multiselect = false
-    // };
-
-    // if (openFileDialog.ShowDialog() == true)
-    // {
-    //     string filePath = openFileDialog.FileName;
-
-    //     var newAttachment = new AttachmentModel
-    //     {
-    //         Purpose = "General", // default or you can prompt
-    //         Format = System.IO.Path.GetExtension(filePath).TrimStart('.').ToUpper(),
-    //         Description = "New Attachment", // optionally prompt user
-    //         Status = "New",
-    //         FilePath = filePath
-    //     };
-
-    //     Job.Attachments.Add(newAttachment);
-    //     AttachmentsListView.Items.Refresh();
-    // }
-}
-
-private void EditAttachment_Click(object sender, RoutedEventArgs e)
-{
-    if (AttemptsListView.SelectedItem is LogEntryModel selected)
+    var dialog = new Microsoft.Win32.OpenFileDialog
     {
-        var editWindow = new EditLogEntryWindow(selected) { Owner = Window.GetWindow(this) };
-
-        if (editWindow.ShowDialog() == true)
-        {
-            selected.Date = editWindow.SelectedDate.Date.Add(editWindow.SelectedTime);  // ✅ fixed
-
-            selected.Body = editWindow.Body;
-            selected.Aff = editWindow.Aff;
-            selected.FS = editWindow.DS;   // ✅ be sure your dialog exposes property as Ds or FS
-            selected.Att = editWindow.Att;
-            selected.Source = editWindow.Source;
-
-            AttemptsListView.Items.Refresh();
-        }
-    }
-    else
-    {
-        MessageBox.Show("Please select an attempt to edit.");
-    }
-}
-
-private void DeleteAttachment_Click(object sender, RoutedEventArgs e)
-{
-    // if (AttachmentsListView.SelectedItem is AttachmentModel selected)
-    // {
-    //     Job.Attachments.Remove(selected);
-    //     AttachmentsListView.Items.Refresh();
-    // }
-    // else
-    // {
-    //     MessageBox.Show("Please select an attachment to delete.");
-    // }
-    }
-// }
-
-private void AddComment_Click(object sender, RoutedEventArgs e)
-{
-    var newEntry = new LogEntryModel
-    {
-        Date = DateTime.Now,
-        Body = "New Comment",
-        Source = "User",
-        Att = false // it's a comment
+        Title = "Select a file to attach",
+        Filter = "All Files|*.*",
+        Multiselect = false
     };
 
-    //Job.Comments.Add(newEntry);
-}
-private void EditComment_Click(object sender, RoutedEventArgs e)
-{
-    if (CommentsListView.SelectedItem is CommentModel selectedComment)
+    if (dialog.ShowDialog() == true)
     {
-        // map CommentModel to LogEntryModel
-        var tempLogEntry = new LogEntryModel
+        var filePath = dialog.FileName;
+        var fileExtension = Path.GetExtension(filePath).TrimStart('.').ToUpper();
+        var newBlobId = Guid.NewGuid();
+        var newAttachmentId = Guid.NewGuid();
+
+        byte[] fileData;
+        try
         {
-            Date = DateTime.Parse($"{selectedComment.Date} {selectedComment.Time}"),
-            Body = selectedComment.Body,
-            Aff = selectedComment.Aff,
-            FS = selectedComment.FS,
-            Att = selectedComment.Att,
-            Source = selectedComment.Source
+            fileData = await File.ReadAllBytesAsync(filePath);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Failed to read file: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            return;
+        }
+
+        var model = new AttachmentModel
+        {
+            Id = newAttachmentId,
+            BlobId = newBlobId,
+            FilePath = filePath,
+            FileData = fileData,
+            Format = fileExtension,
+            Purpose = "General",
+            Description = Path.GetFileName(filePath),
+            Status = "New"
         };
 
-        var editWindow = new EditLogEntryWindow(tempLogEntry) { Owner = Window.GetWindow(this) };
+        Job.Attachments.Add(model);
+        AttachmentsListView.Items.Refresh();
+        Console.WriteLine("➕ Attachment added.");
+    }
+}
 
-        if (editWindow.ShowDialog() == true)
+        private async void EditAttachment_Click(object sender, RoutedEventArgs e)
         {
-            // update CommentModel back from LogEntryModel
-            selectedComment.Date = editWindow.SelectedDate.ToString("yyyy-MM-dd");
-            selectedComment.Time = editWindow.SelectedDate.ToString("HH:mm:ss");  // or editWindow.SelectedTime if separate
-            selectedComment.Body = editWindow.Body;
-            selectedComment.Aff = editWindow.Aff;
-            selectedComment.FS = editWindow.DS;
-            selectedComment.Att = editWindow.Att;
-            selectedComment.Source = editWindow.Source;
+            if (AttachmentsListView.SelectedItem is AttachmentModel selected)
+            {
+                var dialog = new Microsoft.Win32.OpenFileDialog
+                {
+                    Title = "Replace with new file",
+                    Filter = "All Files|*.*"
+                };
+
+                if (dialog.ShowDialog() == true)
+                {
+                    string newPath = dialog.FileName;
+                    byte[] newData;
+                    try
+                    {
+                        newData = await File.ReadAllBytesAsync(newPath);
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show($"Could not read new file: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                        return;
+                    }
+
+                    string newExtension = Path.GetExtension(newPath).TrimStart('.').ToUpper();
+
+                    selected.FilePath = newPath;
+                    selected.FileData = newData;
+                    selected.Format = newExtension;
+                    selected.Description = Path.GetFileName(newPath);
+                    selected.Status = "Edited";
+
+                    AttachmentsListView.Items.Refresh();
+                    Console.WriteLine($"✏️ Attachment updated: {selected.Description}");
+                }
+            }
+        }
+private readonly SemaphoreSlim _attachmentLock = new SemaphoreSlim(1, 1);
+private readonly SemaphoreSlim _commentLock = new SemaphoreSlim(1, 1);
+
+
+private async void DeleteAttachment_Click(object sender, RoutedEventArgs e)
+{
+    if (AttachmentsListView.SelectedItem is not AttachmentModel selected)
+    {
+        Console.WriteLine("⚠️ No attachment selected for deletion.");
+        return;
+    }
+
+    await _attachmentLock.WaitAsync();
+    try
+    {
+        if (selected.Id != Guid.Empty)
+        {
+            Job.DeletedAttachmentId = selected.Id;
+            Console.WriteLine($"🗑️ Marked for DB delete: {selected.Id}");
+        }
+
+        Job.Attachments.Remove(selected);
+        AttachmentsListView.Items.Refresh();
+        Console.WriteLine("✅ Attachment removed from UI list.");
+    }
+    finally
+    {
+        _attachmentLock.Release();
+    }
+}
+private async void AddComment_Click(object sender, RoutedEventArgs e)
+{
+    await _commentLock.WaitAsync();
+    try
+    {
+        var newEntry = new CommentModel
+        {
+            Date = DateTime.Now.ToString("yyyy-MM-dd"),
+            Time = DateTime.Now.ToString("HH:mm:ss"),
+            Body = "New Comment",
+            Source = "User",
+            Aff = false,
+            FS = false,
+            Att = false
+        };
+
+        Job.Comments.Add(newEntry);
+        CommentsListView.Items.Refresh();
+        Console.WriteLine("➕ New comment added.");
+    }
+    finally
+    {
+        _commentLock.Release();
+    }
+}
+
+private async void EditComment_Click(object sender, RoutedEventArgs e)
+{
+    if (CommentsListView.SelectedItem is not CommentModel selected)
+    {
+        MessageBox.Show("Please select a comment to edit.", "No Selection", MessageBoxButton.OK, MessageBoxImage.Warning);
+        return;
+    }
+
+    await _commentLock.WaitAsync();
+    try
+    {
+        var temp = new LogEntryModel
+        {
+            Date = DateTime.Parse($"{selected.Date} {selected.Time}"),
+            Body = selected.Body,
+            Aff = selected.Aff,
+            FS = selected.FS,
+            Att = selected.Att,
+            Source = selected.Source
+        };
+
+        var win = new EditLogEntryWindow(temp) { Owner = Window.GetWindow(this) };
+
+        if (win.ShowDialog() == true)
+        {
+            selected.Date = win.SelectedDate.ToString("yyyy-MM-dd");
+            selected.Time = win.SelectedDate.ToString("HH:mm:ss");
+            selected.Body = win.Body;
+            selected.Aff = win.Aff;
+            selected.FS = win.DS;
+            selected.Att = win.Att;
+            selected.Source = win.Source;
 
             CommentsListView.Items.Refresh();
+            Console.WriteLine($"✏️ Comment updated: {selected.Body}");
         }
     }
-    else
+    finally
     {
-        MessageBox.Show("Please select a comment to edit.");
+        _commentLock.Release();
+    }
+}
+private void DeleteComment_Click(object sender, RoutedEventArgs e)
+{
+    if (CommentsListView.SelectedItem is CommentModel selected)
+    {
+        Job.Comments.Remove(selected);
+        CommentsListView.Items.Refresh();
     }
 }
 
-
-private void DeleteComment_Click(object sender, RoutedEventArgs e)
-{
-//     if (CommentsListView.SelectedItem is LogEntryModel selected)
-//     {
-//         Job.Comments.Remove(selected);
-//     }
-// }
-}
 
 private void AddAttempt_Click(object sender, RoutedEventArgs e)
 {
-    // var newAttempt = new LogEntryModel
-    // {
-    //     Date = DateTime.Now,
-    //     Body = "New attempt message",
-    //     Aff = true,
-    //     FS = false,
-    //     Source = "System",
-    //     Att = true // so it shows in attempts
-    // };
+    var newAttempt = new AttemptsModel
+    {
+        Date = DateTime.Now.ToString("yyyy-MM-dd"),
+        Time = DateTime.Now.ToString("HH:mm:ss"),
+        Body = "New attempt",
+        Source = "UI",
+        Aff = false,
+        FS = false,
+        Att = true
+    };
 
-    // AttemptEntries.Add(newAttempt);
+    Job.Attempts.Add(newAttempt);
+    AttemptsListView.Items.Refresh();
 }
 
-    private void EditAttempt_Click(object sender, RoutedEventArgs e)
+
+  private void EditAttempt_Click(object sender, RoutedEventArgs e)
 {
     if (AttemptsListView.SelectedItem is AttemptsModel selectedAttempt)
     {
-        var tempLogEntry = new LogEntryModel
+        var temp = new LogEntryModel
         {
             Date = DateTime.Parse($"{selectedAttempt.Date} {selectedAttempt.Time}"),
             Body = selectedAttempt.Body,
@@ -416,7 +485,7 @@ private void AddAttempt_Click(object sender, RoutedEventArgs e)
             Source = selectedAttempt.Source
         };
 
-        var editWindow = new EditLogEntryWindow(tempLogEntry) { Owner = Window.GetWindow(this) };
+        var editWindow = new EditLogEntryWindow(temp) { Owner = Window.GetWindow(this) };
 
         if (editWindow.ShowDialog() == true)
         {
@@ -437,34 +506,67 @@ private void AddAttempt_Click(object sender, RoutedEventArgs e)
     }
 }
 
+private readonly SemaphoreSlim _invoiceLock = new SemaphoreSlim(1, 1);
+private readonly SemaphoreSlim _attemptDeleteLock = new SemaphoreSlim(1, 1);
 
 
-private void DeleteAttempt_Click(object sender, RoutedEventArgs e)
+private async void DeleteAttempt_Click(object sender, RoutedEventArgs e)
 {
-    // if (AttemptsListView.SelectedItem is LogEntryModel selected)
-    // {
-    //     AttemptEntries.Remove(selected);
-    // }
-}
+    if (AttemptsListView.SelectedItem is not AttemptsModel selectedAttempt)
+        return;
 
-private void AddInvoice_Click(object sender, RoutedEventArgs e)
-{
-    var entry = new InvoiceModel();
-var popup = new EditInvoiceWindow(entry) { Owner = Window.GetWindow(this) };
-
-    // if (popup.ShowDialog() == true)
-    // {
-    //     InvoiceEntries.Add(entry);z
-    //      RecalculateTotals();
-    // }
-}
-
-private void EditInvoice_Click(object sender, RoutedEventArgs e)
-{
-    if (InvoiceListView.SelectedItem is InvoiceModel selected)
+    await _attemptDeleteLock.WaitAsync();
+    try
     {
-        var editWindow = new EditInvoiceWindow(selected);
-        editWindow.Owner = Window.GetWindow(this);
+        Job.Attempts.Remove(selectedAttempt);
+        AttemptsListView.Items.Refresh();
+        Console.WriteLine("🗑️ Attempt deleted.");
+    }
+    finally
+    {
+        _attemptDeleteLock.Release();
+    }
+}
+
+
+private async void AddInvoice_Click(object sender, RoutedEventArgs e)
+{
+    await _invoiceLock.WaitAsync();
+    try
+    {
+        var entry = new InvoiceModel();
+        var popup = new EditInvoiceWindow(entry) { Owner = Window.GetWindow(this) };
+
+        if (popup.ShowDialog() == true)
+        {
+            Job.InvoiceEntries.Add(entry);
+            OnPropertyChanged(nameof(Job.TotalInvoiceAmount));
+            Console.WriteLine("➕ Invoice added.");
+        }
+    }
+    finally
+    {
+        _invoiceLock.Release();
+    }
+}
+
+
+private async void EditInvoice_Click(object sender, RoutedEventArgs e)
+{
+    if (InvoiceListView.SelectedItem is not InvoiceModel selected)
+    {
+        MessageBox.Show("Please select an invoice to edit.");
+        return;
+    }
+
+    await _invoiceLock.WaitAsync();
+    try
+    {
+        var editWindow = new EditInvoiceWindow(selected)
+        {
+            Owner = Window.GetWindow(this)
+        };
+
         if (editWindow.ShowDialog() == true)
         {
             selected.Description = editWindow.Description;
@@ -474,72 +576,178 @@ private void EditInvoice_Click(object sender, RoutedEventArgs e)
 
             InvoiceListView.Items.Refresh();
             OnPropertyChanged(nameof(Job.TotalInvoiceAmount));
+            Console.WriteLine("✏️ Invoice edited.");
         }
     }
-    else
+    finally
     {
-        MessageBox.Show("Please select an invoice to edit.");
+        _invoiceLock.Release();
     }
 }
 
+// private async void DeleteInvoice_Click(object sender, RoutedEventArgs e)
+// {
+//     if (InvoiceListView.SelectedItem is not InvoiceModel selected)
+//         return;
 
-private void DeleteInvoice_Click(object sender, RoutedEventArgs e)
+//     await _invoiceLock.WaitAsync();
+//     try
+//     {
+//         if (selected.Id != Guid.Empty)
+//         {
+//             Job.DeletedInvoiceId = selected.Id;
+//             Console.WriteLine($"🗑️ Invoice ID marked for deletion: {selected.Id}");
+//         }
+
+//         Job.InvoiceEntries.Remove(selected);
+//         OnPropertyChanged(nameof(Job.TotalInvoiceAmount));
+//         Console.WriteLine("🗑️ Invoice removed from list.");
+//     }
+//     finally
+//     {
+//         _invoiceLock.Release();
+//     }
+// }
+
+
+
+
+private async void AddPayment_Click(object sender, RoutedEventArgs e)
 {
-    // if (InvoiceListView.SelectedItem is InvoiceEntryModel selected)
-    //     InvoiceEntries.Remove(selected);
-    //      RecalculateTotals();
-}
-
-private void AddPayment_Click(object sender, RoutedEventArgs e)
-{
-   var entry = new PaymentModel();
-var popup = new EditPaymentWindow(entry) { Owner = Window.GetWindow(this) };
-
-    if (popup.ShowDialog() == true)
+    await _paymentLock.WaitAsync();
+    try
     {
-        // PaymentEntries.Add(entry);
-        //  RecalculateTotals();
-    }
-}
+        var entry = new PaymentModel();
+        var popup = new EditPaymentWindow(entry) { Owner = Window.GetWindow(this) };
 
-private void EditPayment_Click(object sender, RoutedEventArgs e)
-{
-    if (PaymentsListView.SelectedItem is PaymentModel selected)
-    {
-        var editWindow = new EditPaymentWindow(selected) { Owner = Window.GetWindow(this) };
-        if (editWindow.ShowDialog() == true)
+        if (popup.ShowDialog() == true)
         {
-            if (DateTime.TryParseExact(editWindow.Date + " " + editWindow.Time, "yyyy-MM-dd HH:mm:ss", null, System.Globalization.DateTimeStyles.None, out var parsedDateTime))
+            Job.Payments.Add(entry);
+            OnPropertyChanged(nameof(Job.TotalPaymentsAmount));
+            Console.WriteLine("➕ New payment added.");
+        }
+    }
+    finally
+    {
+        _paymentLock.Release();
+    }
+}
+
+//private readonly SemaphoreSlim _invoiceLock = new SemaphoreSlim(1, 1);
+private readonly SemaphoreSlim _paymentLock = new SemaphoreSlim(1, 1);
+        private async void EditPayment_Click(object sender, RoutedEventArgs e)
+        {
+            if (PaymentsListView.SelectedItem is not PaymentModel selected)
             {
-                selected.Date = parsedDateTime;
-                selected.TimeOnly = editWindow.Time;
-            }
-            else
-            {
-                MessageBox.Show("Invalid date/time format.");
+                MessageBox.Show("Please select a payment to edit.");
                 return;
             }
 
-            selected.Method = editWindow.Method;
-            selected.Description = editWindow.Description;
-            selected.Amount = editWindow.Amount;
+            await _paymentLock.WaitAsync();
+            try
+            {
+                var editWindow = new EditPaymentWindow(selected)
+                {
+                    Owner = Window.GetWindow(this)
+                };
 
-            PaymentsListView.Items.Refresh();
-            OnPropertyChanged(nameof(Job.TotalPaymentsAmount));
+                if (editWindow.ShowDialog() == true)
+                {
+                    if (DateTime.TryParseExact(
+                            editWindow.Date + " " + editWindow.Time,
+                            "yyyy-MM-dd HH:mm:ss",
+                            null,
+                            System.Globalization.DateTimeStyles.None,
+                            out var parsedDateTime))
+                    {
+                        selected.Date = parsedDateTime;
+                        selected.TimeOnly = editWindow.Time;
+                    }
+                    else
+                    {
+                        MessageBox.Show("Invalid date/time format.");
+                        return;
+                    }
+
+                    selected.Method = editWindow.Method;
+                    selected.Description = editWindow.Description;
+                    selected.Amount = editWindow.Amount;
+
+                    PaymentsListView.Items.Refresh();
+                    OnPropertyChanged(nameof(Job.TotalPaymentsAmount));
+                    Console.WriteLine("✏️ Payment updated.");
+                }
+            }
+            finally
+            {
+                _paymentLock.Release();
+            }
         }
-    }
-    else
+
+
+private async void DeletePayment_Click(object sender, RoutedEventArgs e)
+{
+    if (PaymentsListView.SelectedItem is not PaymentModel selected)
     {
-        MessageBox.Show("Please select a payment to edit.");
+        MessageBox.Show("Please select a payment to delete.");
+        return;
+    }
+
+    try
+    {
+        await Task.Run(() =>
+        {
+            lock (_paymentLock)
+            {
+                if (selected.Id != Guid.Empty)
+                {
+                    Job.DeletedPaymentId = selected.Id;
+                }
+
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    Job.Payments.Remove(selected);
+                    OnPropertyChanged(nameof(Job.TotalPaymentsAmount));
+                });
+            }
+        });
+
+        Console.WriteLine("✅ Payment deleted successfully.");
+    }
+    catch (Exception ex)
+    {
+        MessageBox.Show($"Failed to delete payment: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        Console.WriteLine($"❌ Exception in DeletePayment_Click: {ex.Message}");
     }
 }
 
-private void DeletePayment_Click(object sender, RoutedEventArgs e)
-{
-    // if (PaymentsListView.SelectedItem is PaymentEntryModel selected)
-    //     PaymentEntries.Remove(selected);
-    //      RecalculateTotals();
-}
+
+        private async void DeleteInvoice_Click(object sender, RoutedEventArgs e)
+        {
+            if (InvoiceListView.SelectedItem is not InvoiceModel selected)
+                return;
+
+            await _invoiceLock.WaitAsync();
+            try
+            {
+                if (selected.Id != Guid.Empty)
+                {
+                    Job.DeletedInvoiceId = selected.Id;
+                    Console.WriteLine($"🗑️ Invoice ID marked for deletion: {selected.Id}");
+                }
+
+                Job.InvoiceEntries.Remove(selected);
+                OnPropertyChanged(nameof(Job.TotalInvoiceAmount));
+                Console.WriteLine("🗑️ Invoice removed from list.");
+            }
+            finally
+            {
+                _invoiceLock.Release();
+            }
+        }
+
+
+
 
 public void RecalculateTotals()
 {
@@ -550,249 +758,569 @@ public void RecalculateTotals()
 
 
 public event PropertyChangedEventHandler PropertyChanged;
-protected void OnPropertyChanged(string name)
-{
-    PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
-}
+        protected void OnPropertyChanged(string name)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+        }
 
-private void AddInvoices_Click(object sender, RoutedEventArgs e)
+private readonly SemaphoreSlim _invoiceEditLock = new SemaphoreSlim(1, 1);
+private readonly SemaphoreSlim _defendantLock = new SemaphoreSlim(1, 1);
+private readonly SemaphoreSlim _plaintiffLock = new SemaphoreSlim(1, 1);
+
+
+    private async void AddInvoices_Click(object sender, RoutedEventArgs e)
 {
-    var entry = new CivilProcessERP.Models.Job.InvoiceModel();
-    var popup = new EditInvoiceWindow(entry) { Owner = Window.GetWindow(this) };
-    if (popup.ShowDialog() == true)
+    await _invoiceEditLock.WaitAsync();
+    try
     {
-        //InvoiceEntries.Add(entry);
-        RecalculateTotals(); // 👈 Trigger UI update
+        var entry = new CivilProcessERP.Models.Job.InvoiceModel();
+        var popup = new EditInvoiceWindow(entry) { Owner = Window.GetWindow(this) };
+
+        if (popup.ShowDialog() == true)
+        {
+            // You can optionally add to Job.InvoiceEntries if needed
+            // Job.InvoiceEntries.Add(entry);
+
+            RecalculateTotals(); // 👈 Ensure totals update and UI refreshes
+            Console.WriteLine("➕ Invoice popup completed, totals recalculated.");
+        }
     }
-}
-private void EditCourt_MouseDoubleClick(object sender, MouseButtonEventArgs e)
-{
-    var dialog = new EditFieldDialog("Court", Job.Court, ""); // Pass second param as empty
-    if (dialog.ShowDialog() == true)
+    catch (Exception ex)
     {
-        Job.Court = dialog.FirstName; // Just use the FirstName field for single-value
-        OnPropertyChanged(nameof(Job.Court));
+        Console.WriteLine($"🔥 Error adding invoice: {ex.Message}");
     }
-}
-
-private void EditDefendant_MouseDoubleClick(object sender, MouseButtonEventArgs e)
-{
-    var parts = (Job.Defendant ?? "").Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
-    string firstName = parts.Length > 0 ? parts[0] : "";
-    string lastName = parts.Length > 1 ? parts[1] : "";
-
-    var dialog = new EditFieldDialog("Defendant", firstName, lastName);
-    if (dialog.ShowDialog() == true)
+    finally
     {
-        Job.Defendant = $"{dialog.FirstName} {dialog.LastName}".Trim();
-        OnPropertyChanged(nameof(Job.Defendant));
-    }
-}
-
-private void EditPlaintiff_MouseDoubleClick(object sender, MouseButtonEventArgs e)
-{
-    var parts = (Job.Plaintiff ?? "").Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
-    string firstName = parts.Length > 0 ? parts[0] : "";
-    string lastName = parts.Length > 1 ? parts[1] : "";
-
-    var dialog = new EditFieldDialog("Plaintiff", firstName, lastName);
-    if (dialog.ShowDialog() == true)
-    {
-        Job.Plaintiff = $"{dialog.FirstName} {dialog.LastName}".Trim();
-        OnPropertyChanged(nameof(Job.Plaintiff));
+        _invoiceEditLock.Release();
     }
 }
 
-private void EditAttorney_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+private async void EditDefendant_MouseDoubleClick(object sender, MouseButtonEventArgs e)
 {
-    var parts = (Job.Attorney ?? "").Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
-    string firstName = parts.Length > 0 ? parts[0] : "";
-    string lastName = parts.Length > 1 ? parts[1] : "";
-
-    var dialog = new EditFieldDialog("Attorney", firstName, lastName);
-    if (dialog.ShowDialog() == true)
+    await _defendantLock.WaitAsync();
+    try
     {
-        Job.Attorney = $"{dialog.FirstName} {dialog.LastName}".Trim();
-        OnPropertyChanged(nameof(Job.Attorney));
+        var parts = (Job.Defendant ?? "").Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
+        string firstName = parts.Length > 0 ? parts[0] : "";
+        string lastName = parts.Length > 1 ? parts[1] : "";
+
+        var dialog = new EditFieldDialog("Defendant", firstName, lastName);
+        if (dialog.ShowDialog() == true)
+        {
+            Job.Defendant = $"{dialog.FirstName} {dialog.LastName}".Trim();
+            OnPropertyChanged(nameof(Job.Defendant));
+            Console.WriteLine($"✏️ Defendant name updated: {Job.Defendant}");
+        }
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"🔥 Error editing defendant: {ex.Message}");
+    }
+    finally
+    {
+        _defendantLock.Release();
+    }
+}
+private async void EditPlaintiff_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+{
+    await _plaintiffLock.WaitAsync();
+    try
+    {
+        var dialog = new EditPlaintiffSearchWindow(
+            "Host=localhost;Port=5432;Database=mypg_database;Username=postgres;Password=7866",
+            Job.Plaintiffs)
+        {
+            Owner = Window.GetWindow(this)
+        };
+
+        if (dialog.ShowDialog() == true)
+        {
+            Job.Plaintiffs = dialog.SelectedPlaintiffFullName;
+            OnPropertyChanged(nameof(Job.Plaintiffs));
+            Console.WriteLine($"✏️ Plaintiff updated: {Job.Plaintiffs}");
+        }
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"🔥 Error editing plaintiff: {ex.Message}");
+    }
+    finally
+    {
+        _plaintiffLock.Release();
+    }
+}
+private readonly SemaphoreSlim _attorneyLock = new SemaphoreSlim(1, 1);
+private readonly SemaphoreSlim _processServerLock = new SemaphoreSlim(1, 1);
+private readonly SemaphoreSlim _clientLock = new SemaphoreSlim(1, 1);
+
+private async void EditAttorney_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+{
+    await _attorneyLock.WaitAsync();
+    try
+    {
+        var dialog = new EditAttorneySearchWindow(
+            "Host=localhost;Port=5432;Database=mypg_database;Username=postgres;Password=7866",
+            Job.Attorney)
+        {
+            Owner = Window.GetWindow(this)
+        };
+
+        if (dialog.ShowDialog() == true)
+        {
+            Job.Attorney = dialog.SelectedAttorneyFullName;
+            OnPropertyChanged(nameof(Job.Attorney));
+            Console.WriteLine($"✏️ Attorney updated: {Job.Attorney}");
+        }
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"🔥 Error editing attorney: {ex.Message}");
+    }
+    finally
+    {
+        _attorneyLock.Release();
     }
 }
 
-private void EditProcessServer_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+private async void EditProcessServer_MouseDoubleClick(object sender, MouseButtonEventArgs e)
 {
-    var parts = (Job.ProcessServer ?? "").Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
-    string firstName = parts.Length > 0 ? parts[0] : "";
-    string lastName = parts.Length > 1 ? parts[1] : "";
-
-    var dialog = new EditFieldDialog("Process Server", firstName, lastName);
-    if (dialog.ShowDialog() == true)
+    await _processServerLock.WaitAsync();
+    try
     {
-        Job.ProcessServer = $"{dialog.FirstName} {dialog.LastName}".Trim();
-        OnPropertyChanged(nameof(Job.ProcessServer));
+        var dialog2 = new EditProcessServerSearchWindow(
+            "Host=localhost;Port=5432;Database=mypg_database;Username=postgres;Password=7866",
+            Job.ProcessServer)
+        {
+            Owner = Window.GetWindow(this)
+        };
+
+        if (dialog2.ShowDialog() == true)
+        {
+            Job.ProcessServer = dialog2.SelectedProcessServer;
+            OnPropertyChanged(nameof(Job.ProcessServer));
+            Console.WriteLine($"✏️ Process server updated: {Job.ProcessServer}");
+        }
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"🔥 Error editing process server: {ex.Message}");
+    }
+    finally
+    {
+        _processServerLock.Release();
     }
 }
-
-private void EditClient_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+private async void EditClient_MouseDoubleClick(object sender, MouseButtonEventArgs e)
 {
-    var parts = (Job.Client ?? "").Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
-    string firstName = parts.Length > 0 ? parts[0] : "";
-    string lastName = parts.Length > 1 ? parts[1] : "";
-
-    var dialog = new EditFieldDialog("Client", firstName, lastName);
-    if (dialog.ShowDialog() == true)
+    await _clientLock.WaitAsync();
+    try
     {
-        Job.Client = $"{dialog.FirstName} {dialog.LastName}".Trim();
-        OnPropertyChanged(nameof(Job.Client));
+        var dialog3 = new EditClientSearchWindow(
+            "Host=localhost;Port=5432;Database=mypg_database;Username=postgres;Password=7866",
+            Job.Client)
+        {
+            Owner = Window.GetWindow(this)
+        };
+
+        if (dialog3.ShowDialog() == true)
+        {
+            Job.Client = dialog3.SelectedClientFullName;
+            OnPropertyChanged(nameof(Job.Client));
+            Console.WriteLine($"✏️ Client updated: {Job.Client}");
+        }
     }
-}
-
-private void EditSQLDateTimeCreated_MouseDoubleClick(object sender, MouseButtonEventArgs e)
-{
-    var sqlDateTimeCreated = DateTime.TryParse(Job.SqlDateTimeCreated, out var parsedDate) ? (DateTime?)parsedDate : null;
-    var dialog = new EditDateDialog("SQL DateTime Created", sqlDateTimeCreated);
-    if (dialog.ShowDialog() == true && dialog.SelectedDate != null)
+    catch (Exception ex)
     {
-        Job.SqlDateTimeCreated = dialog.SelectedDate.Value.ToString("yyyy-MM-dd HH:mm:ss");
-        OnPropertyChanged(nameof(Job.SqlDateTimeCreated));
+        Console.WriteLine($"🔥 Error editing client: {ex.Message}");
     }
-}
-
-private void EditClientStatus_MouseDoubleClick(object sender, MouseButtonEventArgs e)
-{
-    var dialog = new SingleFieldDialog("Client Status", Job.ClientStatus);
-    if (dialog.ShowDialog() == true)
+    finally
     {
-        Job.ClientStatus = dialog.Value;
-        OnPropertyChanged(nameof(Job.ClientStatus));
-    }
-}
-
-private void EditArea_MouseDoubleClick(object sender, MouseButtonEventArgs e)
-{
-    var dialog = new SingleFieldDialog("Area", Job.Zone);
-    if (dialog.ShowDialog() == true)
-    {
-        Job.Zone = dialog.Value;
-        OnPropertyChanged(nameof(Job.Zone));
-    }
-}
-
-private void EditTypeOfWrit_MouseDoubleClick(object sender, MouseButtonEventArgs e)
-{
-    var dialog = new SingleFieldDialog("Type of Writ", Job.TypeOfWrit);
-    if (dialog.ShowDialog() == true)
-    {
-        Job.TypeOfWrit = dialog.Value;
-        OnPropertyChanged(nameof(Job.TypeOfWrit));
-    }
-}
-
-private void EditServiceType_MouseDoubleClick(object sender, MouseButtonEventArgs e)
-{
-    var dialog = new SingleFieldDialog("Service Info", Job.ServiceType);
-    if (dialog.ShowDialog() == true)
-    {
-        Job.ServiceType = dialog.Value;
-        OnPropertyChanged(nameof(Job.ServiceType));
-    }
-}
-
-private void EditTime_MouseDoubleClick(object sender, MouseButtonEventArgs e)
-{
-    var dialog = new EditTimeDialog("Court Time", TimeSpan.TryParse(Job.Time, out var timeVal) ? timeVal : (TimeSpan?)null);
-    if (dialog.ShowDialog() == true && dialog.SelectedTime.HasValue)
-    {
-        Job.Time = dialog.SelectedTime.Value.ToString(@"hh\:mm");
-        OnPropertyChanged(nameof(Job.Time));
-    }
-}
-
-private void EditServiceTime_MouseDoubleClick(object sender, MouseButtonEventArgs e)
-{
-    var dialog = new EditTimeDialog("Service Time", TimeSpan.TryParse(Job.ServiceTime, out var timeVal) ? timeVal : (TimeSpan?)null);
-    if (dialog.ShowDialog() == true && dialog.SelectedTime.HasValue)
-    {
-        Job.ServiceTime = dialog.SelectedTime.Value.ToString(@"hh\:mm");
-        OnPropertyChanged(nameof(Job.ServiceTime));
-    }
-}
-
-private void EditJobDate_MouseDoubleClick(object sender, MouseButtonEventArgs e)
-{
-    var dialog = new EditDateDialog("Court Date", DateTime.TryParse(Job.Date, out var dateVal) ? dateVal : (DateTime?)null);
-    if (dialog.ShowDialog() == true && dialog.SelectedDate.HasValue)
-    {
-        Job.Date = dialog.SelectedDate.Value.ToString("MM/dd/yyyy");  // Format as needed
-        OnPropertyChanged(nameof(Job.Date));
-    }
-}
-
-private void EditServiceDate_MouseDoubleClick(object sender, MouseButtonEventArgs e)
-{
-    var dialog = new EditDateDialog("Service Date", DateTime.TryParse(Job.ServiceDate, out var dateVal) ? dateVal : (DateTime?)null);
-    if (dialog.ShowDialog() == true && dialog.SelectedDate.HasValue)
-    {
-        Job.ServiceDate = dialog.SelectedDate.Value.ToString("MM/dd/yyyy");  // Format as needed
-        OnPropertyChanged(nameof(Job.ServiceDate));
-    }
-}
-
-private void EditSqlDateTimeCreated_MouseDoubleClick(object sender, MouseButtonEventArgs e)
-{
-    var existing = DateTime.TryParse(Job.SqlDateTimeCreated, out var parsed) ? parsed : (DateTime?)null;
-    var dialog = new EditDateTimeDialog("SQL DateTime Created", existing);
-    if (dialog.ShowDialog() == true && dialog.SelectedDateTime.HasValue)
-    {
-        Job.SqlDateTimeCreated = dialog.SelectedDateTime.Value.ToString("MM/dd/yyyy HH:mm");
-        OnPropertyChanged(nameof(Job.SqlDateTimeCreated));
-    }
-}
-
-private void EditExpirationDate_MouseDoubleClick(object sender, MouseButtonEventArgs e)
-{
-    var existing = DateTime.TryParse(Job.ExpirationDate, out var parsed) ? parsed : (DateTime?)null;
-    var dialog = new EditDateTimeDialog("Expiration Date", existing);
-    if (dialog.ShowDialog() == true && dialog.SelectedDateTime.HasValue)
-    {
-        Job.ExpirationDate = dialog.SelectedDateTime.Value.ToString("MM/dd/yyyy HH:mm");
-        OnPropertyChanged(nameof(Job.ExpirationDate));
-    }
-}
-
-private void EditLastDayToServe_MouseDoubleClick(object sender, MouseButtonEventArgs e)
-{
-    var existing = DateTime.TryParse(Job.LastDayToServe, out var parsed) ? parsed : (DateTime?)null;
-    var dialog = new EditDateTimeDialog("Last Day to Serve Date", existing);
-    if (dialog.ShowDialog() == true && dialog.SelectedDateTime.HasValue)
-    {
-        Job.LastDayToServe = dialog.SelectedDateTime.Value.ToString("MM/dd/yyyy HH:mm");
-        OnPropertyChanged(nameof(Job.LastDayToServe));
+        _clientLock.Release();
     }
 }
 
 
-public ObservableCollection<LogEntryModel> AttemptEntries { get; set; }
-public ObservableCollection<LogEntryModel> CommentEntries { get; set; }
-//public ObservableCollection<InvoiceEntryModel> InvoiceEntries { get; set; } = new ObservableCollection<InvoiceEntryModel>();
-//public ObservableCollection<PaymentEntryModel> PaymentEntries { get; set; } = new ObservableCollection<PaymentEntryModel>();
 
-//public decimal TotalInvoiceAmount => InvoiceEntries?.Sum(x => x.Amount) ?? 0;
-//public decimal TotalPaymentsAmount => PaymentEntries?.Sum(x => x.Amount) ?? 0;
+private async void EditClientStatus_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+{
+    await _clientStatusLock.WaitAsync();
+    try
+    {
+        var dialog4 = new SingleFieldDialog("Client Status", Job.ClientStatus);
+        if (dialog4.ShowDialog() == true)
+        {
+            Job.ClientStatus = dialog4.Value;
+            OnPropertyChanged(nameof(Job.ClientStatus));
+            Console.WriteLine($"✏️ Client Status updated: {Job.ClientStatus}");
+        }
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"🔥 Error editing client status: {ex.Message}");
+    }
+    finally
+    {
+        _clientStatusLock.Release();
+    }
+}
 
 
-// private void LoadMockData()
-// {
-//     var allLogs = new List<LogEntryModel>
-//     {
-//         new LogEntryModel { Date = new DateTime(2025, 1, 16, 21, 58, 0), Body = "Assigned Type of Service: PERSONAL", Att = true, Source = "Office FLI" },
-//         new LogEntryModel { Date = new DateTime(2025, 1, 16, 18, 55, 0), Body = "Assigned Type of Service: PERSONAL SERVICE", Att = false, Source = "Field Agent" },
-//         // ... Add more mock entries here
-//     };
+private async void EditArea_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+{
+    await _areaLock.WaitAsync();
+    try
+    {
+        var dialog5 = new EditAreaSearchWindow(
+            "Host=localhost;Port=5432;Database=mypg_database;Username=postgres;Password=7866",
+            Job.Zone)
+        {
+            Owner = Window.GetWindow(this)
+        };
 
-//     AttemptEntries = new ObservableCollection<LogEntryModel>(allLogs.Where(x => x.Att));
-//     CommentEntries = new ObservableCollection<LogEntryModel>(allLogs.Where(x => !x.Att));
-// }
+        if (dialog5.ShowDialog() == true)
+        {
+            Job.Zone = dialog5.SelectedArea;
+            OnPropertyChanged(nameof(Job.Zone));
+            Console.WriteLine($"✏️ Zone updated: {Job.Zone}");
+        }
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"🔥 Error editing area: {ex.Message}");
+    }
+    finally
+    {
+        _areaLock.Release();
+    }
+}private async void EditTypeOfWrit_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+{
+    await _typeOfWritLock.WaitAsync();
+    try
+    {
+        var dialog6 = new EditTypeOfWritSearchWindow(Job.TypeOfWrit)
+        {
+            Owner = Window.GetWindow(this)
+        };
+
+        if (dialog6.ShowDialog() == true)
+        {
+            Job.TypeOfWrit = dialog6.SelectedTypeOfWrit;
+            OnPropertyChanged(nameof(Job.TypeOfWrit));
+            Console.WriteLine($"✏️ Type of Writ updated: {Job.TypeOfWrit}");
+        }
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"🔥 Error editing type of writ: {ex.Message}");
+    }
+    finally
+    {
+        _typeOfWritLock.Release();
+    }
+}
+
+
+private readonly SemaphoreSlim _clientStatusLock = new SemaphoreSlim(1, 1);
+private readonly SemaphoreSlim _areaLock = new SemaphoreSlim(1, 1);
+private readonly SemaphoreSlim _typeOfWritLock = new SemaphoreSlim(1, 1);
+private readonly SemaphoreSlim _clientRefLock = new SemaphoreSlim(1, 1);
+
+      private async void EditClientRef_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+{
+    await _clientRefLock.WaitAsync();
+    try
+    {
+        var dialog7 = new SingleFieldDialog("Client Reference", Job.ClientRef);
+        if (dialog7.ShowDialog() == true)
+        {
+            Job.ClientRef = dialog7.Value;
+            OnPropertyChanged(nameof(Job.ClientRef));
+            Console.WriteLine($"✏️ Client Ref updated: {Job.ClientRef}");
+        }
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"🔥 Error editing client ref: {ex.Message}");
+    }
+    finally
+    {
+        _clientRefLock.Release();
+    }
+}
+// Removed duplicate EditServiceType_MouseDoubleClick to resolve method redefinition error.
+
+
+private async void EditSQLDateTimeCreated_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+{
+    await _editLock.WaitAsync();
+    try
+    {
+        var sqlDateTimeCreated = DateTime.TryParse(Job.SqlDateTimeCreated, out var parsedDate) ? (DateTime?)parsedDate : null;
+        var dialog = new EditDateDialog("SQL DateTime Created", sqlDateTimeCreated);
+        if (dialog.ShowDialog() == true && dialog.SelectedDate != null)
+        {
+            Job.SqlDateTimeCreated = dialog.SelectedDate.Value.ToString("yyyy-MM-dd HH:mm:ss");
+            OnPropertyChanged(nameof(Job.SqlDateTimeCreated));
+        }
+    }
+    finally
+    {
+        _editLock.Release();
+    }
+}
+
+private async void EditServiceType_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+{
+    await _editLock.WaitAsync();
+    try
+    {
+        var dialog9 = new EditServiceTypeSearchWindow("Host=localhost;Port=5432;Database=mypg_database;Username=postgres;Password=7866", Job.ServiceType)
+        {
+            Owner = Window.GetWindow(this)
+        };
+
+        if (dialog9.ShowDialog() == true)
+        {
+            Job.ServiceType = dialog9.SelectedServiceType;
+            OnPropertyChanged(nameof(Job.ServiceType));
+        }
+    }
+    finally
+    {
+        _editLock.Release();
+    }
+}
+
+private async void EditTime_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+{
+    await _editLock.WaitAsync();
+    try
+    {
+        var dialog11 = new EditTimeDialog("Court Time", TimeSpan.TryParse(Job.Time, out var timeVal) ? timeVal : (TimeSpan?)null);
+        if (dialog11.ShowDialog() == true && dialog11.SelectedTime.HasValue)
+        {
+            Job.Time = dialog11.SelectedTime.Value.ToString(@"hh\:mm");
+            OnPropertyChanged(nameof(Job.Time));
+        }
+    }
+    finally
+    {
+        _editLock.Release();
+    }
+}
+
+private async void EditServiceTime_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+{
+    await _editLock.WaitAsync();
+    try
+    {
+        var dialog12 = new EditTimeDialog("Service Time", TimeSpan.TryParse(Job.ServiceTime, out var timeVal) ? timeVal : (TimeSpan?)null);
+        if (dialog12.ShowDialog() == true && dialog12.SelectedTime.HasValue)
+        {
+            Job.ServiceTime = dialog12.SelectedTime.Value.ToString(@"hh\:mm");
+            OnPropertyChanged(nameof(Job.ServiceTime));
+        }
+    }
+    finally
+    {
+        _editLock.Release();
+    }
+}
+
+private async void EditJobDate_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+{
+    await _editLock.WaitAsync();
+    try
+    {
+        var dialog13 = new EditDateDialog("Court Date", DateTime.TryParse(Job.Date, out var dateVal) ? dateVal : (DateTime?)null);
+        if (dialog13.ShowDialog() == true && dialog13.SelectedDate.HasValue)
+        {
+            Job.Date = dialog13.SelectedDate.Value.ToString("MM/dd/yyyy");
+            OnPropertyChanged(nameof(Job.Date));
+        }
+    }
+    finally
+    {
+        _editLock.Release();
+    }
+}
+
+private async void EditServiceDate_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+{
+    await _editLock.WaitAsync();
+    try
+    {
+        var dialog14 = new EditDateDialog("Service Date", DateTime.TryParse(Job.ServiceDate, out var dateVal) ? dateVal : (DateTime?)null);
+        if (dialog14.ShowDialog() == true && dialog14.SelectedDate.HasValue)
+        {
+            Job.ServiceDate = dialog14.SelectedDate.Value.ToString("MM/dd/yyyy");
+            OnPropertyChanged(nameof(Job.ServiceDate));
+        }
+    }
+    finally
+    {
+        _editLock.Release();
+    }
+}
+
+private static readonly SemaphoreSlim _editLock = new SemaphoreSlim(1, 1);
+
+private async void EditExpirationDate_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+{
+    await _editLock.WaitAsync();
+    try
+    {
+        var existing = DateTime.TryParse(Job.ExpirationDate, out var parsed) ? parsed : (DateTime?)null;
+        var dialog15 = new EditDateTimeDialog("Expiration Date", existing);
+        if (dialog15.ShowDialog() == true && dialog15.SelectedDateTime.HasValue)
+        {
+            Job.ExpirationDate = dialog15.SelectedDateTime.Value.ToString("MM/dd/yyyy HH:mm");
+            OnPropertyChanged(nameof(Job.ExpirationDate));
+        }
+    }
+    finally
+    {
+        _editLock.Release();
+    }
+}
+
+private async void EditLastDayToServe_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+{
+    await _editLock.WaitAsync();
+    try
+    {
+        var existing = DateTime.TryParse(Job.LastDayToServe, out var parsed) ? parsed : (DateTime?)null;
+        var dialog16 = new EditDateTimeDialog("Last Day to Serve Date", existing);
+        if (dialog16.ShowDialog() == true && dialog16.SelectedDateTime.HasValue)
+        {
+            Job.LastDayToServe = dialog16.SelectedDateTime.Value.ToString("MM/dd/yyyy HH:mm");
+            OnPropertyChanged(nameof(Job.LastDayToServe));
+        }
+    }
+    finally
+    {
+        _editLock.Release();
+    }
+}
+
+private async void EditServeeAddress_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+{
+    await _editLock.WaitAsync();
+    try
+    {
+        var parts = Job.Address?.Split(',') ?? Array.Empty<string>();
+
+        string address1 = parts.Length > 0 ? parts[0].Trim() : "";
+        string address2 = "";
+        string city = parts.Length > 1 ? parts[1].Trim() : "";
+        string state = parts.Length > 2 ? parts[2].Trim().Split(' ')[0] : "";
+        string zip = parts.Length > 2 ? parts[2].Trim().Split(' ').Last() : "";
+
+        var dialog = new EditServeeAddressWindow(address1, address2, city, state, zip)
+        {
+            Owner = Window.GetWindow(this)
+        };
+
+        if (dialog.ShowDialog() == true)
+        {
+            Job.Address = $"{dialog.Address1}, {dialog.City} {dialog.State} {dialog.Zip}";
+        }
+    }
+    finally
+    {
+        _editLock.Release();
+    }
+}
+
+private async void EditCourt_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+{
+    await _editLock.WaitAsync();
+    try
+    {
+        var dialog17 = new EditCourtSearchWindow(
+            "Host=localhost;Port=5432;Database=mypg_database;Username=postgres;Password=7866",
+            Job.Court)
+        {
+            Owner = Window.GetWindow(this)
+        };
+
+        if (dialog17.ShowDialog() == true)
+        {
+            Job.Court = dialog17.SelectedCourt;
+            OnPropertyChanged(nameof(Job.Court));
+        }
+    }
+    finally
+    {
+        _editLock.Release();
+    }
+}
+
+private async void SaveButton_Click(object sender, RoutedEventArgs e)
+{
+    await _editLock.WaitAsync();
+    try
+    {
+        var service = new JobService();
+        await Task.Run(() => service.SaveJob(Job)); // Save in background thread
+        MessageBox.Show("Job saved successfully!", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+    }
+    catch (Exception ex)
+    {
+        MessageBox.Show($"Failed to save job: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+    }
+    finally
+    {
+        _editLock.Release();
+    }
+}
+
+private async void CancelButton_Click(object sender, RoutedEventArgs e)
+{
+    await _editLock.WaitAsync();
+    try
+    {
+        Job = _originalJob.Clone();
+
+        DataContext = null;
+        DataContext = this;
+
+        MessageBox.Show("All unsaved changes were discarded.", "Cancelled", MessageBoxButton.OK, MessageBoxImage.Information);
+
+        var mainWindow = Application.Current.MainWindow as MainWindow;
+        mainWindow?.RemoveTab(this);
+    }
+    finally
+    {
+        _editLock.Release();
+    }
+}
+
+private ObservableCollection<LogEntryModel> _attemptEntries;
+public ObservableCollection<LogEntryModel> AttemptEntries
+{
+    get => _attemptEntries;
+    set
+    {
+        _attemptEntries = value;
+        OnPropertyChanged(nameof(AttemptEntries));
+    }
+}
+
+private ObservableCollection<LogEntryModel> _commentEntries;
+public ObservableCollection<LogEntryModel> CommentEntries
+{
+    get => _commentEntries;
+    set
+    {
+        _commentEntries = value;
+        OnPropertyChanged(nameof(CommentEntries));
+    }
+}
+
 
 
 }
 
 }
+ 

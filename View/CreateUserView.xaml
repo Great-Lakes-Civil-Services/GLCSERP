@@ -1,0 +1,82 @@
+<UserControl x:Class="CivilProcessERP.Views.CreateUserView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             d:DesignHeight="600" d:DesignWidth="1000">
+
+    <Grid Background="WhiteSmoke" Margin="20">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="2*" />
+            <ColumnDefinition Width="3*" />
+        </Grid.ColumnDefinitions>
+
+        <!-- User Form Section -->
+        <StackPanel Grid.Column="0" Margin="10">
+            <TextBlock Text="User Management" FontSize="20" FontWeight="Bold" Margin="0,0,0,20"/>
+
+            <TextBlock Text="Full Name"/>
+            <TextBox x:Name="FullNameTextBox" Margin="0,5,0,10"/>
+
+            <TextBlock Text="Role"/>
+            <ComboBox x:Name="RoleComboBox" Margin="0,5,0,10">
+                <ComboBoxItem Content="Admin"/>
+                <ComboBoxItem Content="IT Manager"/>
+                <ComboBoxItem Content="LT Manager"/>
+                <ComboBoxItem Content="LT Specialist"/>
+                <ComboBoxItem Content="LT Clerk"/>
+            </ComboBox>
+
+            <TextBlock Text="Entity / Department"/>
+            <ComboBox x:Name="EntityComboBox" Margin="0,5,0,10">
+                <ComboBoxItem Content="Landlord-Tenant"/>
+                <ComboBoxItem Content="General Civil"/>
+                <ComboBoxItem Content="Eviction"/>
+                <ComboBoxItem Content="Property Seizure"/>
+                <ComboBoxItem Content="Routing"/>
+                <ComboBoxItem Content="Server Management"/>
+            </ComboBox>
+
+            <TextBlock Text="Username"/>
+            <TextBox x:Name="UsernameTextBox" Margin="0,5,0,10"/>
+
+            <TextBlock Text="Password"/>
+            <PasswordBox x:Name="PasswordBox" Margin="0,5,0,10"/>
+
+            <TextBlock Text="Confirm Password"/>
+            <PasswordBox x:Name="ConfirmPasswordBox" Margin="0,5,0,20"/>
+
+            <StackPanel Orientation="Horizontal">
+                <Button Content="Save"
+        Width="100"
+        Margin="0,0,10,0"
+        Background="Green"
+        Foreground="White"
+        Click="SaveButton_Click" />
+
+<Button Content="Cancel"
+        Width="100"
+        Background="DarkRed"
+        Foreground="White"
+        Click="CancelButton_Click" />
+            </StackPanel>
+        </StackPanel>
+
+        <!-- Permissions Viewer Section -->
+        <GroupBox Header="Role-Based Permissions" Grid.Column="1" Margin="10">
+            <Grid>
+                <DataGrid x:Name="PermissionsDataGrid" AutoGenerateColumns="False" IsReadOnly="True">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Permission" Binding="{Binding Permission}" Width="*"/>
+                        <DataGridCheckBoxColumn Header="Admin" Binding="{Binding Admin}"/>
+                        <DataGridCheckBoxColumn Header="IT Manager" Binding="{Binding ITManager}"/>
+                        <DataGridCheckBoxColumn Header="LT Manager" Binding="{Binding LTManager}"/>
+                        <DataGridCheckBoxColumn Header="LT Specialist" Binding="{Binding LTSpecialist}"/>
+                        <DataGridCheckBoxColumn Header="LT Clerk" Binding="{Binding LTClerk}"/>
+                    </DataGrid.Columns>
+                </DataGrid>
+            </Grid>
+        </GroupBox>
+    </Grid>
+</UserControl>

@@ -7,7 +7,22 @@ namespace CivilProcessERP.Views
     public partial class EditLogEntryWindow : Window
     {
         public DateTime SelectedDate => datePicker.SelectedDate ?? DateTime.Today;
-        public TimeSpan SelectedTime => TimeSpan.Parse(txtTime.Text);
+       public TimeSpan SelectedTime
+{
+    get
+    {
+        if (DateTime.TryParse(txtTime.Text, out var parsedTime))
+        {
+            return parsedTime.TimeOfDay;
+        }
+        else
+        {
+            MessageBox.Show("⛔ Invalid time format. Please enter time like '1:55 PM' or '13:55'.", "Invalid Input", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return TimeSpan.Zero; // default fallback
+        }
+    }
+}
+
         public string Body => txtBody.Text.Trim();
         public bool Aff => chkAff.IsChecked == true;
         public bool DS => chkDs.IsChecked == true;

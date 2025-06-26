@@ -11,6 +11,7 @@ namespace CivilProcessERP.Views
         public EditDateTimeDialog(string fieldTitle, DateTime? currentDateTime)
         {
             InitializeComponent();
+
             lblTitle.Text = $"Edit {fieldTitle}";
 
             datePicker.SelectedDate = currentDateTime?.Date ?? DateTime.Today;
@@ -21,13 +22,13 @@ namespace CivilProcessERP.Views
         {
             if (datePicker.SelectedDate == null)
             {
-                MessageBox.Show("Please select a valid date.");
+                MessageBox.Show("Please select a valid date.", "Validation Error", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
-            if (!TimeSpan.TryParseExact(txtTime.Text, "hh\\:mm", CultureInfo.InvariantCulture, out var time))
+            if (!TimeSpan.TryParseExact(txtTime.Text.Trim(), "hh\\:mm", CultureInfo.InvariantCulture, out var time))
             {
-                MessageBox.Show("Please enter a valid time in HH:mm format.");
+                MessageBox.Show("Please enter a valid time in HH:mm format (e.g. 14:30).", "Invalid Time", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 

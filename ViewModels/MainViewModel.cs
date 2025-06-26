@@ -5,6 +5,7 @@ using CivilProcessERP.Models;
 using CivilProcessERP.Data;
 using Microsoft.EntityFrameworkCore;
 using CivilProcessERP.Helpers;
+using System.Windows;
 
 namespace CivilProcessERP.ViewModels
 {
@@ -12,26 +13,40 @@ namespace CivilProcessERP.ViewModels
     {
         private readonly OfficeDbContext _context;
 
-        public ObservableCollection<LeaseAgreement> LeaseAgreements { get; set; }
+        public ObservableCollection<LeaseAgreement> LeaseAgreements { get; private set; }
+
         public ICommand RefreshCommand { get; }
 
         public MainViewModel(OfficeDbContext context)
         {
             _context = context;
             LeaseAgreements = new ObservableCollection<LeaseAgreement>();
-            RefreshCommand = new RelayCommand(async (param) => await LoadLeaseAgreements());
+            RefreshCommand = new RelayCommand(async (param) => await LoadLeaseAgreementsAsync());
 
-            // Optionally load data on startup.
-            Task.Run(async () => await LoadLeaseAgreements());
+            // Fire-and-forget async load on startup (safe inside constructor)
+            Application.Current.Dispatcher.InvokeAsync(async () => await LoadLeaseAgreementsAsync());
         }
 
-        public async Task LoadLeaseAgreements()
+        public async Task LoadLeaseAgreementsAsync()
         {
-            var agreements = await _context.LeaseAgreements.ToListAsync();
-            LeaseAgreements.Clear();
-            foreach (var agreement in agreements)
+            try
             {
-                LeaseAgreements.Add(agreement);
+                var agreements = await _context.LeaseAgreements.ToListAsync();
+
+                // Ensure updates happen on UI thread
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    LeaseAgreements.Clear();
+                    foreach (var agreement in agreements)
+                    {
+                        LeaseAgreements.Add(agreement);
+                    }
+                });
+            }
+            catch (System.Exception ex)
+            {
+                // Handle DB or UI exceptions gracefully
+                System.Diagnostics.Debug.WriteLine($"[ERROR] Loading agreements: {ex.Message}");
             }
         }
     }

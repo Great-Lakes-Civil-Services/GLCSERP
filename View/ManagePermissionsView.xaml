@@ -1,0 +1,62 @@
+<UserControl x:Class="CivilProcessERP.Views.ManagePermissionsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             d:DesignHeight="400" d:DesignWidth="400">
+
+    <Grid Background="LightCyan" Margin="20">
+        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Width="300">
+
+            <TextBlock Text="Manage Permissions" FontSize="20" FontWeight="Bold" Margin="0,0,0,20" HorizontalAlignment="Center"/>
+
+            <!-- Add Permission -->
+            <TextBlock Text="Add New Permission:" Margin="0,0,0,5"/>
+            <TextBox x:Name="NewPermissionBox" Height="30" Margin="0,0,0,10"/>
+
+            <Button Content="Add Permission"
+                    Click="Add_Click"
+                    Background="DarkGreen"
+                    Foreground="White"
+                    Height="35"
+                    Width="150"
+                    HorizontalAlignment="Center"/>
+
+            <!-- Existing Permissions -->
+            <TextBlock Text="Existing Permissions:" Margin="20,20,0,5"/>
+            <ListBox x:Name="PermissionListBox"
+                     Height="150"
+                     Width="300"
+                     Margin="0,0,0,10"
+                     HorizontalAlignment="Center"/>
+
+            <Button Content="Delete Selected"
+                    Click="Delete_Click"
+                    Background="DarkRed"
+                    Foreground="White"
+                    Height="35"
+                    Width="150"
+                    HorizontalAlignment="Center"/>        
+
+            <!-- Status -->
+            <TextBlock x:Name="StatusText"
+                       Foreground="Red"
+                       FontWeight="Bold"
+                       Margin="0,20,0,0"
+                       Visibility="Collapsed"
+                       TextWrapping="Wrap"
+                       TextAlignment="Center"/>
+
+             <Button Content="Cancel"
+        Click="Cancel_Click"
+        Background="Gray"
+        Foreground="White"
+        Height="35"
+        Width="150"
+        HorizontalAlignment="Center"
+        Margin="0,10,0,0"/>
+          
+        </StackPanel>
+    </Grid>
+</UserControl>

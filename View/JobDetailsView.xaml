@@ -35,7 +35,7 @@
                 <TextBlock Text="🔺 3 Other jobs with same Case#" FontStyle="Italic" Foreground="DarkRed" Margin="10,0,5,10"/>
 
                 <TextBlock Text="Court" FontWeight="Bold" Margin="5"/>
-                <TextBox Text="{Binding Job.Court}" PreviewMouseDoubleClick="EditCourt_MouseDoubleClick"  Margin="5"/>
+                <TextBox Text="{Binding Job.Court}" PreviewMouseDoubleClick= "EditCourt_MouseDoubleClick"  Margin="5"/>
 
                 <TextBlock Text="Defendant's Name" FontWeight="Bold" Margin="5"/>
                 <TextBox Text="{Binding Job.Defendant}" PreviewMouseDoubleClick="EditDefendant_MouseDoubleClick" Margin="5"/>
@@ -44,7 +44,7 @@
                 <TextBox Text="{Binding Job.Plaintiffs}" PreviewMouseDoubleClick="EditPlaintiff_MouseDoubleClick" Margin="5"/>
 
                 <TextBlock Text="Servee's Address" FontWeight="Bold" Margin="5"/>
-                <TextBox Text="{Binding Job.Address}"  Margin="5"/>
+                <TextBox Text="{Binding Job.Address}" PreviewMouseDoubleClick="EditServeeAddress_MouseDoubleClick" Margin="5"/>
 
                 <!-- Zone & SQL -->
         <Grid Grid.Row="1" Margin="5">
@@ -60,7 +60,7 @@
 
             <StackPanel Grid.Column="1" Margin="2">
                 <TextBlock Text="SQL DateTime Created" FontWeight="Bold"/>
-                <TextBox Text="{Binding Job.SqlDateTimeCreated}" PreviewMouseDoubleClick="EditSqlDateTimeCreated_MouseDoubleClick"/>
+                <TextBox Text="{Binding Job.SqlDateTimeCreated}"/>
             </StackPanel>
         </Grid>
 
@@ -346,9 +346,9 @@
 <!-- Footer Buttons (Corrected - Aligned under Change History in middle column with downward offset) -->
 <Grid Grid.Column="1" Grid.Row="4" Margin="0,150,0,0"> <!-- Top margin to push it downward -->
     <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-        <Button Content="Save" Width="120" Height="40" Background="Green" Foreground="White" Margin="10"/>
+        <Button Content="Save" Width="120" Height="40" Background="Green" Foreground="White" Margin="10" Click="SaveButton_Click"/>
         <Button Content="Cancel" Width="120" Height="40" Background="Red" Foreground="White" Margin="10"
-                Click="CloseButton_Click"/>
+                Click="CancelButton_Click"/>
     </StackPanel>
 </Grid>
 
@@ -384,11 +384,11 @@
         <!-- Client Ref # -->
         <StackPanel Grid.Column="1" Margin="5,0,0,0">
             <TextBlock Text="Client Ref #" FontWeight="Bold" Margin="0,0,0,3"/>
-            <TextBox Text="{Binding Job.ClientReference}" />
+            <TextBox Text="{Binding Job.ClientReference}" PreviewMouseDoubleClick="EditClientRef_MouseDoubleClick"/>
         </StackPanel>
     </Grid>
             <TextBlock Text="Plaintiff" FontWeight="Bold" Margin="5"/>
-            <TextBox Text="{Binding Job.Plaintiff}" Margin="5"/>
+            <TextBox Text="{Binding Job.Plaintiff}" PreviewMouseDoubleClick="EditPlaintiff_MouseDoubleClick" Margin="5"/>
 
             <TextBlock Text="Attorney Name" FontWeight="Bold" Margin="5"/>
             <TextBox Text="{Binding Job.Attorney}"  PreviewMouseDoubleClick="EditAttorney_MouseDoubleClick" Margin="5"/>
@@ -430,17 +430,12 @@
 </ListView>
 
             <!-- Total Invoice Amount aligned with Amount column -->
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,5,5">
-                <TextBlock Text="Total INVOICED:" FontWeight="Bold" VerticalAlignment="Center"/>
-                <TextBlock Text="{Binding Job.TotalInvoiceAmount, StringFormat={}{0:C}}"
-           FontWeight="Bold" Margin="5,0,0,0" VerticalAlignment="Center"/>
-            </StackPanel>
-
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="5">
-                <Button Content="Add" Width="60" Margin="2" Click="AddInvoice_Click"/>
-                <Button Content="Edit" Width="60" Margin="2" Click="EditInvoice_Click"/>
-                <Button Content="Delete" Width="60" Margin="2" Click="DeleteInvoice_Click"/>
-            </StackPanel>
+            <!-- Invoice Buttons -->
+<StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="5">
+    <Button x:Name="AddInvoiceButton" Content="Add" Width="60" Margin="2" Click="AddInvoice_Click"/>
+    <Button x:Name="EditInvoiceButton" Content="Edit" Width="60" Margin="2" Click="EditInvoice_Click"/>
+    <Button x:Name="DeleteInvoiceButton" Content="Delete" Width="60" Margin="2" Click="DeleteInvoice_Click"/>
+</StackPanel>
         </StackPanel>
     </Border>
 </StackPanel>
@@ -468,11 +463,12 @@
                            FontWeight="Bold" Margin="5,0,0,0" VerticalAlignment="Center"/>
             </StackPanel>
 
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="5">
-                <Button Content="Add" Width="60" Margin="2" Click="AddPayment_Click"/>
-                <Button Content="Edit" Width="60" Margin="2" Click="EditPayment_Click"/>
-                <Button Content="Delete" Width="60" Margin="2" Click="DeletePayment_Click"/>
-            </StackPanel>
+            <!-- Payment Buttons -->
+<StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="5">
+    <Button x:Name="AddPaymentButton" Content="Add" Width="60" Margin="2" Click="AddPayment_Click"/>
+    <Button x:Name="EditPaymentButton" Content="Edit" Width="60" Margin="2" Click="EditPayment_Click"/>
+    <Button x:Name="DeletePaymentButton" Content="Delete" Width="60" Margin="2" Click="DeletePayment_Click"/>
+</StackPanel>
         </StackPanel>
     </Border>
 </StackPanel>
