@@ -13,6 +13,8 @@ namespace CivilProcessERP.Views
         private readonly string _initialValue;
 
         public string SelectedProcessServer => lstServers.SelectedItem?.ToString() ?? "";
+        public bool IsNewProcessServer { get; set; } = false;
+        public string NewProcessServer { get; set; } = string.Empty;
 
         public EditProcessServerSearchWindow(string connectionString, string initialValue = "")
         {
@@ -108,6 +110,19 @@ namespace CivilProcessERP.Views
         {
             DialogResult = false;
             Close();
+        }
+
+        // Add a handler for the 'Other' button (if not present)
+        private void Other_Click(object sender, RoutedEventArgs e)
+        {
+            var input = Microsoft.VisualBasic.Interaction.InputBox("Enter new process server name:", "Add New Process Server", txtSearch.Text);
+            if (!string.IsNullOrWhiteSpace(input))
+            {
+                IsNewProcessServer = true;
+                NewProcessServer = input.Trim();
+                DialogResult = true;
+                Close();
+            }
         }
     }
 }

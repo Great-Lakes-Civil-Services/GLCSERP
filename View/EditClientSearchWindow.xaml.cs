@@ -12,6 +12,8 @@ namespace CivilProcessERP.Views
         private readonly string _initialValue;
 
         public string SelectedClientFullName => lstClients.SelectedItem?.ToString() ?? "";
+        public bool IsNewClient { get; set; } = false;
+        public string NewClientFullName { get; set; } = string.Empty;
 
         public EditClientSearchWindow(string connectionString, string initialValue = "")
         {
@@ -110,6 +112,19 @@ if (!string.IsNullOrWhiteSpace(filter))
         {
             DialogResult = false;
             Close();
+        }
+
+        // Add a handler for the 'Other' button (if not present)
+        private void Other_Click(object sender, RoutedEventArgs e)
+        {
+            var input = Microsoft.VisualBasic.Interaction.InputBox("Enter new client name:", "Add New Client", txtSearch.Text);
+            if (!string.IsNullOrWhiteSpace(input))
+            {
+                IsNewClient = true;
+                NewClientFullName = input.Trim();
+                DialogResult = true;
+                Close();
+            }
         }
     }
 }

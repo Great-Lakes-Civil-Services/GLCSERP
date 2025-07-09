@@ -29,6 +29,17 @@ namespace CivilProcessERP.Views
         private Job _originalJob;
         public Job Job { get; set; }
 
+        private int _jobCountForCaseNumber;
+        public int JobCountForCaseNumber
+        {
+            get => _jobCountForCaseNumber;
+            set
+            {
+                _jobCountForCaseNumber = value;
+                OnPropertyChanged(nameof(JobCountForCaseNumber));
+            }
+        }
+
         public JobDetailsView(Job job)
 {
              InitializeComponent();
@@ -57,6 +68,12 @@ namespace CivilProcessERP.Views
         }
 
         EnsureChangeHistoryExists(Job);
+
+        if (!string.IsNullOrEmpty(Job.CaseNumber))
+        {
+            var jobService = new JobService();
+            JobCountForCaseNumber = await jobService.GetJobCountByCaseNumberAsync(Job.CaseNumber);
+        }
     }
     catch (Exception ex)
     {
@@ -89,28 +106,28 @@ namespace CivilProcessERP.Views
 
         private void EnsureChangeHistoryExists(Job job)
         {
-            if (job.ChangeHistory == null || !job.ChangeHistory.Any())
-            {
-                job.ChangeHistory = new List<ChangeEntryModel>
-            {
-                new ChangeEntryModel
-                {
-                    Date = DateTime.Now.AddDays(-3),
-                    FieldName = "Client",
-                    OldValue = "ABC Corp",
-                    NewValue = "XYZ LLC",
-                    ChangedBy = "Admin"
-                },
-                new ChangeEntryModel
-                {
-                    Date = DateTime.Now.AddDays(-1),
-                    FieldName = "Zone",
-                    OldValue = "North",
-                    NewValue = "West",
-                    ChangedBy = "System"
-                }
-            };
-            }
+            // if (job.ChangeHistory == null || !job.ChangeHistory.Any())
+            // {
+            //     job.ChangeHistory = new List<ChangeEntryModel>
+            // {
+            //     new ChangeEntryModel
+            //     {
+            //         Date = DateTime.Now.AddDays(-3),
+            //         FieldName = "Client",
+            //         OldValue = "ABC Corp",
+            //         NewValue = "XYZ LLC",
+            //         ChangedBy = "Admin"
+            //     },
+            //     new ChangeEntryModel
+            //     {
+            //         Date = DateTime.Now.AddDays(-1),
+            //         FieldName = "Zone",
+            //         OldValue = "North",
+            //         NewValue = "West",
+            //         ChangedBy = "System"
+            //     }
+            // };
+            // }
         }
 
         private void CloseButton_Click(object sender, RoutedEventArgs e)
@@ -765,35 +782,39 @@ public event PropertyChangedEventHandler PropertyChanged;
 
 private readonly SemaphoreSlim _invoiceEditLock = new SemaphoreSlim(1, 1);
 private readonly SemaphoreSlim _defendantLock = new SemaphoreSlim(1, 1);
-private readonly SemaphoreSlim _plaintiffLock = new SemaphoreSlim(1, 1);
+        private readonly SemaphoreSlim _plaintiffLock = new SemaphoreSlim(1, 1);
+
+private readonly SemaphoreSlim _plaintiffsLock = new SemaphoreSlim(1, 1);
 
 
-    private async void AddInvoices_Click(object sender, RoutedEventArgs e)
-{
-    await _invoiceEditLock.WaitAsync();
-    try
-    {
-        var entry = new CivilProcessERP.Models.Job.InvoiceModel();
-        var popup = new EditInvoiceWindow(entry) { Owner = Window.GetWindow(this) };
 
-        if (popup.ShowDialog() == true)
+
+        private async void AddInvoices_Click(object sender, RoutedEventArgs e)
         {
-            // You can optionally add to Job.InvoiceEntries if needed
-            // Job.InvoiceEntries.Add(entry);
+            await _invoiceEditLock.WaitAsync();
+            try
+            {
+                var entry = new CivilProcessERP.Models.Job.InvoiceModel();
+                var popup = new EditInvoiceWindow(entry) { Owner = Window.GetWindow(this) };
 
-            RecalculateTotals(); // 👈 Ensure totals update and UI refreshes
-            Console.WriteLine("➕ Invoice popup completed, totals recalculated.");
+                if (popup.ShowDialog() == true)
+                {
+                    // You can optionally add to Job.InvoiceEntries if needed
+                    // Job.InvoiceEntries.Add(entry);
+
+                    RecalculateTotals(); // 👈 Ensure totals update and UI refreshes
+                    Console.WriteLine("➕ Invoice popup completed, totals recalculated.");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"🔥 Error adding invoice: {ex.Message}");
+            }
+            finally
+            {
+                _invoiceEditLock.Release();
+            }
         }
-    }
-    catch (Exception ex)
-    {
-        Console.WriteLine($"🔥 Error adding invoice: {ex.Message}");
-    }
-    finally
-    {
-        _invoiceEditLock.Release();
-    }
-}
 
 private async void EditDefendant_MouseDoubleClick(object sender, MouseButtonEventArgs e)
 {
@@ -821,12 +842,42 @@ private async void EditDefendant_MouseDoubleClick(object sender, MouseButtonEven
         _defendantLock.Release();
     }
 }
-private async void EditPlaintiff_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+        private async void EditPlaintiff_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+        {
+            await _plaintiffLock.WaitAsync();
+            try
+            {
+                var dialog = new EditPlaintiffSearchWindow(
+                    "Host=localhost;Port=5432;Database=mypg_database;Username=postgres;Password=7866",
+                    Job.Plaintiff)
+                {
+                    Owner = Window.GetWindow(this)
+                };
+
+                if (dialog.ShowDialog() == true)
+                {
+                    Job.Plaintiff = dialog.SelectedPlaintiffFullName;
+                    Job.IsPlaintiffEdited = true;
+                    OnPropertyChanged(nameof(Job.Plaintiff));
+                    Console.WriteLine($"✏️ Plaintiff updated: {Job.Plaintiff}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"🔥 Error editing plaintiff: {ex.Message}");
+            }
+            finally
+            {
+                _plaintiffLock.Release();
+            }
+        }
+
+private async void EditPlaintiffs_MouseDoubleClick(object sender, MouseButtonEventArgs e)
 {
-    await _plaintiffLock.WaitAsync();
+    await _plaintiffsLock.WaitAsync();
     try
     {
-        var dialog = new EditPlaintiffSearchWindow(
+        var dialog = new EditPlaintiffsSearchWindow(
             "Host=localhost;Port=5432;Database=mypg_database;Username=postgres;Password=7866",
             Job.Plaintiffs)
         {
@@ -835,7 +886,8 @@ private async void EditPlaintiff_MouseDoubleClick(object sender, MouseButtonEven
 
         if (dialog.ShowDialog() == true)
         {
-            Job.Plaintiffs = dialog.SelectedPlaintiffFullName;
+            Job.Plaintiffs = dialog.SelectedPlaintiffsFullName;
+            Job.IsPlaintiffsEdited = true;
             OnPropertyChanged(nameof(Job.Plaintiffs));
             Console.WriteLine($"✏️ Plaintiff updated: {Job.Plaintiffs}");
         }
@@ -846,10 +898,11 @@ private async void EditPlaintiff_MouseDoubleClick(object sender, MouseButtonEven
     }
     finally
     {
-        _plaintiffLock.Release();
+        _plaintiffsLock.Release();
     }
 }
-private readonly SemaphoreSlim _attorneyLock = new SemaphoreSlim(1, 1);
+
+        private readonly SemaphoreSlim _attorneyLock = new SemaphoreSlim(1, 1);
 private readonly SemaphoreSlim _processServerLock = new SemaphoreSlim(1, 1);
 private readonly SemaphoreSlim _clientLock = new SemaphoreSlim(1, 1);
 
@@ -1208,13 +1261,11 @@ private async void EditServeeAddress_MouseDoubleClick(object sender, MouseButton
     await _editLock.WaitAsync();
     try
     {
-        var parts = Job.Address?.Split(',') ?? Array.Empty<string>();
-
-        string address1 = parts.Length > 0 ? parts[0].Trim() : "";
-        string address2 = "";
-        string city = parts.Length > 1 ? parts[1].Trim() : "";
-        string state = parts.Length > 2 ? parts[2].Trim().Split(' ')[0] : "";
-        string zip = parts.Length > 2 ? parts[2].Trim().Split(' ').Last() : "";
+        string address1 = Job.AddressLine1 ?? "";
+string address2 = Job.AddressLine2 ?? "";
+string city     = Job.City ?? "";
+string state    = Job.State ?? "";
+string zip      = Job.Zip ?? "";
 
         var dialog = new EditServeeAddressWindow(address1, address2, city, state, zip)
         {
@@ -1223,7 +1274,9 @@ private async void EditServeeAddress_MouseDoubleClick(object sender, MouseButton
 
         if (dialog.ShowDialog() == true)
         {
-            Job.Address = $"{dialog.Address1}, {dialog.City} {dialog.State} {dialog.Zip}";
+            Job.Address = $"{dialog.Address1},{dialog.Address2},{dialog.City},{dialog.State},{dialog.Zip}";
+            OnPropertyChanged(nameof(Job.Address));
+            Console.WriteLine($"✏️ Servee Address updated: {Job.Address}");
         }
     }
     finally
@@ -1318,7 +1371,25 @@ public ObservableCollection<LogEntryModel> CommentEntries
     }
 }
 
-
+private void EditAttachmentPurpose_Click(object sender, RoutedEventArgs e)
+{
+    if (AttachmentsListView.SelectedItem is AttachmentModel selectedAttachment)
+    {
+        var editWindow = new EditAttachmentWindow(selectedAttachment) { Owner = Window.GetWindow(this) };
+        if (editWindow.ShowDialog() == true)
+        {
+            selectedAttachment.Description = editWindow.Description;
+            selectedAttachment.Format = editWindow.Format;
+            selectedAttachment.Purpose = editWindow.Purpose;
+            selectedAttachment.Status = "Edited";
+            AttachmentsListView.Items.Refresh();
+        }
+    }
+    else
+    {
+        MessageBox.Show("Please select an attachment to edit.", "No Selection", MessageBoxButton.OK, MessageBoxImage.Warning);
+    }
+}
 
 }
 

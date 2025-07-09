@@ -1,0 +1,503 @@
+<UserControl x:Class="CivilProcessERP.Views.AddJobView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             Background="LightCyan">
+
+    <!-- FULL COPY OF JobDetailsView.xaml GOES HERE, with x:Class changed to AddJobView -->
+    <!-- All controls, bindings, and event handlers should be present -->
+    <!-- ... (full content as in JobDetailsView.xaml) ... -->
+
+    
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <StackPanel Orientation="Horizontal" Grid.Row="0" Background="White" Margin="10">
+            <TextBlock Text="Great Lakes Civil Services" FontSize="22" FontWeight="Bold" Foreground="Blue"/>
+            <TextBlock Text=" > Job #" FontSize="16" Margin="10,0"/>
+            <TextBlock Text="{Binding Job.JobId}" FontSize="16" FontWeight="Bold"/>
+        </StackPanel>
+
+        <!-- Main Content -->
+        <Grid Grid.Row="1" Margin="10">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="3*"/>
+                <ColumnDefinition Width="4*"/>
+                <ColumnDefinition Width="3*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Left Column -->
+            <StackPanel Grid.Column="0" Background="LightCyan" Margin="10">
+                  <!-- Relationships -->
+                <TextBlock Text="Relationships" FontWeight="Bold" Margin="5"/>
+                <TextBlock Text="{Binding JobCountForCaseNumber, StringFormat=🔺 {0} Other jobs with same Case#}" FontStyle="Italic" Foreground="DarkRed" Margin="10,0,5,10"/>
+
+                <TextBlock Text="Court" FontWeight="Bold" Margin="5"/>
+                <TextBox Text="{Binding Job.Court}" PreviewMouseDoubleClick= "EditCourt_MouseDoubleClick"  Margin="5"/>
+
+                <TextBlock Text="Defendant's Name" FontWeight="Bold" Margin="5"/>
+                <TextBox Text="{Binding Job.Defendant, Mode=TwoWay}" PreviewMouseDoubleClick="EditDefendant_MouseDoubleClick" Margin="5"/>
+
+                <TextBlock Text="Servee's Name" FontWeight="Bold" Margin="5"/>
+                <TextBox Text="{Binding Job.Plaintiffs, Mode=TwoWay}" PreviewMouseDoubleClick="EditPlaintiffs_MouseDoubleClick" Margin="5"/>
+
+                <TextBlock Text="Servee's Address" FontWeight="Bold" Margin="5"/>
+                <TextBox Text="{Binding Job.Address}" PreviewMouseDoubleClick="EditServeeAddress_MouseDoubleClick" Margin="5"/>
+
+                <!-- Zone & SQL -->
+        <Grid Grid.Row="1" Margin="5">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <StackPanel Grid.Column="0" Margin="2">
+                <TextBlock Text="Area" FontWeight="Bold"/>
+                <TextBox Text="{Binding Job.Zone}"  PreviewMouseDoubleClick="EditArea_MouseDoubleClick"/>
+            </StackPanel>
+
+            <StackPanel Grid.Column="1" Margin="2">
+                <TextBlock Text="SQL DateTime Created" FontWeight="Bold"/>
+                <TextBox Text="{Binding Job.SqlDateTimeCreated}"/>
+            </StackPanel>
+        </Grid>
+
+        <!-- Expiration + Last Day -->
+        <Grid Grid.Row="2" Margin="5">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <StackPanel Grid.Column="0" Margin="2">
+                <TextBlock Text="Expiration Date" FontWeight="Bold"/>
+                <TextBox Text="{Binding Job.ExpirationDate}" PreviewMouseDoubleClick="EditExpirationDate_MouseDoubleClick"/>
+            </StackPanel>
+
+            <StackPanel Grid.Column="1" Margin="2">
+                <TextBlock Text="Last Day to Serve Date" FontWeight="Bold"/>
+                <TextBox Text="{Binding Job.LastDayToServe}" PreviewMouseDoubleClick="EditLastDayToServe_MouseDoubleClick"/>
+            </StackPanel>
+        </Grid>
+
+              <ListView x:Name="AttachmentsListView"
+          ItemsSource="{Binding Job.Attachments}"
+          MouseDoubleClick="AttachmentsListView_MouseDoubleClick"
+          Margin="10"
+          Height="100">
+    <ListView.View>
+        <GridView>
+            <GridViewColumn Header="Purpose" DisplayMemberBinding="{Binding Purpose}" />
+            <GridViewColumn Header="Format" DisplayMemberBinding="{Binding Format}" />
+            <GridViewColumn Header="Description" DisplayMemberBinding="{Binding Description}" />
+        </GridView>
+    </ListView.View>
+</ListView>
+
+
+             
+                <StackPanel Orientation="Horizontal" Margin="5">
+    <Button Content="Add Attachment" Width="120" Margin="5"
+            Click="AddAttachment_Click"/>
+    <Button Content="Edit" Width="80" Margin="5"
+            Click="EditAttachment_Click"/>
+    <Button Content="Edit Details" Width="120" Margin="5"
+            Click="EditAttachmentPurpose_Click"/>
+    <Button Content="Delete" Width="80" Margin="5"
+            Click="DeleteAttachment_Click"/>
+</StackPanel>
+
+<!-- Mailings and Affidavit Buttons using Grid for full width -->
+<Grid Margin="5">
+    <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="*" />
+        <ColumnDefinition Width="*" />
+    </Grid.ColumnDefinitions>
+
+    <Button Grid.Column="0"
+            Content="MAILINGS"
+            Height="30"
+            Margin="5"
+            Background="White"
+            BorderBrush="Black"
+            FontWeight="Bold"/>
+
+    <Button Grid.Column="1"
+            Content="AFFIDAVIT"
+            Height="30"
+            Margin="5"
+            Background="White"
+            BorderBrush="Black"
+            FontWeight="Bold"/>
+</Grid>
+
+
+                <!-- Workflow Status --> 
+                <TextBlock Text="Workflow Status" FontWeight="Bold" Margin="5"/>
+                <CheckBox Content="FCM – Needs First-class Mailing sent out" Margin="10,0"/>
+                <CheckBox Content="SOPS – Needs to be Sent Out to Process Server" Margin="10,0"/>
+                <CheckBox Content="IIA – Needs Invoice Items Added" Margin="10,0"/>
+            </StackPanel>
+
+          <Grid Grid.Column="1" Margin="10">
+    <Grid.RowDefinitions>
+        <RowDefinition Height="Auto"/> <!-- Writ Info -->
+        <RowDefinition Height="Auto"/> <!-- Comments -->
+        <RowDefinition Height="Auto"/> <!-- Attempts -->
+        <RowDefinition Height="*"/>    <!-- Change History expands as needed -->
+    </Grid.RowDefinitions>
+
+    <!-- Writ Info -->
+    <StackPanel Grid.Row="0">
+        <TextBlock Text="Type of Writ" FontWeight="Bold" FontSize="18" Margin="5" TextAlignment="Center"/>
+        <TextBox Text="{Binding Job.TypeOfWrit}" PreviewMouseDoubleClick="EditTypeOfWrit_MouseDoubleClick" Margin="5"/>
+
+        <TextBlock Text="Court Date and Time" FontWeight="Bold" Margin="5"/>
+        <StackPanel Orientation="Horizontal" Margin="5">
+            <TextBlock Text="Date:" Margin="5"/>
+            <TextBox Text="{Binding Job.Date}" Width="120" PreviewMouseDoubleClick="EditJobDate_MouseDoubleClick" Margin="5"/>
+            <TextBlock Text="Time:" Margin="5"/>
+            <TextBox Text="{Binding Job.Time}" PreviewMouseDoubleClick="EditTime_MouseDoubleClick" Width="120" Margin="5"/>
+        </StackPanel>
+
+        <TextBlock Text="Service Information" FontWeight="Bold" Margin="5"/>
+
+<StackPanel Orientation="Horizontal" Margin="5">
+    <!-- Service Type -->
+    <TextBox Text="{Binding Job.ServiceType}" PreviewMouseDoubleClick="EditServiceType_MouseDoubleClick" Width="180" Margin="0,0,10,0"/>
+
+    <!-- Date -->
+    <TextBlock Text="Date:" VerticalAlignment="Center" Margin="0,0,5,0"/>
+    <TextBox Text="{Binding Job.ServiceDate}" PreviewMouseDoubleClick="EditServiceDate_MouseDoubleClick" Width="120" Margin="0,0,10,0"/>
+
+    <!-- Time -->
+    <TextBlock Text="Time:" VerticalAlignment="Center" Margin="0,0,5,0"/>
+    <TextBox Text="{Binding Job.ServiceTime}" PreviewMouseDoubleClick="EditServiceTime_MouseDoubleClick" Width="120"/>
+
+
+</StackPanel>
+    </StackPanel>
+    <StackPanel Grid.Row="1">
+    <TextBlock Text="Comments" FontWeight="Bold" Margin="5"/>
+    <ListView x:Name="CommentsListView" ItemsSource="{Binding Job.Comments}" Height="120" Margin="5" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+        <ListView.View>
+            <GridView>
+                <!-- DATE (only date part shown) -->
+                <GridViewColumn Header="DATE" Width="100">
+                    <GridViewColumn.CellTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding Date, StringFormat={}{0:MM/dd/yyyy}}"/>
+                        </DataTemplate>
+                    </GridViewColumn.CellTemplate>
+                </GridViewColumn>
+
+                <!-- TIME (only time part shown) -->
+                <GridViewColumn Header="TIME" Width="80">
+                    <GridViewColumn.CellTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding Time, StringFormat={}{0:h:mm tt}}"/>
+                        </DataTemplate>
+                    </GridViewColumn.CellTemplate>
+                </GridViewColumn>
+
+                <!-- BODY (give this most space) -->
+                <GridViewColumn Header="BODY" DisplayMemberBinding="{Binding Body}" Width="250"/>
+
+
+                <!-- AFF Checkbox -->
+<GridViewColumn Header="AFF" Width="40">
+    <GridViewColumn.CellTemplate>
+        <DataTemplate>
+            <CheckBox IsChecked="{Binding Aff}" IsEnabled="False" HorizontalAlignment="Center"/>
+        </DataTemplate>
+    </GridViewColumn.CellTemplate>
+</GridViewColumn>
+
+<!-- DS Checkbox -->
+<GridViewColumn Header="DS" Width="40">
+    <GridViewColumn.CellTemplate>
+        <DataTemplate>
+            <CheckBox IsChecked="{Binding FS}" IsEnabled="False" HorizontalAlignment="Center"/>
+        </DataTemplate>
+    </GridViewColumn.CellTemplate>
+</GridViewColumn>
+
+<!-- ATT Checkbox -->
+<GridViewColumn Header="ATTY" Width="40">
+    <GridViewColumn.CellTemplate>
+        <DataTemplate>
+            <CheckBox IsChecked="{Binding Att}" IsEnabled="False" HorizontalAlignment="Center"/>
+        </DataTemplate>
+    </GridViewColumn.CellTemplate>
+</GridViewColumn>
+
+
+                <!-- SOURCE -->
+                <GridViewColumn Header="SOURCE" DisplayMemberBinding="{Binding Source}" Width="100"/>
+            </GridView>
+        </ListView.View>
+    </ListView> 
+
+<StackPanel Orientation="Horizontal" Margin="5">
+    <Button Content="Add Comment" Click="AddComment_Click" Margin="5"/>
+    <Button Content="Edit Comment" Click="EditComment_Click" Margin="5"/>
+    <Button Content="Delete Comment" Click="DeleteComment_Click" Margin="5"/>
+</StackPanel>
+</StackPanel>
+
+
+    <!-- Attempts -->
+   <StackPanel Grid.Row="2">
+    <TextBlock Text="Attempts" FontWeight="Bold" Margin="5"/>
+    <ListView x:Name="AttemptsListView" ItemsSource="{Binding Job.Attempts}" Height="120" Margin="5"
+        ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+        <ListView.View>
+            <GridView>
+                <!-- DATE (only date part shown) -->
+                <GridViewColumn Header="DATE" Width="100">
+                    <GridViewColumn.CellTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding Date, StringFormat={}{0:MM/dd/yyyy}}"/>
+                        </DataTemplate>
+                    </GridViewColumn.CellTemplate>
+                </GridViewColumn>
+
+                <!-- TIME (only time part shown) -->
+                <GridViewColumn Header="TIME" Width="80">
+                    <GridViewColumn.CellTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding Time, StringFormat={}{0:h:mm tt}}"/>
+                        </DataTemplate>
+                    </GridViewColumn.CellTemplate>
+                </GridViewColumn>
+
+                <!-- BODY (give this most space) -->
+                <GridViewColumn Header="BODY" DisplayMemberBinding="{Binding Body}" Width="250"/>
+
+                <!-- AFF Checkbox -->
+                <GridViewColumn Header="AFF" Width="40">
+                    <GridViewColumn.CellTemplate>
+                        <DataTemplate>
+                            <CheckBox IsChecked="{Binding Aff}" IsEnabled="False" HorizontalAlignment="Center"/>
+                        </DataTemplate>
+                    </GridViewColumn.CellTemplate>
+                </GridViewColumn>
+
+                <!-- DS Checkbox -->
+                <GridViewColumn Header="DS" Width="40">
+                    <GridViewColumn.CellTemplate>
+                        <DataTemplate>
+                            <CheckBox IsChecked="{Binding FS}" IsEnabled="False" HorizontalAlignment="Center"/>
+                        </DataTemplate>
+                    </GridViewColumn.CellTemplate>
+                </GridViewColumn>
+
+                <!-- ATT Checkbox -->
+                <GridViewColumn Header="ATTY" Width="40">
+                    <GridViewColumn.CellTemplate>
+                        <DataTemplate>
+                            <CheckBox IsChecked="{Binding Att}" IsEnabled="False" HorizontalAlignment="Center"/>
+                        </DataTemplate>
+                    </GridViewColumn.CellTemplate>
+                </GridViewColumn>
+
+                <!-- SOURCE -->
+                <GridViewColumn Header="SOURCE" DisplayMemberBinding="{Binding Source}" Width="100"/>
+            </GridView>
+        </ListView.View>
+    </ListView> 
+
+    <StackPanel Orientation="Horizontal" Margin="5">
+        <Button Content="Add Attempt" Click="AddAttempt_Click" Margin="5"/>
+        <Button Content="Edit Attempt" Click="EditAttempt_Click" Margin="5"/>
+        <Button Content="Delete Attempt" Click="DeleteAttempt_Click" Margin="5"/>
+    </StackPanel>
+    </StackPanel>
+
+    <!-- ✅ Change History FIX -->
+    
+<StackPanel Grid.Row="3" Margin="0,10,0,0">
+    <TextBlock Text="Change History" FontWeight="Bold" Margin="5"/>
+    <Border BorderBrush="Gray" BorderThickness="1" CornerRadius="4" Margin="5">
+        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" Height="100">
+            <ListView ItemsSource="{Binding Job.ChangeHistory}" Background="White" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                <ListView.View>
+                    <GridView>
+                        <!-- FIXED DATE FORMAT -->
+                        <GridViewColumn Header="DATE" Width="160">
+                            <GridViewColumn.CellTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding Date, StringFormat={}{0:MM/dd/yyyy}}"/>
+                                </DataTemplate>
+                            </GridViewColumn.CellTemplate>
+                        </GridViewColumn>
+
+                        <GridViewColumn Header="ACTION" DisplayMemberBinding="{Binding FieldName}" Width="150"/>
+                        <GridViewColumn Header="CHANGED BY" DisplayMemberBinding="{Binding OldValue}" Width="150"/>
+                        <GridViewColumn Header="COMMENT" DisplayMemberBinding="{Binding NewValue}" Width="150"/>
+                        <GridViewColumn Header="additional col" DisplayMemberBinding="{Binding ChangedBy}" Width="150"/>
+                    </GridView>
+                </ListView.View>
+            </ListView>
+        </ScrollViewer>
+    </Border>
+</StackPanel>
+
+<!-- Footer Buttons (Corrected - Aligned under Change History in middle column with downward offset) -->
+<Grid Grid.Column="1" Grid.Row="4" Margin="0,150,0,0"> <!-- Top margin to push it downward -->
+    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+        <Button Content="Save" Width="120" Height="40" Background="Green" Foreground="White" Margin="10" Click="SaveButton_Click"/>
+        <Button Content="Cancel" Width="120" Height="40" Background="Red" Foreground="White" Margin="10"
+                Click="CancelButton_Click"/>
+    </StackPanel>
+</Grid>
+
+
+
+</Grid>
+
+<!-- Right Column -->
+<ScrollViewer Grid.Column="2" VerticalScrollBarVisibility="Auto" Margin="10" Background="LightCyan">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/> <!-- Top content -->
+            <RowDefinition Height="Auto"/> <!-- Invoice -->
+            <RowDefinition Height="Auto"/> <!-- Payments -->
+            <RowDefinition Height="Auto"/> <!-- Zone & SQL -->
+            <RowDefinition Height="Auto"/> <!-- Expiration -->
+        </Grid.RowDefinitions>
+
+        <!-- Top Content -->
+        <StackPanel Grid.Row="0">
+           <Grid Margin="5">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+
+        <!-- Case # -->
+        <StackPanel Grid.Column="0" Margin="0,0,5,0">
+            <TextBlock Text="Case #" FontWeight="Bold" Margin="0,0,0,3"/>
+            <TextBox Text="{Binding Job.CaseNumber}" />
+        </StackPanel>
+
+        <!-- Client Ref # -->
+        <StackPanel Grid.Column="1" Margin="5,0,0,0">
+            <TextBlock Text="Client Ref #" FontWeight="Bold" Margin="0,0,0,3"/>
+            <TextBox Text="{Binding Job.ClientReference}" PreviewMouseDoubleClick="EditClientRef_MouseDoubleClick"/>
+        </StackPanel>
+    </Grid>
+            <TextBlock Text="Plaintiff" FontWeight="Bold" Margin="5"/>
+            <TextBox Text="{Binding Job.Plaintiff, Mode=TwoWay}" PreviewMouseDoubleClick="EditPlaintiff_MouseDoubleClick" Margin="5"/>
+
+            <TextBlock Text="Attorney Name" FontWeight="Bold" Margin="5"/>
+            <TextBox Text="{Binding Job.Attorney, Mode=TwoWay}"  PreviewMouseDoubleClick="EditAttorney_MouseDoubleClick" Margin="5"/>
+
+            <TextBlock Text="Client" FontWeight="Bold" Margin="5"/>
+            <TextBox Text="{Binding Job.Client, Mode=TwoWay}" PreviewMouseDoubleClick="EditClient_MouseDoubleClick" Margin="5" AcceptsReturn="True" Height="10"/>
+
+            <Grid Margin="5">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0" Margin="2">
+                    <TextBlock Text="Process Server" FontWeight="Bold"/>
+                    <TextBox Text="{Binding Job.ProcessServer, Mode=TwoWay}"  PreviewMouseDoubleClick="EditProcessServer_MouseDoubleClick"/>
+                </StackPanel>
+
+                <StackPanel Grid.Column="1" Margin="2">
+                    <TextBlock Text="Client Status" FontWeight="Bold"/>
+                    <TextBox Text="{Binding Job.ClientStatus}"  PreviewMouseDoubleClick="EditClientStatus_MouseDoubleClick"/>
+                </StackPanel>
+            </Grid>
+        </StackPanel>
+
+<StackPanel Grid.Row="3">
+    <TextBlock Text="Invoice" FontWeight="Bold" Margin="5"/>
+    <Border BorderBrush="Black" BorderThickness="1" Margin="5">
+        <StackPanel>
+            <ListView x:Name="InvoiceListView" ItemsSource="{Binding Job.InvoiceEntries}" Height="100">
+    <ListView.View>
+        <GridView>
+            <GridViewColumn Header="Description" DisplayMemberBinding="{Binding Description}" Width="230"/>
+            <GridViewColumn Header="Qty" DisplayMemberBinding="{Binding Quantity}" Width="50"/>
+            <GridViewColumn Header="Rate" DisplayMemberBinding="{Binding Rate}" Width="70"/>
+            <GridViewColumn Header="Amount" DisplayMemberBinding="{Binding Amount}" Width="80"/>
+        </GridView>
+    </ListView.View>
+</ListView>
+
+            <!-- Total Invoice Amount aligned with Amount column -->
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,5,5">
+                <TextBlock Text="Total Invoice:" FontWeight="Bold" VerticalAlignment="Center"/>
+                <TextBlock Text="{Binding Job.TotalInvoiceAmount, StringFormat={}{0:C}}"
+                           FontWeight="Bold" Margin="5,0,0,0" VerticalAlignment="Center"/>
+            </StackPanel>
+
+            <!-- Invoice Buttons -->
+<StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="5">
+    <Button x:Name="AddInvoiceButton" Content="Add" Width="60" Margin="2" Click="AddInvoice_Click"/>
+    <Button x:Name="EditInvoiceButton" Content="Edit" Width="60" Margin="2" Click="EditInvoice_Click"/>
+    <Button x:Name="DeleteInvoiceButton" Content="Delete" Width="60" Margin="2" Click="DeleteInvoice_Click"/>
+</StackPanel>
+        </StackPanel>
+    </Border>
+</StackPanel>
+
+<StackPanel Grid.Row="4">
+    <TextBlock Text="Payments" FontWeight="Bold" Margin="5"/>
+    <Border BorderBrush="Black" BorderThickness="1" Margin="5">
+        <StackPanel>
+            <ListView x:Name="PaymentsListView" ItemsSource="{Binding Job.Payments}" Height="100">
+                <ListView.View>
+                    <GridView>
+                        <GridViewColumn Header="Date" DisplayMemberBinding="{Binding Date}" Width="150"/>
+                        <GridViewColumn Header="Time" DisplayMemberBinding="{Binding TimeOnly}" Width="100"/>
+                        <GridViewColumn Header="Method" DisplayMemberBinding="{Binding Method}" Width="100"/>
+                        <GridViewColumn Header="Description" DisplayMemberBinding="{Binding Description}" Width="200"/>
+                        <GridViewColumn Header="Amount" DisplayMemberBinding="{Binding Amount, StringFormat={}{0:C}}" Width="100"/>
+                    </GridView>
+                </ListView.View>
+            </ListView>
+
+            <!-- Total Payment Amount aligned with Amount column -->
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,5,5">
+                <TextBlock Text="Total PMTS:" FontWeight="Bold" VerticalAlignment="Center"/>
+                <TextBlock Text="{Binding Job.TotalPaymentsAmount, StringFormat={}{0:C}}"
+                           FontWeight="Bold" Margin="5,0,0,0" VerticalAlignment="Center"/>
+            </StackPanel>
+
+            <!-- Payment Buttons -->
+<StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="5">
+    <Button x:Name="AddPaymentButton" Content="Add" Width="60" Margin="2" Click="AddPayment_Click"/>
+    <Button x:Name="EditPaymentButton" Content="Edit" Width="60" Margin="2" Click="EditPayment_Click"/>
+    <Button x:Name="DeletePaymentButton" Content="Delete" Width="60" Margin="2" Click="DeletePayment_Click"/>
+</StackPanel>
+        </StackPanel>
+    </Border>
+</StackPanel>
+
+
+        <!-- Invoice Due -->
+<StackPanel Grid.Row="5" Margin="5">
+    <TextBlock Text="Invoice Due" FontWeight="Bold" Margin="0,200,0,3"/>
+    <Border BorderBrush="Black" BorderThickness="1" Padding="5">
+        <TextBlock Text="{Binding Job.InvoiceDue}" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+    </Border>
+</StackPanel>
+
+
+    </Grid>
+</ScrollViewer>
+    </Grid>
+    </Grid>
+</UserControl> 

@@ -63,7 +63,6 @@ C:\Users\GLCS\CivilProcessERP\bin\Debug\net9.0-windows\System.Composition.Conven
 C:\Users\GLCS\CivilProcessERP\bin\Debug\net9.0-windows\System.Composition.Hosting.dll
 C:\Users\GLCS\CivilProcessERP\bin\Debug\net9.0-windows\System.Composition.Runtime.dll
 C:\Users\GLCS\CivilProcessERP\bin\Debug\net9.0-windows\System.Composition.TypedParts.dll
-C:\Users\GLCS\CivilProcessERP\bin\Debug\net9.0-windows\System.Diagnostics.EventLog.dll
 C:\Users\GLCS\CivilProcessERP\bin\Debug\net9.0-windows\de\MahApps.Metro.resources.dll
 C:\Users\GLCS\CivilProcessERP\bin\Debug\net9.0-windows\cs\Microsoft.CodeAnalysis.resources.dll
 C:\Users\GLCS\CivilProcessERP\bin\Debug\net9.0-windows\de\Microsoft.CodeAnalysis.resources.dll
@@ -130,11 +129,11 @@ C:\Users\GLCS\CivilProcessERP\bin\Debug\net9.0-windows\ru\Microsoft.CodeAnalysis
 C:\Users\GLCS\CivilProcessERP\bin\Debug\net9.0-windows\tr\Microsoft.CodeAnalysis.Workspaces.MSBuild.BuildHost.resources.dll
 C:\Users\GLCS\CivilProcessERP\bin\Debug\net9.0-windows\zh-Hans\Microsoft.CodeAnalysis.Workspaces.MSBuild.BuildHost.resources.dll
 C:\Users\GLCS\CivilProcessERP\bin\Debug\net9.0-windows\zh-Hant\Microsoft.CodeAnalysis.Workspaces.MSBuild.BuildHost.resources.dll
-C:\Users\GLCS\CivilProcessERP\bin\Debug\net9.0-windows\runtimes\win\lib\net9.0\System.Diagnostics.EventLog.dll
 C:\Users\GLCS\CivilProcessERP\obj\Debug\net9.0-windows\CivilProcessERP.csproj.AssemblyReference.cache
 C:\Users\GLCS\CivilProcessERP\obj\Debug\net9.0-windows\LoginView.baml
 C:\Users\GLCS\CivilProcessERP\obj\Debug\net9.0-windows\MainWindow.baml
 C:\Users\GLCS\CivilProcessERP\obj\Debug\net9.0-windows\MfaPromptWindow.baml
+C:\Users\GLCS\CivilProcessERP\obj\Debug\net9.0-windows\View\AddJobView.baml
 C:\Users\GLCS\CivilProcessERP\obj\Debug\net9.0-windows\View\AssignPermissionView.baml
 C:\Users\GLCS\CivilProcessERP\obj\Debug\net9.0-windows\View\ClientsView.baml
 C:\Users\GLCS\CivilProcessERP\obj\Debug\net9.0-windows\View\CourtsView.baml
@@ -142,6 +141,7 @@ C:\Users\GLCS\CivilProcessERP\obj\Debug\net9.0-windows\View\CreateUserView.baml
 C:\Users\GLCS\CivilProcessERP\obj\Debug\net9.0-windows\View\DeleteGroupView.baml
 C:\Users\GLCS\CivilProcessERP\obj\Debug\net9.0-windows\View\DeleteUserView.baml
 C:\Users\GLCS\CivilProcessERP\obj\Debug\net9.0-windows\View\EditAreaSearchWindow.baml
+C:\Users\GLCS\CivilProcessERP\obj\Debug\net9.0-windows\View\EditAttachmentWindow.baml
 C:\Users\GLCS\CivilProcessERP\obj\Debug\net9.0-windows\View\EditAttorneySearchWindow.baml
 C:\Users\GLCS\CivilProcessERP\obj\Debug\net9.0-windows\View\EditClientSearchWindow.baml
 C:\Users\GLCS\CivilProcessERP\obj\Debug\net9.0-windows\View\EditCourtSearchWindow.baml
@@ -152,6 +152,7 @@ C:\Users\GLCS\CivilProcessERP\obj\Debug\net9.0-windows\View\EditInvoiceWindow.ba
 C:\Users\GLCS\CivilProcessERP\obj\Debug\net9.0-windows\View\EditLogEntryWindow.baml
 C:\Users\GLCS\CivilProcessERP\obj\Debug\net9.0-windows\View\EditPaymentWindow.baml
 C:\Users\GLCS\CivilProcessERP\obj\Debug\net9.0-windows\View\EditPlaintiffSearchWindow.baml
+C:\Users\GLCS\CivilProcessERP\obj\Debug\net9.0-windows\View\EditPlaintiffsSearchWindow.baml
 C:\Users\GLCS\CivilProcessERP\obj\Debug\net9.0-windows\View\EditProcessServerSearchWindow.baml
 C:\Users\GLCS\CivilProcessERP\obj\Debug\net9.0-windows\View\EditServeeAddressWindow.baml
 C:\Users\GLCS\CivilProcessERP\obj\Debug\net9.0-windows\View\EditServiceTypeSearchWindow.baml
@@ -175,6 +176,7 @@ C:\Users\GLCS\CivilProcessERP\obj\Debug\net9.0-windows\App.baml
 C:\Users\GLCS\CivilProcessERP\obj\Debug\net9.0-windows\LoginView.g.cs
 C:\Users\GLCS\CivilProcessERP\obj\Debug\net9.0-windows\MainWindow.g.cs
 C:\Users\GLCS\CivilProcessERP\obj\Debug\net9.0-windows\MfaPromptWindow.g.cs
+C:\Users\GLCS\CivilProcessERP\obj\Debug\net9.0-windows\View\AddJobView.g.cs
 C:\Users\GLCS\CivilProcessERP\obj\Debug\net9.0-windows\View\AdministrationView.g.cs
 C:\Users\GLCS\CivilProcessERP\obj\Debug\net9.0-windows\View\AssignPermissionView.g.cs
 C:\Users\GLCS\CivilProcessERP\obj\Debug\net9.0-windows\View\ClientsView.g.cs
@@ -183,6 +185,7 @@ C:\Users\GLCS\CivilProcessERP\obj\Debug\net9.0-windows\View\CreateUserView.g.cs
 C:\Users\GLCS\CivilProcessERP\obj\Debug\net9.0-windows\View\DeleteGroupView.g.cs
 C:\Users\GLCS\CivilProcessERP\obj\Debug\net9.0-windows\View\DeleteUserView.g.cs
 C:\Users\GLCS\CivilProcessERP\obj\Debug\net9.0-windows\View\EditAreaSearchWindow.g.cs
+C:\Users\GLCS\CivilProcessERP\obj\Debug\net9.0-windows\View\EditAttachmentWindow.g.cs
 C:\Users\GLCS\CivilProcessERP\obj\Debug\net9.0-windows\View\EditAttorneySearchWindow.g.cs
 C:\Users\GLCS\CivilProcessERP\obj\Debug\net9.0-windows\View\EditClientSearchWindow.g.cs
 C:\Users\GLCS\CivilProcessERP\obj\Debug\net9.0-windows\View\EditCourtSearchWindow.g.cs
@@ -193,6 +196,7 @@ C:\Users\GLCS\CivilProcessERP\obj\Debug\net9.0-windows\View\EditInvoiceWindow.g.
 C:\Users\GLCS\CivilProcessERP\obj\Debug\net9.0-windows\View\EditLogEntryWindow.g.cs
 C:\Users\GLCS\CivilProcessERP\obj\Debug\net9.0-windows\View\EditPaymentWindow.g.cs
 C:\Users\GLCS\CivilProcessERP\obj\Debug\net9.0-windows\View\EditPlaintiffSearchWindow.g.cs
+C:\Users\GLCS\CivilProcessERP\obj\Debug\net9.0-windows\View\EditPlaintiffsSearchWindow.g.cs
 C:\Users\GLCS\CivilProcessERP\obj\Debug\net9.0-windows\View\EditProcessServerSearchWindow.g.cs
 C:\Users\GLCS\CivilProcessERP\obj\Debug\net9.0-windows\View\EditServeeAddressWindow.g.cs
 C:\Users\GLCS\CivilProcessERP\obj\Debug\net9.0-windows\View\EditServiceTypeSearchWindow.g.cs

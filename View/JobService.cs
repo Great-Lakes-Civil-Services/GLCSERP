@@ -21,6 +21,8 @@ public class JobService : INotifyPropertyChanged
 
     public List<AttachmentModel> Attachments { get; set; } = new List<AttachmentModel>();
 
+    public bool IsPlaintiffsEdited { get; set; }
+    public bool IsPlaintiffEdited { get; set; }
 
     public event PropertyChangedEventHandler PropertyChanged;
 
@@ -33,8 +35,6 @@ public class JobService : INotifyPropertyChanged
     public async Task<Job> GetJobById(string jobId)
     {
         Job job = new();
-
-        //await _jobLock.WaitAsync(); // Acquire lock before reading
         try
         {
             await using var conn = new NpgsqlConnection(_connectionString);
@@ -42,33 +42,33 @@ public class JobService : INotifyPropertyChanged
             Console.WriteLine("[INFO] ✅ Connected to DB: " + conn.Database);
 
             // Step 1: Fetch from papers table
-            await using var cmd1 = new NpgsqlCommand("SELECT serialnum, caseserialnum FROM papers WHERE serialnum = @jobId", conn);
-            cmd1.Parameters.AddWithValue("jobId", long.Parse(jobId));
-
-            await using var reader1 = await cmd1.ExecuteReaderAsync();
-
-            if (!await reader1.ReadAsync())
+            await using (var cmd1 = new NpgsqlCommand("SELECT serialnum, caseserialnum FROM papers WHERE serialnum = @jobId", conn))
             {
-                Console.WriteLine("[WARN] ❌ No paper found with JobId: " + jobId);
-                return null;
+                cmd1.Parameters.AddWithValue("jobId", long.Parse(jobId));
+                await using (var reader1 = await cmd1.ExecuteReaderAsync())
+                {
+                    if (!await reader1.ReadAsync())
+                    {
+                        Console.WriteLine("[WARN] ❌ No paper found with JobId: " + jobId);
+                        return null;
+                    }
+                    job.JobId = reader1["serialnum"].ToString();
+                    var caseSerial = reader1["caseserialnum"].ToString();
+                    job.CaseNumber = caseSerial;
+                }
             }
-
-            job.JobId = reader1["serialnum"].ToString();
-            var caseSerial = reader1["caseserialnum"].ToString();
-            job.CaseNumber = caseSerial;
 
             // Step 2: Fetch Court number (courtnum) from cases table
             string courtNum = null;
-
-            await using var conn1 = new NpgsqlConnection(_connectionString);
-            await conn1.OpenAsync();
-            await using (var cmd2 = new NpgsqlCommand("SELECT courtnum FROM cases WHERE serialnum = @caseserialnum", conn1))
+            await using (var cmd2 = new NpgsqlCommand("SELECT courtnum FROM cases WHERE serialnum = @caseserialnum", conn))
             {
                 cmd2.Parameters.AddWithValue("caseserialnum", int.Parse(job.CaseNumber));
-                await using var reader2 = await cmd2.ExecuteReaderAsync();
-                if (await reader2.ReadAsync())
+                await using (var reader2 = await cmd2.ExecuteReaderAsync())
                 {
-                    courtNum = reader2["courtnum"]?.ToString();
+                    if (await reader2.ReadAsync())
+                    {
+                        courtNum = reader2["courtnum"]?.ToString();
+                    }
                 }
             }
 
@@ -80,10 +80,12 @@ public class JobService : INotifyPropertyChanged
                 await using (var cmd24 = new NpgsqlCommand("SELECT name FROM courts WHERE serialnum = @courtnum", conn2))
                 {
                     cmd24.Parameters.AddWithValue("courtnum", int.Parse(courtNum));
-                    await using var reader24 = await cmd24.ExecuteReaderAsync();
-                    if (await reader24.ReadAsync())
+                    await using (var reader24 = await cmd24.ExecuteReaderAsync())
                     {
-                        job.Court = reader24["name"]?.ToString(); // Assign the court name to the Job object
+                        if (await reader24.ReadAsync())
+                        {
+                            job.Court = reader24["name"]?.ToString(); // Assign the court name to the Job object
+                        }
                     }
                 }
                 await using var conn3 = new NpgsqlConnection(_connectionString);
@@ -92,10 +94,12 @@ public class JobService : INotifyPropertyChanged
                 await using (var cmd3 = new NpgsqlCommand("SELECT defend1 FROM cases WHERE serialnum = @caseserialnum", conn3))
                 {
                     cmd3.Parameters.AddWithValue("caseserialnum", int.Parse(job.CaseNumber));
-                    await using var reader3 = await cmd3.ExecuteReaderAsync();
-                    if (await reader3.ReadAsync())
+                    await using (var reader3 = await cmd3.ExecuteReaderAsync())
                     {
-                        job.Defendant = reader3["defend1"]?.ToString();
+                        if (await reader3.ReadAsync())
+                        {
+                            job.Defendant = reader3["defend1"]?.ToString();
+                        }
                     }
                 }
 
@@ -107,10 +111,12 @@ public class JobService : INotifyPropertyChanged
                 await using (var cmd4 = new NpgsqlCommand("SELECT zone FROM papers WHERE serialnum = @jobId", conn4))
                 {
                     cmd4.Parameters.AddWithValue("jobId", long.Parse(job.JobId));
-                    await using var reader4 = await cmd4.ExecuteReaderAsync();
-                    if (await reader4.ReadAsync())
+                    await using (var reader4 = await cmd4.ExecuteReaderAsync())
                     {
-                        job.Zone = reader4["zone"]?.ToString();
+                        if (await reader4.ReadAsync())
+                        {
+                            job.Zone = reader4["zone"]?.ToString();
+                        }
                     }
                 }
 
@@ -120,10 +126,12 @@ public class JobService : INotifyPropertyChanged
                 await using (var cmd5 = new NpgsqlCommand("SELECT sqldatetimerecd FROM papers WHERE serialnum = @jobId", conn5))
                 {
                     cmd5.Parameters.AddWithValue("jobId", long.Parse(job.JobId));
-                    await using var reader5 = await cmd5.ExecuteReaderAsync();
-                    if (await reader5.ReadAsync())
+                    await using (var reader5 = await cmd5.ExecuteReaderAsync())
                     {
-                        job.SqlDateTimeCreated = reader5["sqldatetimerecd"]?.ToString();
+                        if (await reader5.ReadAsync())
+                        {
+                            job.SqlDateTimeCreated = reader5["sqldatetimerecd"]?.ToString();
+                        }
                     }
                 }
 
@@ -227,18 +235,38 @@ public class JobService : INotifyPropertyChanged
 
                 await using var conn13 = new NpgsqlConnection(_connectionString);
                 await conn13.OpenAsync();
-                // Step 12: Get Plaintiff Name from entity table using serialnumber = case number
+                //Step 12: Get Plaintiff Name from entity table using case number from papers
                 if (!string.IsNullOrEmpty(caseSerialNum))
                 {
-                    await using (var cmd13 = new NpgsqlCommand("SELECT \"FirstName\", \"LastName\" FROM entity WHERE \"SerialNum\" = @caseSerialNum", conn13))
+                    await using (var connCase = new NpgsqlConnection(_connectionString))
                     {
-                        cmd13.Parameters.AddWithValue("caseSerialNum", int.Parse(caseSerialNum));
-                        await using var reader13 = await cmd13.ExecuteReaderAsync();
-                        if (await reader13.ReadAsync())
+                        await connCase.OpenAsync();
+                        await using (var cmdCase = new NpgsqlCommand("SELECT pliannum FROM papers WHERE serialnum = @jobId", connCase))
                         {
-                            var first = reader13["FirstName"]?.ToString();
-                            var last = reader13["LastName"]?.ToString();
-                            job.Plaintiff = $"{first} {last}".Trim();  // ✅ assign full name
+                            cmdCase.Parameters.AddWithValue("jobId", long.Parse(job.JobId));
+                            await using var readerCase = await cmdCase.ExecuteReaderAsync();
+                            if (await readerCase.ReadAsync())
+                            {
+                                caseSerialNum = readerCase["pliannum"]?.ToString();
+                            }
+                        }
+                    }
+                    if (!string.IsNullOrEmpty(caseSerialNum))
+                    {
+                        await using (var connEntity = new NpgsqlConnection(_connectionString))
+                        {
+                            await connEntity.OpenAsync();
+                            await using (var cmdEntity = new NpgsqlCommand("SELECT \"FirstName\", \"LastName\" FROM entity WHERE \"SerialNum\" = @pliannum", connEntity))
+                            {
+                                cmdEntity.Parameters.AddWithValue("pliannum", int.Parse(caseSerialNum));
+                                await using var readerEntity = await cmdEntity.ExecuteReaderAsync();
+                                if (await readerEntity.ReadAsync())
+                                {
+                                    var first = readerEntity["FirstName"]?.ToString();
+                                    var last = readerEntity["LastName"]?.ToString();
+                                    job.Plaintiff = $"{first} {last}".Trim();
+                                }
+                            }
                         }
                     }
                 }
@@ -505,19 +533,19 @@ public class JobService : INotifyPropertyChanged
                 // Step: Load Comments
                 await using var conn40 = new NpgsqlConnection(_connectionString);
                 await conn40.OpenAsync();
-                await using (var cmd = new NpgsqlCommand(@"SELECT 
-                                            comment, datetime, source, isattempt, 
+                await using (var cmd90 = new NpgsqlCommand(@"SELECT 
+                                            serialnum, seqnum, comment, datetime, source, isattempt, 
                                             printonaff, printonfs, reviewed 
                                             FROM comments 
                                             WHERE serialnum = @jobId AND isattempt = false", conn40))
                 {
-                    cmd.Parameters.AddWithValue("jobId", long.Parse(job.JobId));
-                    await using var reader = await cmd.ExecuteReaderAsync();
+                    cmd90.Parameters.AddWithValue("jobId", long.Parse(job.JobId));
+                    await using var reader90 = await cmd90.ExecuteReaderAsync();
 
-                    while (await reader.ReadAsync())
+                    while (await reader90.ReadAsync())
                     {
-                        var comment = reader["comment"]?.ToString() ?? string.Empty;
-                        var datetimeRaw = reader["datetime"];
+                        var comment = reader90["comment"]?.ToString() ?? string.Empty;
+                        var datetimeRaw = reader90["datetime"];
                         DateTime datetimeParsed = DateTime.MinValue;
 
                         if (datetimeRaw != DBNull.Value)
@@ -533,17 +561,20 @@ public class JobService : INotifyPropertyChanged
                                 datetimeParsed = Convert.ToDateTime(datetimeRaw);
                             }
                         }
-
+                        int id = reader90["serialnum"] != DBNull.Value ? Convert.ToInt32(reader90["serialnum"]) : 0;
+                        int seqNum = reader90["seqnum"] != DBNull.Value ? Convert.ToInt32(reader90["seqnum"]) : 0;
                         var date = datetimeParsed.ToString("yyyy-MM-dd");
                         var time = datetimeParsed.ToString("HH:mm:ss");
 
-                        var source = reader["source"]?.ToString() ?? "Unknown Source";
-                        bool affChecked = reader["printonaff"] != DBNull.Value && Convert.ToInt32(reader["printonaff"]) > 0;
-                        bool dsChecked = reader["printonfs"] != DBNull.Value && Convert.ToInt32(reader["printonfs"]) > 0;
-                        bool attChecked = reader["reviewed"] != DBNull.Value && Convert.ToBoolean(reader["reviewed"]);
+                        var source = reader90["source"]?.ToString() ?? "Unknown Source";
+                        bool affChecked = reader90["printonaff"] != DBNull.Value && Convert.ToInt32(reader90["printonaff"]) > 0;
+                        bool dsChecked = reader90["printonfs"] != DBNull.Value && Convert.ToInt32(reader90["printonfs"]) > 0;
+                        bool attChecked = reader90["reviewed"] != DBNull.Value && Convert.ToBoolean(reader90["reviewed"]);
 
                         var commentModel = new CommentModel
                         {
+                            SerialNum = id,
+                            Seqnum = seqNum,
                             Date = date,
                             Time = time,
                             Body = comment,
@@ -561,7 +592,7 @@ public class JobService : INotifyPropertyChanged
                 await using var conn25 = new NpgsqlConnection(_connectionString);
                 await conn25.OpenAsync();
                 await using (var cmd25 = new NpgsqlCommand(@"SELECT 
-                                                comment, datetime, source, isattempt, 
+                                                serialnum, seqnum, comment, datetime, source, isattempt, 
                                                 printonaff, printonfs, reviewed 
                                                 FROM comments 
                                                 WHERE serialnum = @jobId AND isattempt = true", conn25))
@@ -588,6 +619,8 @@ public class JobService : INotifyPropertyChanged
                                 datetimeParsed = Convert.ToDateTime(datetimeRaw);
                             }
                         }
+                        int id = reader25["serialnum"] != DBNull.Value ? Convert.ToInt32(reader25["serialnum"]) : 0;
+                        int seqNum = reader25["seqnum"] != DBNull.Value ? Convert.ToInt32(reader25["seqnum"]) : 0;
 
                         var date = datetimeParsed.ToString("yyyy-MM-dd");
                         var time = datetimeParsed.ToString("HH:mm:ss");
@@ -599,6 +632,8 @@ public class JobService : INotifyPropertyChanged
 
                         var attemptsModel = new AttemptsModel
                         {
+                            SerialNum = id,
+                            Seqnum = seqNum, // Assuming seqnum is not used for attempts
                             Date = date,
                             Time = time,
                             Body = comment,
@@ -629,6 +664,11 @@ public class JobService : INotifyPropertyChanged
                         city = reader26["city"]?.ToString();
                         zip = reader26["zip"]?.ToString();
                     }
+                    job.AddressLine1 = address1;
+job.AddressLine2 = address2;
+job.City = city;
+job.State = state;
+job.Zip = zip;
                 }
 
                 await using var conn43 = new NpgsqlConnection(_connectionString);
@@ -651,13 +691,13 @@ public class JobService : INotifyPropertyChanged
                 string pliannum = null;
                 await using var conn28 = new NpgsqlConnection(_connectionString);
                 await conn28.OpenAsync();
-                await using (var cmd28 = new NpgsqlCommand("SELECT pliannum FROM papers WHERE serialnum = @jobId", conn28))
+                await using (var cmd28 = new NpgsqlCommand("SELECT serialnum FROM papers WHERE serialnum = @jobId", conn28))
                 {
                     cmd28.Parameters.AddWithValue("jobId", long.Parse(job.JobId));
                     await using var reader28 = await cmd28.ExecuteReaderAsync();
                     if (await reader28.ReadAsync())
                     {
-                        pliannum = reader28["pliannum"]?.ToString();
+                        pliannum = reader28["serialnum"]?.ToString();
                     }
                 }
 
@@ -672,22 +712,25 @@ public class JobService : INotifyPropertyChanged
                     {
                         var firstName = reader29["firstname"]?.ToString()?.Trim();
                         var lastName = reader29["lastname"]?.ToString()?.Trim();
-                        job.Plaintiff = $"{firstName} {lastName}".Trim();
+                        job.Plaintiffs = $"{firstName} {lastName}".Trim();
                     }
                 }
+
+
 
                 // Step: Fetch Attachments
                 await using var conn31 = new NpgsqlConnection(_connectionString);
                 await conn31.OpenAsync();
                 await using (var cmd31 = new NpgsqlCommand(@"SELECT 
     a.id AS attachment_id, 
+    a.blobid,
     a.description, 
     a.purpose, 
     bm.fileextension, 
     bm.id AS blobmetadata_id 
     FROM attachments a 
     JOIN papersattachmentscross pac ON pac.attachmentid = a.id 
-    JOIN blobmetadata bm ON bm.changenum = a.changenum 
+    JOIN blobmetadata bm ON bm.id = a.blobid 
     WHERE pac.paperserialnum = @serialnum;", conn31))
                 {
                     int serialnum = Convert.ToInt32(jobId);
@@ -696,17 +739,14 @@ public class JobService : INotifyPropertyChanged
 
                     while (await reader31.ReadAsync())
                     {
-                        var purpose = reader31["purpose"]?.ToString();
-                        var attachmentDescription = reader31["description"]?.ToString();
-                        var fileExtension = reader31["fileextension"]?.ToString();
-                        var blobMetadataId = reader31["blobmetadata_id"]?.ToString();
-
                         job.Attachments.Add(new AttachmentModel
                         {
-                            Purpose = purpose,
-                            Description = attachmentDescription ?? string.Empty,
-                            Format = fileExtension,
-                            BlobMetadataId = blobMetadataId
+                            Id = reader31["attachment_id"] != DBNull.Value ? (Guid)reader31["attachment_id"] : Guid.Empty,
+                            BlobId = reader31["blobid"] != DBNull.Value ? (Guid)reader31["blobid"] : Guid.Empty,
+                            Purpose = reader31["purpose"]?.ToString(),
+                            Description = reader31["description"]?.ToString() ?? string.Empty,
+                            Format = reader31["fileextension"]?.ToString(),
+                            BlobMetadataId = reader31["blobmetadata_id"]?.ToString()
                         });
                     }
                 }
@@ -716,6 +756,39 @@ public class JobService : INotifyPropertyChanged
                 Console.WriteLine($"Concatenated Address: {job.Address}");
 
                 Console.WriteLine($"[INFO] ✅ Job fetched from DB: {job.JobId}, Court: {job.Court}, Defendant: {job.Defendant}");
+
+                using var auditCmd = new NpgsqlCommand(@"
+    INSERT INTO changehistory (jobid, action, username, details)
+    VALUES (@jobid, @action, @username, @details);", conn);
+
+                auditCmd.Parameters.AddWithValue("jobid", long.Parse(jobId));
+                auditCmd.Parameters.AddWithValue("action", "SEARCH");
+                auditCmd.Parameters.AddWithValue("username", SessionManager.CurrentUser?.LoginName ?? "Unknown");
+                auditCmd.Parameters.AddWithValue("details", $"Job search performed for JobId: {jobId}");
+
+                await auditCmd.ExecuteNonQueryAsync();
+
+                var changeHistory = new List<ChangeEntryModel>();
+                using var cmd = new NpgsqlCommand(@"
+    SELECT action, username, details, changed_at
+    FROM changehistory
+    WHERE jobid = @jobid
+    ORDER BY changed_at DESC;", conn);
+
+                cmd.Parameters.AddWithValue("jobid", long.Parse(jobId));
+                using var reader = await cmd.ExecuteReaderAsync();
+                while (await reader.ReadAsync())
+                {
+                    changeHistory.Add(new ChangeEntryModel
+                    {
+                        Date = reader.GetDateTime(reader.GetOrdinal("changed_at")),
+                        FieldName = reader.GetString(reader.GetOrdinal("action")),
+                        OldValue = reader.GetString(reader.GetOrdinal("username")),
+                        NewValue = reader.GetString(reader.GetOrdinal("details"))
+                    });
+                }
+                job.ChangeHistory = changeHistory;
+
                 return job;
             }
         }
@@ -763,6 +836,7 @@ public class JobService : INotifyPropertyChanged
                 if (affected > 0)
                 {
                     Console.WriteLine("✅ papers table updated.");
+                    await LogAuditAsync(conn32, tx, job.JobId, "UPDATE", "Updated papers table fields.");
                 }
                 else
                 {
@@ -828,10 +902,12 @@ public class JobService : INotifyPropertyChanged
                                 VALUES ({string.Join(", ", valueList)});";
 
                                 int inserted = await insertCmd.ExecuteNonQueryAsync();
-                                if (inserted > 0)
+                                if (inserted > 0){
                                     Console.WriteLine("✅ Minimal papers row inserted.");
-                                else
-                                    Console.WriteLine("❌ INSERT into papers failed — check constraints or values.");
+                                    await LogAuditAsync(conn32, tx, job.JobId, "INSERT", "Inserted minimal papers row.");}
+
+                                else{
+                                    Console.WriteLine("❌ INSERT into papers failed — check constraints or values.");}
                             }
                         }
                         else
@@ -856,10 +932,11 @@ public class JobService : INotifyPropertyChanged
                     cmd.Parameters.AddWithValue("jobId", long.Parse(job.JobId));
 
                     int affected = await cmd.ExecuteNonQueryAsync();
-                    if (affected > 0)
+                    if (affected > 0){
                         Console.WriteLine("✅ plongs.typewrit updated.");
-                    else
-                        Console.WriteLine("⚠️ No plongs row updated — serialnum may be missing.");
+                        await LogAuditAsync(conn32, tx, job.JobId, "UPDATE", "Updated plongs.typewrit.");}
+                    else{
+                        Console.WriteLine("⚠️ No plongs row updated — serialnum may be missing.");}
                 }
             }
             else
@@ -904,8 +981,10 @@ public class JobService : INotifyPropertyChanged
                     {
                         cmdUpdateCourt.Parameters.AddWithValue("courtName", job.Court);
                         cmdUpdateCourt.Parameters.AddWithValue("courtNum", courtNum.Value);
-                        await cmdUpdateCourt.ExecuteNonQueryAsync();
+                        int affectedRows = await cmdUpdateCourt.ExecuteNonQueryAsync();
+                        Console.WriteLine($"[DEBUG] Rows affected: {affectedRows}");
                         Console.WriteLine("✅ courts.name updated.");
+                        await LogAuditAsync(conn32, tx, job.JobId, "UPDATE", "Updated courts.name.");
                     }
                 }
                 else
@@ -920,8 +999,10 @@ public class JobService : INotifyPropertyChanged
                     {
                         cmdInsertCourt.Parameters.AddWithValue("serial", newCourtSerial);
                         cmdInsertCourt.Parameters.AddWithValue("name", job.Court);
-                        await cmdInsertCourt.ExecuteNonQueryAsync();
+                        int affectedRows = await cmdInsertCourt.ExecuteNonQueryAsync();
+                        Console.WriteLine($"[DEBUG] Rows affected: {affectedRows}");
                         Console.WriteLine($"✅ Inserted new court with serialnum = {newCourtSerial}");
+                        await LogAuditAsync(conn32, tx, job.JobId, "INSERT", $"Inserted new court with serialnum = {newCourtSerial}.");
                     }
 
                     // Step 3: Link court to case
@@ -936,8 +1017,10 @@ public class JobService : INotifyPropertyChanged
                     {
                         cmdUpdateCase.Parameters.AddWithValue("courtSerial", newCourtSerial);
                         cmdUpdateCase.Parameters.AddWithValue("jobId", long.Parse(job.JobId));
-                        await cmdUpdateCase.ExecuteNonQueryAsync();
+                        int affectedRows = await cmdUpdateCase.ExecuteNonQueryAsync();
+                        Console.WriteLine($"[DEBUG] Rows affected: {affectedRows}");
                         Console.WriteLine("✅ cases.courtnum linked to new court.");
+                        await LogAuditAsync(conn32, tx, job.JobId, "UPDATE", "Linked court to case.");
                     }
                 }
             }
@@ -974,8 +1057,10 @@ public class JobService : INotifyPropertyChanged
                     {
                         cmdUpdateDefendant.Parameters.AddWithValue("defendant", job.Defendant);
                         cmdUpdateDefendant.Parameters.AddWithValue("caseSerial", caseSerial.Value);
-                        await cmdUpdateDefendant.ExecuteNonQueryAsync();
+                        int affectedRows = await cmdUpdateDefendant.ExecuteNonQueryAsync();
+                        Console.WriteLine($"[DEBUG] Rows affected: {affectedRows}");
                         Console.WriteLine($"✅ cases.defend1 updated to: {job.Defendant}");
+                        await LogAuditAsync(conn32, tx, job.JobId, "UPDATE", "Updated cases.defend1.");
                     }
                 }
                 else
@@ -985,13 +1070,16 @@ public class JobService : INotifyPropertyChanged
                     int newCaseSerial = await GenerateNewSerialAsync("cases", conn32, tx);
 
                     await using (var cmdInsertCase = new NpgsqlCommand(@"
-            INSERT INTO cases (serialnum, defend1)
-            VALUES (@serial, @defendant);", conn32, tx))
+            INSERT INTO cases (serialnum, defend1, changenum)
+            VALUES (@serial, @defendant, @changenum);", conn32, tx))
                     {
                         cmdInsertCase.Parameters.AddWithValue("serial", newCaseSerial);
                         cmdInsertCase.Parameters.AddWithValue("defendant", job.Defendant);
-                        await cmdInsertCase.ExecuteNonQueryAsync();
+                        cmdInsertCase.Parameters.AddWithValue("changenum", 0); // or another default value
+                        int affectedRows = await cmdInsertCase.ExecuteNonQueryAsync();
+                        Console.WriteLine($"[DEBUG] Rows affected: {affectedRows}");
                         Console.WriteLine($"✅ Inserted new case with serialnum = {newCaseSerial}");
+                        await LogAuditAsync(conn32, tx, job.JobId, "INSERT", $"Inserted new case with serialnum = {newCaseSerial}.");
                     }
 
                     await using (var cmdLinkCase = new NpgsqlCommand(@"
@@ -1001,16 +1089,18 @@ public class JobService : INotifyPropertyChanged
                     {
                         cmdLinkCase.Parameters.AddWithValue("caseSerial", newCaseSerial);
                         cmdLinkCase.Parameters.AddWithValue("jobId", long.Parse(job.JobId));
-                        await cmdLinkCase.ExecuteNonQueryAsync();
+                        int affectedRows = await cmdLinkCase.ExecuteNonQueryAsync();
+                        Console.WriteLine($"[DEBUG] Rows affected: {affectedRows}");
                         Console.WriteLine($"✅ Linked new case to papers.serialnum = {job.JobId}");
+                        await LogAuditAsync(conn32, tx, job.JobId, "UPDATE", "Linked new case to papers.");
                     }
                 }
             }
 
             // ✅ PLAINTIFF - Update or Insert into SERVEEDETAILS
-            if (!string.IsNullOrWhiteSpace(job.Plaintiff))
+            if (job.IsPlaintiffsEdited && !string.IsNullOrWhiteSpace(job.Plaintiffs))
             {
-                var parts = job.Plaintiff.Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
+                var parts = job.Plaintiffs.Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
                 var firstName = parts.Length > 0 ? parts[0] : "";
                 var lastName = parts.Length > 1 ? parts[1] : "";
 
@@ -1021,15 +1111,15 @@ public class JobService : INotifyPropertyChanged
 
                 // Step 1: Get pliannum from papers
                 await using (var cmdGetPlian = new NpgsqlCommand(@"
-        SELECT pliannum
+        SELECT serialnum
         FROM papers
         WHERE serialnum = @jobId;", conn32, tx))
                 {
                     cmdGetPlian.Parameters.AddWithValue("jobId", long.Parse(job.JobId));
                     await using var reader = await cmdGetPlian.ExecuteReaderAsync();
-                    if (await reader.ReadAsync() && reader["pliannum"] != DBNull.Value)
+                    if (await reader.ReadAsync() && reader["serialnum"] != DBNull.Value)
                     {
-                        plianNum = Convert.ToInt32(reader["pliannum"]);
+                        plianNum = Convert.ToInt32(reader["serialnum"]);
                     }
                     await reader.CloseAsync();
                 }
@@ -1040,13 +1130,15 @@ public class JobService : INotifyPropertyChanged
                     await using (var cmdUpdate = new NpgsqlCommand(@"
             UPDATE serveedetails
             SET firstname = @firstName, lastname = @lastName
-            WHERE serialnum = @plianNum AND seqnum = 1;", conn32, tx))
+            WHERE serialnum = @serialnum AND seqnum = 1;", conn32, tx))
                     {
                         cmdUpdate.Parameters.AddWithValue("firstName", firstName);
                         cmdUpdate.Parameters.AddWithValue("lastName", lastName);
-                        cmdUpdate.Parameters.AddWithValue("plianNum", plianNum.Value);
-                        await cmdUpdate.ExecuteNonQueryAsync();
-                        Console.WriteLine($"✅ Plaintiff (serveedetails) updated: {firstName} {lastName}");
+                        cmdUpdate.Parameters.AddWithValue("serialnum", plianNum.Value);
+                        int affectedRows = await cmdUpdate.ExecuteNonQueryAsync();
+                        Console.WriteLine($"[DEBUG] Rows affected: {affectedRows}");
+                        Console.WriteLine($"✅ Plaintiffs (serveedetails) updated: {firstName} {lastName}");
+                        await LogAuditAsync(conn32, tx, job.JobId, "UPDATE", "Updated serveedetails for plaintiffs.");
                     }
                 }
                 else
@@ -1062,8 +1154,10 @@ public class JobService : INotifyPropertyChanged
                         cmdInsert.Parameters.AddWithValue("serial", newPlianSerial);
                         cmdInsert.Parameters.AddWithValue("firstName", firstName);
                         cmdInsert.Parameters.AddWithValue("lastName", lastName);
-                        await cmdInsert.ExecuteNonQueryAsync();
+                        int affectedRows = await cmdInsert.ExecuteNonQueryAsync();
+                        Console.WriteLine($"[DEBUG] Rows affected: {affectedRows}");
                         Console.WriteLine($"✅ Inserted new serveedetails row with serialnum = {newPlianSerial}");
+                        await LogAuditAsync(conn32, tx, job.JobId, "INSERT", $"Inserted new serveedetails row with serialnum = {newPlianSerial}.");
                     }
                     await using (var cmdLink = new NpgsqlCommand(@"
             UPDATE papers
@@ -1072,8 +1166,10 @@ public class JobService : INotifyPropertyChanged
                     {
                         cmdLink.Parameters.AddWithValue("plianSerial", newPlianSerial);
                         cmdLink.Parameters.AddWithValue("jobId", long.Parse(job.JobId));
-                        await cmdLink.ExecuteNonQueryAsync();
+                        int affectedRows = await cmdLink.ExecuteNonQueryAsync();
+                        Console.WriteLine($"[DEBUG] Rows affected: {affectedRows}");
                         Console.WriteLine($"✅ Linked serveedetails.pliannum = {newPlianSerial} to papers.serialnum = {job.JobId}");
+                        await LogAuditAsync(conn32, tx, job.JobId, "UPDATE", "Linked serveedetails to papers.");
                     }
                 }
             }
@@ -1108,9 +1204,11 @@ public class JobService : INotifyPropertyChanged
                         cmdUpdate.Parameters.AddWithValue("firstName", firstName);
                         cmdUpdate.Parameters.AddWithValue("lastName", lastName);
                         cmdUpdate.Parameters.AddWithValue("serial", attorneySerial.Value);
-                        await cmdUpdate.ExecuteNonQueryAsync();
+                        int affectedRows = await cmdUpdate.ExecuteNonQueryAsync();
+                        Console.WriteLine($"[DEBUG] Rows affected: {affectedRows}");
+                        Console.WriteLine($"✅ Attorney updated: {firstName} {lastName}");
+                        await LogAuditAsync(conn32, tx, job.JobId, "UPDATE", "Updated attorney in entity.");
                     }
-                    Console.WriteLine($"✅ Attorney updated: {firstName} {lastName}");
                 }
                 else
                 {
@@ -1125,7 +1223,10 @@ public class JobService : INotifyPropertyChanged
                         cmdInsert.Parameters.AddWithValue("serial", newSerial);
                         cmdInsert.Parameters.AddWithValue("firstName", firstName);
                         cmdInsert.Parameters.AddWithValue("lastName", lastName);
-                        await cmdInsert.ExecuteNonQueryAsync();
+                        int affectedRows = await cmdInsert.ExecuteNonQueryAsync();
+                        Console.WriteLine($"[DEBUG] Rows affected: {affectedRows}");
+                        Console.WriteLine($"✅ Attorney entity inserted and linked: {firstName} {lastName}");
+                        await LogAuditAsync(conn32, tx, job.JobId, "INSERT", "Inserted and linked new attorney entity.");
                     }
 
                     await using (var cmdLink = new NpgsqlCommand(@"
@@ -1133,7 +1234,10 @@ public class JobService : INotifyPropertyChanged
                     {
                         cmdLink.Parameters.AddWithValue("serial", newSerial);
                         cmdLink.Parameters.AddWithValue("jobId", long.Parse(job.JobId));
-                        await cmdLink.ExecuteNonQueryAsync();
+                        int affectedRows = await cmdLink.ExecuteNonQueryAsync();
+                        Console.WriteLine($"[DEBUG] Rows affected: {affectedRows}");
+                        Console.WriteLine($"✅ Attorney entity inserted and linked: {firstName} {lastName}");
+                        await LogAuditAsync(conn32, tx, job.JobId, "UPDATE", "Updated attorney in entity.");
                     }
 
                     Console.WriteLine($"✅ Attorney entity inserted and linked: {firstName} {lastName}");
@@ -1169,9 +1273,11 @@ public class JobService : INotifyPropertyChanged
                         cmdUpdate.Parameters.AddWithValue("firstName", firstName);
                         cmdUpdate.Parameters.AddWithValue("lastName", lastName);
                         cmdUpdate.Parameters.AddWithValue("serial", clientSerial.Value);
-                        await cmdUpdate.ExecuteNonQueryAsync();
+                        int affectedRows = await cmdUpdate.ExecuteNonQueryAsync();
+                        Console.WriteLine($"[DEBUG] Rows affected: {affectedRows}");
+                        Console.WriteLine($"✅ Client updated: {firstName} {lastName}");
+                        await LogAuditAsync(conn32, tx, job.JobId, "UPDATE", "Updated client in entity.");
                     }
-                    Console.WriteLine($"✅ Client updated: {firstName} {lastName}");
                 }
                 else
                 {
@@ -1187,7 +1293,10 @@ public class JobService : INotifyPropertyChanged
                         cmdInsert.Parameters.AddWithValue("serial", newSerial);
                         cmdInsert.Parameters.AddWithValue("firstName", firstName);
                         cmdInsert.Parameters.AddWithValue("lastName", lastName);
-                        await cmdInsert.ExecuteNonQueryAsync();
+                        int affectedRows = await cmdInsert.ExecuteNonQueryAsync();
+                        Console.WriteLine($"[DEBUG] Rows affected: {affectedRows}");
+                        Console.WriteLine($"✅ Client entity inserted and linked: {firstName} {lastName}");
+                        await LogAuditAsync(conn32, tx, job.JobId, "INSERT", "Inserted and linked new client entity.");
                     }
 
                     await using (var cmdLink = new NpgsqlCommand(@"
@@ -1195,7 +1304,10 @@ public class JobService : INotifyPropertyChanged
                     {
                         cmdLink.Parameters.AddWithValue("serial", newSerial);
                         cmdLink.Parameters.AddWithValue("jobId", long.Parse(job.JobId));
-                        await cmdLink.ExecuteNonQueryAsync();
+                        int affectedRows = await cmdLink.ExecuteNonQueryAsync();
+                        Console.WriteLine($"[DEBUG] Rows affected: {affectedRows}");
+                        Console.WriteLine($"✅ Client entity inserted and linked: {firstName} {lastName}");
+                        await LogAuditAsync(conn32, tx, job.JobId, "UPDATE", "Updated client in entity.");
                     }
 
                     Console.WriteLine($"✅ Client entity inserted and linked: {firstName} {lastName}");
@@ -1232,9 +1344,11 @@ public class JobService : INotifyPropertyChanged
                         cmdUpdate.Parameters.AddWithValue("firstName", firstName);
                         cmdUpdate.Parameters.AddWithValue("lastName", lastName);
                         cmdUpdate.Parameters.AddWithValue("serial", serverSerial.Value);
-                        await cmdUpdate.ExecuteNonQueryAsync();
+                        int affectedRows = await cmdUpdate.ExecuteNonQueryAsync();
+                        Console.WriteLine($"[DEBUG] Rows affected: {affectedRows}");
+                        Console.WriteLine($"✅ Process Server updated: {firstName} {lastName}");
+                        await LogAuditAsync(conn32, tx, job.JobId, "UPDATE", "Updated process server in entity.");
                     }
-                    Console.WriteLine($"✅ Process Server updated: {firstName} {lastName}");
                 }
                 else
                 {
@@ -1248,7 +1362,10 @@ public class JobService : INotifyPropertyChanged
                         cmdInsert.Parameters.AddWithValue("serial", newSerial);
                         cmdInsert.Parameters.AddWithValue("firstName", firstName);
                         cmdInsert.Parameters.AddWithValue("lastName", lastName);
-                        await cmdInsert.ExecuteNonQueryAsync();
+                        int affectedRows = await cmdInsert.ExecuteNonQueryAsync();
+                        Console.WriteLine($"[DEBUG] Rows affected: {affectedRows}");
+                        Console.WriteLine($"✅ Process Server inserted and linked: {firstName} {lastName}");
+                        await LogAuditAsync(conn32, tx, job.JobId, "INSERT", "Inserted and linked new process server entity.");
                     }
 
                     await using (var cmdLink = new NpgsqlCommand(@"
@@ -1256,12 +1373,96 @@ public class JobService : INotifyPropertyChanged
                     {
                         cmdLink.Parameters.AddWithValue("serial", newSerial);
                         cmdLink.Parameters.AddWithValue("jobId", long.Parse(job.JobId));
-                        await cmdLink.ExecuteNonQueryAsync();
+                        int affectedRows = await cmdLink.ExecuteNonQueryAsync();
+                        Console.WriteLine($"[DEBUG] Rows affected: {affectedRows}");
+                        Console.WriteLine($"✅ Process Server inserted and linked: {firstName} {lastName}");
+                        await LogAuditAsync(conn32, tx, job.JobId, "UPDATE", "Updated process server in entity.");
                     }
 
                     Console.WriteLine($"✅ Process Server inserted and linked: {firstName} {lastName}");
                 }
             }
+
+            // ✅ SERVEEDETAILS ADDRESS - Update or Insert into SERVEEDETAILS
+            if (!string.IsNullOrWhiteSpace(job.Address))
+            {
+                Console.WriteLine("➡ Attempting to update serveedetails address...");
+
+                // Parse the address components from the concatenated address
+                // Format: "Address1, City State Zip"
+                var parts = (job.Address ?? "").Split(',');
+                string address1 = parts.Length > 0 ? parts[0].Trim() : "";
+                string address2 = parts.Length > 1 ? parts[1].Trim() : "";
+                string city = parts.Length > 2 ? parts[2].Trim() : "";
+                string state = parts.Length > 3 ? parts[3].Trim() : "";
+                string zip = parts.Length > 4 ? parts[4].Trim() : "";
+
+                // Fallback for legacy data (if only one part and it looks like a full address)
+                if (parts.Length == 1 && string.IsNullOrWhiteSpace(address2 + city + state + zip))
+                {
+                    // Try to parse using regex or string splitting (optional, for legacy support)
+                }
+
+                Console.WriteLine($"[DEBUG] Parsed address - Address1: '{address1}', City: '{city}', State: '{state}', Zip: '{zip}'");
+
+                // Check if serveedetails record exists for this job
+                int? serveeSerial = null;
+                await using (var cmdGetServee = new NpgsqlCommand(@"
+        SELECT serialnum FROM serveedetails 
+        WHERE serialnum = @jobId AND seqnum = 1;", conn32, tx))
+                {
+                    cmdGetServee.Parameters.AddWithValue("jobId", long.Parse(job.JobId));
+                    await using var reader = await cmdGetServee.ExecuteReaderAsync();
+                    if (await reader.ReadAsync())
+                    {
+                        serveeSerial = Convert.ToInt32(reader["serialnum"]);
+                    }
+                    await reader.CloseAsync();
+                }
+
+                if (serveeSerial.HasValue)
+                {
+                    Console.WriteLine($"✅ serveedetails record exists: {serveeSerial.Value}");
+                    await using (var cmdUpdate = new NpgsqlCommand(@"
+            UPDATE serveedetails
+            SET address1 = @address1, address2 = @address2, city = @city, state = @state, zip = @zip
+            WHERE serialnum = @serveeSerial AND seqnum = 1;", conn32, tx))
+                    {
+                        cmdUpdate.Parameters.AddWithValue("address1", address1);
+                        cmdUpdate.Parameters.AddWithValue("address2", address2);
+                        cmdUpdate.Parameters.AddWithValue("city", city);
+                        cmdUpdate.Parameters.AddWithValue("state", state);
+                        cmdUpdate.Parameters.AddWithValue("zip", zip);
+                        cmdUpdate.Parameters.AddWithValue("serveeSerial", serveeSerial.Value);
+                        int affectedRows = await cmdUpdate.ExecuteNonQueryAsync();
+                        Console.WriteLine($"[DEBUG] Rows affected: {affectedRows}");
+                        Console.WriteLine($"✅ Servee address updated: {address1}, {city} {state} {zip}");
+                        await LogAuditAsync(conn32, tx, job.JobId, "UPDATE", "Updated serveedetails address.");
+                    }
+                }
+                else
+                {
+                    Console.WriteLine("⚠️ No serveedetails record found — inserting new record...");
+                    int newServeeSerial = await GenerateNewSerialAsync("serveedetails", conn32, tx);
+
+                    await using (var cmdInsert = new NpgsqlCommand(@"
+            INSERT INTO serveedetails (serialnum, seqnum, address1, address2, city, state, zip)
+            VALUES (@serial, 1, @address1, @address2, @city, @state, @zip);", conn32, tx))
+                    {
+                        cmdInsert.Parameters.AddWithValue("serial", newServeeSerial);
+                        cmdInsert.Parameters.AddWithValue("address1", address1);
+                        cmdInsert.Parameters.AddWithValue("address2", address2);
+                        cmdInsert.Parameters.AddWithValue("city", city);
+                        cmdInsert.Parameters.AddWithValue("state", state);
+                        cmdInsert.Parameters.AddWithValue("zip", zip);
+                        int affectedRows = await cmdInsert.ExecuteNonQueryAsync();
+                        Console.WriteLine($"[DEBUG] Rows affected: {affectedRows}");
+                        Console.WriteLine($"✅ Inserted new serveedetails record with serialnum = {newServeeSerial}");
+                        await LogAuditAsync(conn32, tx, job.JobId, "INSERT", $"Inserted new serveedetails record with serialnum = {newServeeSerial}.");
+                    }
+                }
+            }
+
             if (!string.IsNullOrWhiteSpace(job.ServiceType))
             {
                 Console.WriteLine("➡ Attempting to update ServiceType...");
@@ -1289,8 +1490,10 @@ public class JobService : INotifyPropertyChanged
             WHERE serialnumber = @serial;", conn32, tx);
                     cmdUpdate.Parameters.AddWithValue("serviceName", job.ServiceType);
                     cmdUpdate.Parameters.AddWithValue("serial", typeSerial.Value);
-                    await cmdUpdate.ExecuteNonQueryAsync();
+                    int affectedRows = await cmdUpdate.ExecuteNonQueryAsync();
+                    Console.WriteLine($"[DEBUG] Rows affected: {affectedRows}");
                     Console.WriteLine($"✅ ServiceType updated to: {job.ServiceType}");
+                    await LogAuditAsync(conn32, tx, job.JobId, "UPDATE", "Updated typeservice.");
                 }
                 else
                 {
@@ -1300,8 +1503,10 @@ public class JobService : INotifyPropertyChanged
             VALUES (@serial, @name);", conn32, tx);
                     cmdInsert.Parameters.AddWithValue("serial", newTypeSerial);
                     cmdInsert.Parameters.AddWithValue("name", job.ServiceType);
-                    await cmdInsert.ExecuteNonQueryAsync();
+                    int affectedRows = await cmdInsert.ExecuteNonQueryAsync();
+                    Console.WriteLine($"[DEBUG] Rows affected: {affectedRows}");
                     Console.WriteLine($"✅ Inserted new ServiceType with ID = {newTypeSerial}");
+                    await LogAuditAsync(conn32, tx, job.JobId, "INSERT", $"Inserted new typeservice with ID = {newTypeSerial}.");
 
 
                     await using var cmdUpdateLink = new NpgsqlCommand(@"
@@ -1310,47 +1515,151 @@ public class JobService : INotifyPropertyChanged
             WHERE serialnum = @jobId;", conn32, tx);
                     cmdUpdateLink.Parameters.AddWithValue("serial", newTypeSerial);
                     cmdUpdateLink.Parameters.AddWithValue("jobId", long.Parse(job.JobId));
-                    await cmdUpdateLink.ExecuteNonQueryAsync();
+                    //int affectedRows = await cmdUpdateLink.ExecuteNonQueryAsync();
+                    Console.WriteLine($"[DEBUG] Rows affected: {affectedRows}");
                     Console.WriteLine("✅ papers.typeservice linked to new service.");
+                    await LogAuditAsync(conn32, tx, job.JobId, "UPDATE", "Linked typeservice to papers.");
                 }
-            }
-            //q -> comment list from memory
-            var incoming = new Dictionary<int, CommentModel>();
-            int seq = 1;
-            foreach (var comment in job.Comments)
-            {
-                incoming[seq++] = comment;
-            }
-            Console.WriteLine("🔄 Refreshing comments in DB...");
+                //         }
+                //         //q -> comment list from memory
+                //         var incoming = new Dictionary<int, CommentModel>();
+                //         int seq = 1;
+                //         foreach (var comment in job.Comments)
+                //         {
+                //             incoming[seq++] = comment;
+                //         }
+                //         Console.WriteLine("🔄 Refreshing comments in DB...");
 
-            // Step 1: Get existing comment seqnums
-            var existing = new Dictionary<int, string>();
-            await using var connComments = new NpgsqlConnection(_connectionString);
-            await connComments.OpenAsync();
-            using (var cmd = new NpgsqlCommand(@"
+                //         // Step 1: Get existing comment seqnums
+                //         var existing = new Dictionary<int, string>();
+                //         await using var connComments = new NpgsqlConnection(_connectionString);
+                //         await connComments.OpenAsync();
+                //         using (var cmd = new NpgsqlCommand(@"
+                // SELECT seqnum, comment
+                // FROM comments
+                // WHERE serialnum = @jobId AND isattempt = false;", connComments, tx))
+                //         {
+                //             cmd.Parameters.AddWithValue("jobId", long.Parse(job.JobId));
+                //             using var reader = await cmd.ExecuteReaderAsync();
+                //             while (await reader.ReadAsync())
+                //             {
+                //                 int existingSeq = Convert.ToInt32(reader["seqnum"]);
+                //                 string body = reader["comment"]?.ToString() ?? "";
+                //                 existing[existingSeq] = body;
+                //             }
+                //         }
+
+                //         foreach (var kvp in incoming)
+                //         {
+                //             var currentSeq = kvp.Key;
+                //             var c = kvp.Value;
+                //             long timestamp = ConvertToUnixTimestamp(c.Date, c.Time);
+
+                //             if (existing.ContainsKey(currentSeq))
+                //             {
+                //                 using var update = new NpgsqlCommand(@"
+                //         UPDATE comments
+                //         SET comment = @comment,
+                //             datetime = @datetime,
+                //             source = @source,
+                //             printonaff = @aff,
+                //             printonfs = @fs,
+                //             reviewed = @att
+                //         WHERE serialnum = @jobId AND seqnum = @seq AND isattempt = false;", conn32, tx);
+
+                //                 update.Parameters.AddWithValue("comment", c.Body ?? "");
+                //                 update.Parameters.AddWithValue("datetime", timestamp);
+                //                 update.Parameters.AddWithValue("source", c.Source ?? "UI");
+                //                 update.Parameters.Add("aff", NpgsqlTypes.NpgsqlDbType.Smallint).Value = c.Aff ? (short)1 : (short)0;
+                //                 update.Parameters.Add("fs", NpgsqlTypes.NpgsqlDbType.Smallint).Value = c.FS ? (short)1 : (short)0;
+                //                 update.Parameters.Add("att", NpgsqlTypes.NpgsqlDbType.Boolean).Value = c.Att;
+                //                 update.Parameters.AddWithValue("jobId", long.Parse(job.JobId));
+                //                 update.Parameters.AddWithValue("seq", currentSeq);
+
+                //                 int affectedRows = await update.ExecuteNonQueryAsync();
+                //                 Console.WriteLine($"[DEBUG] Rows affected: {affectedRows}");
+                //                 Console.WriteLine($"🔄 Updated comment seq = {currentSeq}");
+                //                 await LogAuditAsync(conn32, tx, job.JobId, "UPDATE", $"Updated comment seq = {currentSeq}.");
+                //             }
+                //             else
+                //             {
+                //                 using var insert = new NpgsqlCommand(@"
+                //         INSERT INTO comments (
+                //             serialnum, seqnum, changenum, comment, datetime, source,
+                //             isattempt, printonaff, printonfs, reviewed)
+                //         VALUES (
+                //             @serialnum, @seqnum, 0, @comment, @datetime, @source,
+                //             false, @aff, @fs, @att);", conn32, tx);
+
+                //                 insert.Parameters.AddWithValue("serialnum", long.Parse(job.JobId));
+                //                 insert.Parameters.AddWithValue("seqnum", currentSeq);
+                //                 insert.Parameters.AddWithValue("comment", c.Body ?? "");
+                //                 insert.Parameters.AddWithValue("datetime", timestamp);
+                //                 insert.Parameters.AddWithValue("source", c.Source ?? "UI");
+                //                 insert.Parameters.Add("aff", NpgsqlTypes.NpgsqlDbType.Smallint).Value = c.Aff ? (short)1 : (short)0;
+                //                 insert.Parameters.Add("fs", NpgsqlTypes.NpgsqlDbType.Smallint).Value = c.FS ? (short)1 : (short)0;
+                //                 insert.Parameters.Add("att", NpgsqlTypes.NpgsqlDbType.Boolean).Value = c.Att;
+
+                //                 int affectedRows = await insert.ExecuteNonQueryAsync();
+                //                 Console.WriteLine($"[DEBUG] Rows affected: {affectedRows}");
+                //                 Console.WriteLine($"➕ Inserted new comment seq = {currentSeq}");
+                //                 await LogAuditAsync(conn32, tx, job.JobId, "INSERT", $"Inserted new comment seq = {currentSeq}.");
+                //             }
+                //         }
+
+                //         // Step 4: Delete rows that were removed in memory
+                //         var incomingSeqs = new HashSet<int>(incoming.Keys);
+                //         foreach (var existingSeq in existing.Keys)
+                //         {
+                //             if (!incomingSeqs.Contains(existingSeq))
+                //             {
+                //                 using var deleteCmd = new NpgsqlCommand(@"
+                //         DELETE FROM comments
+                //         WHERE serialnum = @jobId AND seqnum = @seq AND isattempt = false;", conn32, tx);
+
+                //                 deleteCmd.Parameters.AddWithValue("jobId", long.Parse(job.JobId));
+                //                 deleteCmd.Parameters.AddWithValue("seq", existingSeq);
+                //                 int affectedRows = await deleteCmd.ExecuteNonQueryAsync();
+                //                 Console.WriteLine($"[DEBUG] Rows affected: {affectedRows}");
+                //                 Console.WriteLine($"🗑️ Deleted comment seq = {existingSeq}");
+                //                 await LogAuditAsync(conn32, tx, job.JobId, "DELETE", $"Deleted comment seq = {existingSeq}.");
+                //             }
+                //         }
+                //         Console.WriteLine("🔄 Refreshing attempts in DB...");
+
+                // Build dictionary from memory using actual seqnum
+                var incoming = job.Comments
+                    .Where(c => c.Seqnum > 0)
+                    .ToDictionary(c => c.Seqnum);
+
+                // Step 1: Fetch existing comments from DB
+                var existing = new Dictionary<int, string>();
+                await using var connComments = new NpgsqlConnection(_connectionString);
+                await connComments.OpenAsync();
+                using (var cmd = new NpgsqlCommand(@"
     SELECT seqnum, comment
     FROM comments
     WHERE serialnum = @jobId AND isattempt = false;", connComments, tx))
-            {
-                cmd.Parameters.AddWithValue("jobId", long.Parse(job.JobId));
-                using var reader = await cmd.ExecuteReaderAsync();
-                while (await reader.ReadAsync())
                 {
-                    int existingSeq = Convert.ToInt32(reader["seqnum"]);
-                    string body = reader["comment"]?.ToString() ?? "";
-                    existing[existingSeq] = body;
+                    cmd.Parameters.AddWithValue("jobId", long.Parse(job.JobId));
+                    using var reader = await cmd.ExecuteReaderAsync();
+                    while (await reader.ReadAsync())
+                    {
+                        int seq = Convert.ToInt32(reader["seqnum"]);
+                        string comment = reader["comment"]?.ToString() ?? "";
+                        existing[seq] = comment;
+                    }
                 }
-            }
 
-            foreach (var kvp in incoming)
-            {
-                var currentSeq = kvp.Key;
-                var c = kvp.Value;
-                long timestamp = ConvertToUnixTimestamp(c.Date, c.Time);
-
-                if (existing.ContainsKey(currentSeq))
+                // Step 2: Insert or Update
+                foreach (var c in job.Comments)
                 {
-                    using var update = new NpgsqlCommand(@"
+                    long timestamp = ConvertToUnixTimestamp(c.Date, c.Time);
+
+                    if (existing.ContainsKey(c.Seqnum))
+                    {
+                        // Update
+                        using var update = new NpgsqlCommand(@"
             UPDATE comments
             SET comment = @comment,
                 datetime = @datetime,
@@ -1360,21 +1669,23 @@ public class JobService : INotifyPropertyChanged
                 reviewed = @att
             WHERE serialnum = @jobId AND seqnum = @seq AND isattempt = false;", conn32, tx);
 
-                    update.Parameters.AddWithValue("comment", c.Body ?? "");
-                    update.Parameters.AddWithValue("datetime", timestamp);
-                    update.Parameters.AddWithValue("source", c.Source ?? "UI");
-                    update.Parameters.Add("aff", NpgsqlTypes.NpgsqlDbType.Smallint).Value = c.Aff ? (short)1 : (short)0;
-                    update.Parameters.Add("fs", NpgsqlTypes.NpgsqlDbType.Smallint).Value = c.FS ? (short)1 : (short)0;
-                    update.Parameters.Add("att", NpgsqlTypes.NpgsqlDbType.Boolean).Value = c.Att;
-                    update.Parameters.AddWithValue("jobId", long.Parse(job.JobId));
-                    update.Parameters.AddWithValue("seq", currentSeq);
+                        update.Parameters.AddWithValue("comment", c.Body ?? "");
+                        update.Parameters.AddWithValue("datetime", timestamp);
+                        update.Parameters.AddWithValue("source", c.Source ?? "UI");
+                        update.Parameters.Add("aff", NpgsqlTypes.NpgsqlDbType.Smallint).Value = c.Aff ? (short)1 : (short)0;
+                        update.Parameters.Add("fs", NpgsqlTypes.NpgsqlDbType.Smallint).Value = c.FS ? (short)1 : (short)0;
+                        update.Parameters.Add("att", NpgsqlTypes.NpgsqlDbType.Boolean).Value = c.Att;
+                        update.Parameters.AddWithValue("jobId", long.Parse(job.JobId));
+                        update.Parameters.AddWithValue("seq", c.Seqnum);
 
-                    await update.ExecuteNonQueryAsync();
-                    Console.WriteLine($"🔄 Updated comment seq = {currentSeq}");
-                }
-                else
-                {
-                    using var insert = new NpgsqlCommand(@"
+                        await update.ExecuteNonQueryAsync();
+                        Console.WriteLine($"🔄 Updated comment seq = {c.Seqnum}");
+                        await LogAuditAsync(conn32, tx, job.JobId, "UPDATE", $"Updated comment seq = {c.Seqnum}.");
+                    }
+                    else
+                    {
+                        // Insert new
+                        using var insert = new NpgsqlCommand(@"
             INSERT INTO comments (
                 serialnum, seqnum, changenum, comment, datetime, source,
                 isattempt, printonaff, printonfs, reviewed)
@@ -1382,88 +1693,109 @@ public class JobService : INotifyPropertyChanged
                 @serialnum, @seqnum, 0, @comment, @datetime, @source,
                 false, @aff, @fs, @att);", conn32, tx);
 
-                    insert.Parameters.AddWithValue("serialnum", long.Parse(job.JobId));
-                    insert.Parameters.AddWithValue("seqnum", currentSeq);
-                    insert.Parameters.AddWithValue("comment", c.Body ?? "");
-                    insert.Parameters.AddWithValue("datetime", timestamp);
-                    insert.Parameters.AddWithValue("source", c.Source ?? "UI");
-                    insert.Parameters.Add("aff", NpgsqlTypes.NpgsqlDbType.Smallint).Value = c.Aff ? (short)1 : (short)0;
-                    insert.Parameters.Add("fs", NpgsqlTypes.NpgsqlDbType.Smallint).Value = c.FS ? (short)1 : (short)0;
-                    insert.Parameters.Add("att", NpgsqlTypes.NpgsqlDbType.Boolean).Value = c.Att;
+                        insert.Parameters.AddWithValue("serialnum", long.Parse(job.JobId));
+                        insert.Parameters.AddWithValue("seqnum", c.Seqnum);
+                        insert.Parameters.AddWithValue("comment", c.Body ?? "");
+                        insert.Parameters.AddWithValue("datetime", timestamp);
+                        insert.Parameters.AddWithValue("source", c.Source ?? "UI");
+                        insert.Parameters.Add("aff", NpgsqlTypes.NpgsqlDbType.Smallint).Value = c.Aff ? (short)1 : (short)0;
+                        insert.Parameters.Add("fs", NpgsqlTypes.NpgsqlDbType.Smallint).Value = c.FS ? (short)1 : (short)0;
+                        insert.Parameters.Add("att", NpgsqlTypes.NpgsqlDbType.Boolean).Value = c.Att;
 
-                    await insert.ExecuteNonQueryAsync();
-                    Console.WriteLine($"➕ Inserted new comment seq = {currentSeq}");
+                        await insert.ExecuteNonQueryAsync();
+                        Console.WriteLine($"➕ Inserted comment seq = {c.Seqnum}");
+                        await LogAuditAsync(conn32, tx, job.JobId, "INSERT", $"Inserted new comment seq = {c.Seqnum}.");
+                    }
                 }
-            }
 
-            // Step 4: Delete rows that were removed in memory
-            var incomingSeqs = new HashSet<int>(incoming.Keys);
-            foreach (var existingSeq in existing.Keys)
-            {
-                if (!incomingSeqs.Contains(existingSeq))
+                // Step 3: Delete removed comments
+                var memorySeqs = new HashSet<int>(job.Comments.Select(c => c.Seqnum));
+                foreach (var seq in existing.Keys)
                 {
-                    using var deleteCmd = new NpgsqlCommand(@"
+                    if (!memorySeqs.Contains(seq))
+                    {
+                        using var delete = new NpgsqlCommand(@"
             DELETE FROM comments
             WHERE serialnum = @jobId AND seqnum = @seq AND isattempt = false;", conn32, tx);
 
-                    deleteCmd.Parameters.AddWithValue("jobId", long.Parse(job.JobId));
-                    deleteCmd.Parameters.AddWithValue("seq", existingSeq);
-                    await deleteCmd.ExecuteNonQueryAsync();
+                        delete.Parameters.AddWithValue("jobId", long.Parse(job.JobId));
+                        delete.Parameters.AddWithValue("seq", seq);
 
-                    Console.WriteLine($"🗑️ Deleted comment seq = {existingSeq}");
+                        await delete.ExecuteNonQueryAsync();
+                        Console.WriteLine($"🗑️ Deleted comment seq = {seq}");
+                        await LogAuditAsync(conn32, tx, job.JobId, "DELETE", $"Deleted comment seq = {seq}.");
+                    }
                 }
-            }
-            Console.WriteLine("🔄 Refreshing attempts in DB...");
 
-            int maxAttemptSeq = 1000;
 
-            using (var maxCmd = new NpgsqlCommand(@"
-    SELECT COALESCE(MAX(seqnum), 999)
-    FROM comments
-    WHERE serialnum = @jobId AND isattempt = true;", conn32, tx))
-            {
-                maxCmd.Parameters.AddWithValue("jobId", long.Parse(job.JobId));
-                maxAttemptSeq = Convert.ToInt32(await maxCmd.ExecuteScalarAsync());
-            }
+// Step: Sync Attempts (exactly like Comments now)
+Console.WriteLine("🔄 Syncing attempts in DB...");
 
-            var existingAttempts = new Dictionary<int, string>();
+                var incomingAttempts = new Dictionary<int, AttemptsModel>();
+// Step: Assign new Seqnums to any new attempts
+// Step 1: Load existing attempts from DB
+var existingAttempts = new Dictionary<int, string>();
+int maxSeq = 1000;
 
-            using (var cmd = new NpgsqlCommand(@"
+using (var cmd = new NpgsqlCommand(@"
     SELECT seqnum, comment
     FROM comments
     WHERE serialnum = @jobId AND isattempt = true;", conn32, tx))
-            {
-                cmd.Parameters.AddWithValue("jobId", long.Parse(job.JobId));
-                using var reader = await cmd.ExecuteReaderAsync();
-                while (await reader.ReadAsync())
-                {
-                    int existingSeq = Convert.ToInt32(reader["seqnum"]);
-                    string body = reader["comment"]?.ToString() ?? "";
-                    existingAttempts[existingSeq] = body;
-                }
-            }
-            var usedSeqs = new HashSet<int>(existingAttempts.Keys);
-            var incomingAttempts = new Dictionary<int, AttemptsModel>();
+{
+    cmd.Parameters.AddWithValue("jobId", long.Parse(job.JobId));
+    using var reader = await cmd.ExecuteReaderAsync();
+    while (await reader.ReadAsync())
+    {
+        int existingSeq = Convert.ToInt32(reader["seqnum"]);
+        string body = reader["comment"]?.ToString() ?? "";
+        existingAttempts[existingSeq] = body;
+        if (existingSeq > maxSeq) maxSeq = existingSeq;
+    }
+}
 
-            foreach (var attempt in job.Attempts)
-            {
-                do { maxAttemptSeq++; }
-                while (usedSeqs.Contains(maxAttemptSeq));
+// Step 2: Assign new seqnum for new attempts
+var usedSeqs = new HashSet<int>(existingAttempts.Keys);
 
-                incomingAttempts[maxAttemptSeq] = attempt;
-                usedSeqs.Add(maxAttemptSeq);
-            }
+foreach (var a in job.Attempts)
+{
+    if (a.Seqnum > 0)
+    {
+        incomingAttempts[a.Seqnum] = a;
+    }
+    else
+    {
+        do { maxSeq++; } while (usedSeqs.Contains(maxSeq));
+        a.Seqnum = maxSeq;
+        incomingAttempts[maxSeq] = a;
+        usedSeqs.Add(maxSeq);
+    }
+}
 
 
-            foreach (var kvp in incomingAttempts)
-            {
-                var attemptSeq = kvp.Key;
-                var a = kvp.Value;
-                long ts = ConvertToUnixTimestamp(a.Date, a.Time);
+using (var cmd = new NpgsqlCommand(@"
+    SELECT seqnum, comment
+    FROM comments
+    WHERE serialnum = @jobId AND isattempt = true;", conn32, tx))
+{
+    cmd.Parameters.AddWithValue("jobId", long.Parse(job.JobId));
+    using var reader = await cmd.ExecuteReaderAsync();
+    while (await reader.ReadAsync())
+    {
+        int existingSeq = Convert.ToInt32(reader["seqnum"]);
+        string body = reader["comment"]?.ToString() ?? "";
+        existingAttempts[existingSeq] = body;
+    }
+}
 
-                if (existingAttempts.ContainsKey(attemptSeq))
-                {
-                    using var update = new NpgsqlCommand(@"
+foreach (var kvp in incomingAttempts)
+{
+    var attemptSeq = kvp.Key;
+    var a = kvp.Value;
+    long ts = ConvertToUnixTimestamp(a.Date, a.Time);
+
+    if (existingAttempts.ContainsKey(attemptSeq))
+    {
+        using var update = new NpgsqlCommand(@"
             UPDATE comments SET
                 comment = @comment,
                 datetime = @datetime,
@@ -1473,22 +1805,23 @@ public class JobService : INotifyPropertyChanged
                 reviewed = @att
             WHERE serialnum = @jobId AND seqnum = @seq AND isattempt = true;", conn32, tx);
 
-                    update.Parameters.AddWithValue("comment", a.Body ?? "");
-                    update.Parameters.AddWithValue("datetime", ts);
-                    update.Parameters.AddWithValue("source", a.Source ?? "UI");
-                    update.Parameters.AddWithValue("aff", a.Aff ? 1 : 0);
-                    update.Parameters.AddWithValue("fs", a.FS ? 1 : 0);
-                    update.Parameters.AddWithValue("att", a.Att);
-                    update.Parameters.AddWithValue("jobId", long.Parse(job.JobId));
-                    update.Parameters.AddWithValue("seq", attemptSeq);
+        update.Parameters.AddWithValue("comment", a.Body ?? "");
+        update.Parameters.AddWithValue("datetime", ts);
+        update.Parameters.AddWithValue("source", a.Source ?? "UI");
+        update.Parameters.AddWithValue("aff", a.Aff ? 1 : 0);
+        update.Parameters.AddWithValue("fs", a.FS ? 1 : 0);
+        update.Parameters.AddWithValue("att", a.Att);
+        update.Parameters.AddWithValue("jobId", long.Parse(job.JobId));
+        update.Parameters.AddWithValue("seq", attemptSeq);
 
-                    await update.ExecuteNonQueryAsync();
-                    Console.WriteLine($"🔄 Updated attempt seq = {attemptSeq}");
-                }
-                else
-                {
-
-                    using var insert = new NpgsqlCommand(@"
+        int affectedRows = await update.ExecuteNonQueryAsync();
+        Console.WriteLine($"[DEBUG] Rows affected: {affectedRows}");
+        Console.WriteLine($"🔄 Updated attempt seq = {attemptSeq}");
+        await LogAuditAsync(conn32, tx, job.JobId, "UPDATE", $"Updated attempt seq = {attemptSeq}.");
+    }
+    else
+    {
+        using var insert = new NpgsqlCommand(@"
             INSERT INTO comments (
                 serialnum, seqnum, changenum, comment, datetime, source,
                 isattempt, printonaff, printonfs, reviewed)
@@ -1496,275 +1829,360 @@ public class JobService : INotifyPropertyChanged
                 @serialnum, @seqnum, 0, @comment, @datetime, @source,
                 true, @aff, @fs, @att);", conn32, tx);
 
-                    insert.Parameters.AddWithValue("serialnum", long.Parse(job.JobId));
-                    insert.Parameters.AddWithValue("seqnum", attemptSeq);
-                    insert.Parameters.AddWithValue("comment", a.Body ?? "");
-                    insert.Parameters.AddWithValue("datetime", ts);
-                    insert.Parameters.AddWithValue("source", a.Source ?? "UI");
-                    insert.Parameters.AddWithValue("aff", a.Aff ? 1 : 0);
-                    insert.Parameters.AddWithValue("fs", a.FS ? 1 : 0);
-                    insert.Parameters.AddWithValue("att", a.Att);
+        insert.Parameters.AddWithValue("serialnum", long.Parse(job.JobId));
+        insert.Parameters.AddWithValue("seqnum", attemptSeq);
+        insert.Parameters.AddWithValue("comment", a.Body ?? "");
+        insert.Parameters.AddWithValue("datetime", ts);
+        insert.Parameters.AddWithValue("source", a.Source ?? "UI");
+        insert.Parameters.AddWithValue("aff", a.Aff ? 1 : 0);
+        insert.Parameters.AddWithValue("fs", a.FS ? 1 : 0);
+        insert.Parameters.AddWithValue("att", a.Att);
 
-                    await insert.ExecuteNonQueryAsync();
-                    Console.WriteLine($"➕ Inserted new attempt seq = {attemptSeq}");
-                }
-            }
+        int affectedRows = await insert.ExecuteNonQueryAsync();
+        Console.WriteLine($"[DEBUG] Rows affected: {affectedRows}");
+        Console.WriteLine($"➕ Inserted new attempt seq = {attemptSeq}");
+        await LogAuditAsync(conn32, tx, job.JobId, "INSERT", $"Inserted new attempt seq = {attemptSeq}.");
+    }
+}
 
-            // Step 4: Delete any DB attempts that are no longer in memory
-            var incomingAttemptSeqs = new HashSet<int>(incomingAttempts.Keys);
-            foreach (var existingSeq in existingAttempts.Keys)
-            {
-                if (!incomingAttemptSeqs.Contains(existingSeq))
-                {
-                    using var delete = new NpgsqlCommand(@"
+// Step 4: Delete any attempts from DB that are no longer in memory
+var incomingAttemptSeqs = new HashSet<int>(incomingAttempts.Keys);
+foreach (var existingSeq in existingAttempts.Keys)
+{
+    if (!incomingAttemptSeqs.Contains(existingSeq))
+    {
+        using var delete = new NpgsqlCommand(@"
             DELETE FROM comments 
             WHERE serialnum = @jobId AND seqnum = @seq AND isattempt = true;", conn32, tx);
 
-                    delete.Parameters.AddWithValue("jobId", long.Parse(job.JobId));
-                    delete.Parameters.AddWithValue("seq", existingSeq);
-                    await delete.ExecuteNonQueryAsync();
-                    Console.WriteLine($"🗑️ Deleted attempt seq = {existingSeq}");
-                }
-            }
-
-            Console.WriteLine("🔄 Syncing invoice entries...");
-
-            // Handle deletion if flagged
-            if (job.DeletedInvoiceId.HasValue)
-            {
-                using var delete = new NpgsqlCommand("DELETE FROM joblineitem WHERE id = @id", conn32, tx);
-                delete.Parameters.AddWithValue("id", job.DeletedInvoiceId.Value);
-                await delete.ExecuteNonQueryAsync();
-                Console.WriteLine($"🗑️ Deleted invoice by ID: {job.DeletedInvoiceId.Value}");
-                job.DeletedInvoiceId = null;
-            }
+        delete.Parameters.AddWithValue("jobId", long.Parse(job.JobId));
+        delete.Parameters.AddWithValue("seq", existingSeq);
+        int affectedRows = await delete.ExecuteNonQueryAsync();
+        Console.WriteLine($"[DEBUG] Rows affected: {affectedRows}");
+        Console.WriteLine($"🗑️ Deleted attempt seq = {existingSeq}");
+        await LogAuditAsync(conn32, tx, job.JobId, "DELETE", $"Deleted attempt seq = {existingSeq}.");
+    }
+}
 
 
-            var existingInvoices = new Dictionary<Guid, InvoiceModel>();
-            using (var cmd = new NpgsqlCommand(@"
+                var existingInvoices = new Dictionary<Guid, InvoiceModel>();
+                using (var cmd = new NpgsqlCommand(@"
     SELECT id, description, quantity, rate, amount 
     FROM joblineitem 
     WHERE jobnumber = @jobId;", conn32, tx))
-            {
-                cmd.Parameters.AddWithValue("jobId", long.Parse(job.JobId));
-                using var reader = await cmd.ExecuteReaderAsync();
-                while (await reader.ReadAsync())
                 {
-                    var id = reader.GetGuid(0);
-                    existingInvoices[id] = new InvoiceModel
+                    cmd.Parameters.AddWithValue("jobId", long.Parse(job.JobId));
+                    using var reader = await cmd.ExecuteReaderAsync();
+                    while (await reader.ReadAsync())
                     {
-                        Id = id,
-                        Description = reader["description"]?.ToString() ?? "",
-                        Quantity = Convert.ToInt32(reader["quantity"]),
-                        Rate = Convert.ToDecimal(reader["rate"]),
-                        Amount = Convert.ToDecimal(reader["amount"])
-                    };
+                        var id = reader.GetGuid(0);
+                        existingInvoices[id] = new InvoiceModel
+                        {
+                            Id = id,
+                            Description = reader["description"]?.ToString() ?? "",
+                            Quantity = Convert.ToInt32(reader["quantity"]),
+                            Rate = Convert.ToDecimal(reader["rate"]),
+                            Amount = Convert.ToDecimal(reader["amount"])
+                        };
+                    }
                 }
-            }
-            foreach (var inv in job.InvoiceEntries)
-            {
-                if (inv.Id != Guid.Empty && existingInvoices.ContainsKey(inv.Id))
+                foreach (var inv in job.InvoiceEntries)
                 {
-                    // Update existing invoice
-                    using var update = new NpgsqlCommand(@"
+                    if (inv.Id != Guid.Empty && existingInvoices.ContainsKey(inv.Id))
+                    {
+                        // Update existing invoice
+                        using var update = new NpgsqlCommand(@"
             UPDATE joblineitem
             SET description = @desc, quantity = @qty, rate = @rate, amount = @amt
             WHERE id = @id;", conn32, tx);
 
-                    update.Parameters.AddWithValue("id", inv.Id);
-                    update.Parameters.AddWithValue("desc", inv.Description);
-                    update.Parameters.AddWithValue("qty", inv.Quantity);
-                    update.Parameters.AddWithValue("rate", inv.Rate);
-                    update.Parameters.AddWithValue("amt", inv.Amount);
+                        update.Parameters.AddWithValue("id", inv.Id);
+                        update.Parameters.AddWithValue("desc", inv.Description);
+                        update.Parameters.AddWithValue("qty", inv.Quantity);
+                        update.Parameters.AddWithValue("rate", inv.Rate);
+                        update.Parameters.AddWithValue("amt", inv.Amount);
 
-                    await update.ExecuteNonQueryAsync();
-                    Console.WriteLine($"🔄 Updated invoice: {inv.Description}");
-                }
-                else
-                {
-                    // Insert new invoice
-                    var newId = inv.Id != Guid.Empty ? inv.Id : Guid.NewGuid();
-                    using var insert = new NpgsqlCommand(@"
+                        int affectedRows = await update.ExecuteNonQueryAsync();
+                        Console.WriteLine($"[DEBUG] Rows affected: {affectedRows}");
+                        Console.WriteLine($"🔄 Updated invoice: {inv.Description}");
+                        await LogAuditAsync(conn32, tx, job.JobId, "UPDATE", $"Updated invoice: {inv.Description}.");
+                    }
+                    else
+                    {
+                        // Insert new invoice
+                        var newId = inv.Id != Guid.Empty ? inv.Id : Guid.NewGuid();
+                        using var insert = new NpgsqlCommand(@"
             INSERT INTO joblineitem (
                 id, jobnumber, description, quantity, rate, amount,
                 pricingmethod, ismanualrate, changenum)
             VALUES (
                 @id, @jobId, @desc, @qty, @rate, @amt, 2, TRUE, 0);", conn32, tx);
 
-                    insert.Parameters.AddWithValue("id", newId);
-                    insert.Parameters.AddWithValue("jobId", long.Parse(job.JobId));
-                    insert.Parameters.AddWithValue("desc", inv.Description);
-                    insert.Parameters.AddWithValue("qty", inv.Quantity);
-                    insert.Parameters.AddWithValue("rate", inv.Rate);
-                    insert.Parameters.AddWithValue("amt", inv.Amount);
+                        insert.Parameters.AddWithValue("id", newId);
+                        insert.Parameters.AddWithValue("jobId", long.Parse(job.JobId));
+                        insert.Parameters.AddWithValue("desc", inv.Description);
+                        insert.Parameters.AddWithValue("qty", inv.Quantity);
+                        insert.Parameters.AddWithValue("rate", inv.Rate);
+                        insert.Parameters.AddWithValue("amt", inv.Amount);
 
-                    await insert.ExecuteNonQueryAsync();
-                    Console.WriteLine($"➕ Inserted invoice: {inv.Description}");
+                        int affectedRows = await insert.ExecuteNonQueryAsync();
+                        Console.WriteLine($"[DEBUG] Rows affected: {affectedRows}");
+                        Console.WriteLine($"➕ Inserted invoice: {inv.Description}");
+                        await LogAuditAsync(conn32, tx, job.JobId, "INSERT", $"Inserted invoice: {inv.Description}.");
+                    }
                 }
-            }
-            Console.WriteLine("🔄 Syncing payments...");
+                Console.WriteLine("🔄 Syncing payments...");
 
-            // 🗑️ Step 1: Delete payment if flagged
-            if (job.DeletedPaymentId.HasValue)
-            {
-                using var delete = new NpgsqlCommand("DELETE FROM payment WHERE id = @id", conn32, tx);
-                delete.Parameters.AddWithValue("id", job.DeletedPaymentId.Value);
-                await delete.ExecuteNonQueryAsync();
-                Console.WriteLine($"🗑️ Deleted payment by ID: {job.DeletedPaymentId.Value}");
-                job.DeletedPaymentId = null; // Clear flag
-            }
+                // 🗑️ Step 1: Delete payment if flagged
+                if (job.DeletedPaymentId.HasValue)
+                {
+                    using var delete = new NpgsqlCommand("DELETE FROM payment WHERE id = @id", conn32, tx);
+                    delete.Parameters.AddWithValue("id", job.DeletedPaymentId.Value);
+                    int affectedRows = await delete.ExecuteNonQueryAsync();
+                    Console.WriteLine($"[DEBUG] Rows affected: {affectedRows}");
+                    Console.WriteLine($"🗑️ Deleted payment by ID: {job.DeletedPaymentId.Value}");
+                    job.DeletedPaymentId = null; // Clear flag
+                    await LogAuditAsync(conn32, tx, job.JobId, "DELETE", $"Deleted payment by ID: {job.DeletedPaymentId.Value}.");
+                }
 
-            // ✅ Step 2: Load existing payments from DB
-            var existingPayments = new Dictionary<Guid, PaymentModel>();
-            using (var cmd = new NpgsqlCommand(@"
+                // ✅ Step 2: Load existing payments from DB
+                var existingPayments = new Dictionary<Guid, PaymentModel>();
+                using (var cmd = new NpgsqlCommand(@"
     SELECT id, date, method, description, amount 
     FROM payment 
     WHERE jobnumber = @jobId;", conn32, tx))
-            {
-                cmd.Parameters.AddWithValue("jobId", long.Parse(job.JobId));
-                using var reader = await cmd.ExecuteReaderAsync();
-                while (await reader.ReadAsync())
                 {
-                    var id = reader.GetGuid(0);
-                    existingPayments[id] = new PaymentModel
+                    cmd.Parameters.AddWithValue("jobId", long.Parse(job.JobId));
+                    using var reader = await cmd.ExecuteReaderAsync();
+                    while (await reader.ReadAsync())
                     {
-                        Id = id,
-                        Date = Convert.ToDateTime(reader["date"]).Date,
-                        TimeOnly = Convert.ToDateTime(reader["date"]).ToString("HH:mm:ss"),
-                        Method = reader["method"]?.ToString(),
-                        Description = reader["description"]?.ToString() ?? "",
-                        Amount = Convert.ToDecimal(reader["amount"])
-                    };
+                        var id = reader.GetGuid(0);
+                        existingPayments[id] = new PaymentModel
+                        {
+                            Id = id,
+                            Date = Convert.ToDateTime(reader["date"]).Date,
+                            TimeOnly = Convert.ToDateTime(reader["date"]).ToString("HH:mm:ss"),
+                            Method = reader["method"]?.ToString(),
+                            Description = reader["description"]?.ToString() ?? "",
+                            Amount = Convert.ToDecimal(reader["amount"])
+                        };
+                    }
                 }
-            }
 
-            // ✅ Step 3: Insert or Update each payment entry
-            foreach (var pay in job.Payments)
-            {
-                if (job.DeletedPaymentId.HasValue && pay.Id == job.DeletedPaymentId.Value)
-                    continue; // Skip deleted item
-
-                DateTime fullDateTime = DateTime.ParseExact($"{pay.Date:yyyy-MM-dd} {pay.TimeOnly}", "yyyy-MM-dd HH:mm:ss", null);
-
-                if (pay.Id != Guid.Empty && existingPayments.ContainsKey(pay.Id))
+                // ✅ Step 3: Insert or Update each payment entry
+                foreach (var pay in job.Payments)
                 {
-                    using var update = new NpgsqlCommand(@"
+                    if (job.DeletedPaymentId.HasValue && pay.Id == job.DeletedPaymentId.Value)
+                        continue; // Skip deleted item
+
+                    DateTime fullDateTime = DateTime.ParseExact($"{pay.Date:yyyy-MM-dd} {pay.TimeOnly}", "yyyy-MM-dd HH:mm:ss", null);
+
+                    if (pay.Id != Guid.Empty && existingPayments.ContainsKey(pay.Id))
+                    {
+                        using var update = new NpgsqlCommand(@"
             UPDATE payment
             SET date = @dt, method = @method, description = @desc, amount = @amt
             WHERE id = @id;", conn32, tx);
 
-                    update.Parameters.AddWithValue("id", pay.Id);
-                    update.Parameters.AddWithValue("dt", fullDateTime);
-                    update.Parameters.AddWithValue("method", Convert.ToInt16(pay.Method ?? "0"));
-                    update.Parameters.AddWithValue("desc", pay.Description ?? "");
-                    update.Parameters.AddWithValue("amt", pay.Amount);
+                        update.Parameters.AddWithValue("id", pay.Id);
+                        update.Parameters.AddWithValue("dt", fullDateTime);
+                        update.Parameters.AddWithValue("method", Convert.ToInt16(pay.Method ?? "0"));
+                        update.Parameters.AddWithValue("desc", pay.Description ?? "");
+                        update.Parameters.AddWithValue("amt", pay.Amount);
 
-                    await update.ExecuteNonQueryAsync();
-                    Console.WriteLine($"🔄 Updated payment: {pay.Description}");
-                }
-                else
-                {
-                    var newId = pay.Id != Guid.Empty ? pay.Id : Guid.NewGuid();
+                        int affectedRows = await update.ExecuteNonQueryAsync();
+                        Console.WriteLine($"[DEBUG] Rows affected: {affectedRows}");
+                        Console.WriteLine($"🔄 Updated payment: {pay.Description}");
+                        await LogAuditAsync(conn32, tx, job.JobId, "UPDATE", $"Updated payment: {pay.Description}.");
+                    }
+                    else
+                    {
+                        var newId = pay.Id != Guid.Empty ? pay.Id : Guid.NewGuid();
 
-                    using var insert = new NpgsqlCommand(@"
+                        using var insert = new NpgsqlCommand(@"
             INSERT INTO payment (id, jobnumber, date, method, description, amount, changenum)
             VALUES (@id, @jobId, @dt, @method, @desc, @amt, 0);", conn32, tx);
 
-                    insert.Parameters.AddWithValue("id", newId);
-                    insert.Parameters.AddWithValue("jobId", long.Parse(job.JobId));
-                    insert.Parameters.AddWithValue("dt", fullDateTime);
-                    insert.Parameters.AddWithValue("method", Convert.ToInt16(pay.Method ?? "0"));
-                    insert.Parameters.AddWithValue("desc", pay.Description ?? "");
-                    insert.Parameters.AddWithValue("amt", pay.Amount);
+                        insert.Parameters.AddWithValue("id", newId);
+                        insert.Parameters.AddWithValue("jobId", long.Parse(job.JobId));
+                        insert.Parameters.AddWithValue("dt", fullDateTime);
+                        insert.Parameters.AddWithValue("method", Convert.ToInt16(pay.Method ?? "0"));
+                        insert.Parameters.AddWithValue("desc", pay.Description ?? "");
+                        insert.Parameters.AddWithValue("amt", pay.Amount);
 
-                    await insert.ExecuteNonQueryAsync();
-                    Console.WriteLine($"➕ Inserted payment: {pay.Description}");
+                        int affectedRows = await insert.ExecuteNonQueryAsync();
+                        Console.WriteLine($"[DEBUG] Rows affected: {affectedRows}");
+                        Console.WriteLine($"➕ Inserted payment: {pay.Description}");
+                        await LogAuditAsync(conn32, tx, job.JobId, "INSERT", $"Inserted payment: {pay.Description}.");
+                    }
                 }
-            }
 
-            // Step 1: DELETE (one at a time)
-            // ✅ Step 4: Delete attachment if flagged
-            if (job.DeletedAttachmentId.HasValue)
-            {
-                await using var conn80 = new NpgsqlConnection(_connectionString);
-                await conn80.OpenAsync();
-                using var delete = new NpgsqlCommand("DELETE FROM attachments WHERE id = @id", conn80, tx);
-                delete.Parameters.AddWithValue("id", job.DeletedAttachmentId.Value);
-                await delete.ExecuteNonQueryAsync();
-                Console.WriteLine($"🗑️ Deleted attachment ID: {job.DeletedAttachmentId.Value}");
-                job.DeletedAttachmentId = null;
-            }
-
-            // Step // Step 2: INSERT or UPDATE attachments
-            foreach (var att in job.Attachments)
-            {
-                var blobId = att.BlobId != Guid.Empty ? att.BlobId : Guid.NewGuid();
-                var attachmentId = att.Id != Guid.Empty ? att.Id : Guid.NewGuid();
-                var changenum = new Random().Next(1000000, 9999999);
-
-                // ✅ Insert into blobs (ON CONFLICT DO NOTHING)
-                using (var insertBlob = new NpgsqlCommand(@"
-        INSERT INTO blobs (id, blob)
-        VALUES (@id, @blob)
-        ON CONFLICT (id) DO NOTHING;", conn32, tx))
+                // Step 1: DELETE (one at a time)
+                // ✅ Step 4: Delete attachment if flagged
+                if (job.DeletedAttachmentId.HasValue)
                 {
-                    insertBlob.Parameters.AddWithValue("id", blobId);
-                    var blobParam = new NpgsqlParameter("blob", NpgsqlTypes.NpgsqlDbType.Bytea)
-                    {
-                        Value = att.FileData ?? Array.Empty<byte>()
-                    };
-                    insertBlob.Parameters.Add(blobParam);
-                    await insertBlob.ExecuteNonQueryAsync();
+                    await using var conn80 = new NpgsqlConnection(_connectionString);
+                    await conn80.OpenAsync();
+                    using var delete = new NpgsqlCommand("DELETE FROM attachments WHERE id = @id", conn80, tx);
+                    delete.Parameters.AddWithValue("id", job.DeletedAttachmentId.Value);
+                    int affectedRows = await delete.ExecuteNonQueryAsync();
+                    Console.WriteLine($"[DEBUG] Rows affected: {affectedRows}");
+                    Console.WriteLine($"🗑️ Deleted attachment ID: {job.DeletedAttachmentId.Value}");
+                    job.DeletedAttachmentId = null;
+                    await LogAuditAsync(conn32, tx, job.JobId, "DELETE", $"Deleted attachment ID: {job.DeletedAttachmentId.Value}.");
                 }
 
-                // ✅ Insert or update blobmetadata (on changenum)
-                using var insertMeta = new NpgsqlCommand(@"
-        INSERT INTO blobmetadata (id, changenum, fileextension)
-        VALUES (@id, @chg, @ext)
-        ON CONFLICT (changenum) DO UPDATE SET fileextension = @ext;", conn32, tx);
-                insertMeta.Parameters.AddWithValue("id", blobId);
-                insertMeta.Parameters.AddWithValue("chg", changenum);
-                insertMeta.Parameters.AddWithValue("ext", att.Format ?? "");
-                await insertMeta.ExecuteNonQueryAsync();
+                // Step // Step 2: INSERT or UPDATE attachments
+                foreach (var att in job.Attachments)
+                {
+                    if (att.Status == "New")
+                    {
+                        Console.WriteLine($"[DEBUG] Inserting new attachment: ID={att.Id}, Filename={att.Filename}, Description={att.Description}, Format={att.Format}, Purpose={att.Purpose}");
 
-                // ✅ Insert attachment (ignore if exists)
-                using var insertAttachment = new NpgsqlCommand(@"
-        INSERT INTO attachments (id, description, purpose, blobid, changenum)
-        VALUES (@id, @desc, @purpose, @blobid, @chg)
-        ON CONFLICT (id) DO NOTHING;", conn32, tx);
-                insertAttachment.Parameters.AddWithValue("id", attachmentId);
-                insertAttachment.Parameters.AddWithValue("desc", att.Description ?? "");
-                insertAttachment.Parameters.AddWithValue("purpose", att.Purpose ?? "General");
-                insertAttachment.Parameters.AddWithValue("blobid", blobId);
-                insertAttachment.Parameters.AddWithValue("chg", changenum);
-                await insertAttachment.ExecuteNonQueryAsync();
+                        using var insertAttachment = new NpgsqlCommand(@"
+    INSERT INTO attachments (id, blobid, description, purpose, filename, changenum)
+    VALUES (@id, @blobid, @desc, @purpose, @filename, @changenum);", conn32, tx);
 
-                // ✅ Insert papersattachmentscross (only if not already linked)
-                await using var conn84 = new NpgsqlConnection(_connectionString);
-                await conn84.OpenAsync();
-                using var insertCross = new NpgsqlCommand(@"
-        INSERT INTO papersattachmentscross (paperserialnum, attachmentid)
-        VALUES (@paperId, @attachId)
-        ON CONFLICT (paperserialnum, attachmentid) DO NOTHING;", conn84, tx);
-                insertCross.Parameters.AddWithValue("paperId", int.Parse(job.JobId));
-                insertCross.Parameters.AddWithValue("attachId", attachmentId);
-                await insertCross.ExecuteNonQueryAsync();
+                        insertAttachment.Parameters.AddWithValue("id", att.Id);
+                        insertAttachment.Parameters.AddWithValue("blobid", att.BlobId);
+                        insertAttachment.Parameters.AddWithValue("desc", att.Description ?? "");
+                        insertAttachment.Parameters.AddWithValue("purpose", int.TryParse(att.Purpose, out var p) ? p : 1);
+                        insertAttachment.Parameters.AddWithValue("filename", att.Filename ?? "");
+                        insertAttachment.Parameters.AddWithValue("changenum", 0); // or generate a value if needed
+
+                        int affectedRows = await insertAttachment.ExecuteNonQueryAsync();
+                        Console.WriteLine($"[DEBUG] Inserted attachment: ID={att.Id}, Rows affected: {affectedRows}");
+                        await LogAuditAsync(conn32, tx, job.JobId, "INSERT", $"Inserted attachment: {att.Description}.");
+
+                        // Optionally insert into blobmetadata, blobs, and papersattachmentscross as needed
+                        att.Status = "Synced";
+
+                        using var insertCross = new NpgsqlCommand(@"
+    INSERT INTO papersattachmentscross (id, paperserialnum, attachmentid, changenum)
+    VALUES (@id, @paperserialnum, @attachmentid, @changenum);", conn32, tx);
+
+                        insertCross.Parameters.AddWithValue("id", Guid.NewGuid());
+                        insertCross.Parameters.AddWithValue("paperserialnum", long.Parse(job.JobId));
+                        insertCross.Parameters.AddWithValue("attachmentid", att.Id);
+                        insertCross.Parameters.AddWithValue("changenum", 0); // or a real value if needed
+
+                        await insertCross.ExecuteNonQueryAsync();
+
+                        using var insertBlobMeta = new NpgsqlCommand(@"
+    INSERT INTO blobmetadata (id, changenum, fileextension)
+    VALUES (@id, @changenum, @fileextension)
+    ON CONFLICT (id) DO NOTHING;", conn32, tx);
+
+                        insertBlobMeta.Parameters.AddWithValue("id", att.BlobId);
+                        insertBlobMeta.Parameters.AddWithValue("changenum", 0); // or a real value if needed
+                        insertBlobMeta.Parameters.AddWithValue("fileextension", att.Format ?? "");
+
+                        await insertBlobMeta.ExecuteNonQueryAsync();
+                    }
+                    else if (att.Status == "Edited")
+                    {
+                        Console.WriteLine($"[DEBUG] Updating attachment: ID={att.Id}, Description={att.Description}, Format={att.Format}, Purpose={att.Purpose}");
+                        // Update attachments table
+                        using var updateAttachment = new NpgsqlCommand(@"
+            UPDATE attachments
+            SET description = @desc, purpose = @purpose, format = @format
+            WHERE id = @id;", conn32, tx);
+                        updateAttachment.Parameters.AddWithValue("id", att.Id);
+                        updateAttachment.Parameters.AddWithValue("desc", att.Description ?? "");
+                        updateAttachment.Parameters.AddWithValue("purpose", int.TryParse(att.Purpose, out var p) ? p : 1); // or your mapping
+                        updateAttachment.Parameters.AddWithValue("format", att.Format ?? "");
+                        int affectedRows = await updateAttachment.ExecuteNonQueryAsync();
+                        Console.WriteLine($"[DEBUG] Attachments table updated, rows affected: {affectedRows}");
+
+                        // Optionally update blobmetadata if format changed
+                        using var updateBlobMeta = new NpgsqlCommand(@"
+            UPDATE blobmetadata
+            SET fileextension = @ext
+            WHERE id = @blobid;", conn32, tx);
+                        updateBlobMeta.Parameters.AddWithValue("ext", att.Format ?? "");
+                        updateBlobMeta.Parameters.AddWithValue("blobid", att.BlobId);
+                        int blobMetaRows = await updateBlobMeta.ExecuteNonQueryAsync();
+                        Console.WriteLine($"[DEBUG] Blobmetadata table updated, rows affected: {blobMetaRows}");
+
+                        att.Status = "Synced"; // Reset status
+                        Console.WriteLine($"[DEBUG] Attachment status set to Synced for ID={att.Id}");
+                    }
+                }
+
+
+
+                // ✅ Clear deletion flag only AFTER all logic
+                // ✅ Clear deletion flags AFTER all logic
+                job.DeletedPaymentId = null;
+                job.DeletedAttachmentId = null;
+
+
+                if (!string.IsNullOrWhiteSpace(job.Plaintiff))
+                {
+                    // ✅ Update Plaintiff in entity table using caseserialnum from papers
+                    string caseSerialNum = null;
+                    await using (var connCase = new NpgsqlConnection(_connectionString))
+                    {
+                        await connCase.OpenAsync();
+                        await using (var cmdCase = new NpgsqlCommand("SELECT pliannum FROM papers WHERE serialnum = @jobId", connCase))
+                        {
+                            cmdCase.Parameters.AddWithValue("jobId", long.Parse(job.JobId));
+                            await using var readerCase = await cmdCase.ExecuteReaderAsync();
+                            if (await readerCase.ReadAsync())
+                            {
+                                caseSerialNum = readerCase["pliannum"]?.ToString();
+                            }
+                        }
+                    }
+                    if (!string.IsNullOrWhiteSpace(job.Plaintiff) && int.TryParse(caseSerialNum, out int serialNum))
+                    {
+                        var nameParts = job.Plaintiff.Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
+                        string firstName = nameParts.Length > 0 ? nameParts[0] : "";
+                        string lastName = nameParts.Length > 1 ? nameParts[1] : "";
+
+                        await using (var cmd = new NpgsqlCommand(@"
+                        UPDATE entity
+                        SET ""FirstName"" = @firstName, ""LastName"" = @lastName
+                        WHERE ""SerialNum"" = @caseSerialNum;", conn32, tx))
+                        {
+                            cmd.Parameters.AddWithValue("firstName", firstName);
+                            cmd.Parameters.AddWithValue("lastName", lastName);
+                            cmd.Parameters.AddWithValue("caseSerialNum", int.Parse(caseSerialNum));
+                            int affectedRows = await cmd.ExecuteNonQueryAsync();
+                            Console.WriteLine($"[DEBUG] Rows affected: {affectedRows}");
+                            Console.WriteLine($"✅ entity updated for plaintiff: {firstName} {lastName} (SerialNum: {serialNum})");
+                        }
+                        Console.WriteLine($"✅ entity updated for plaintiff: {firstName} {lastName} (SerialNum: {serialNum})");
+                    }
+                }
+
+                Console.WriteLine("🟢 Committing transaction...");
+                Console.WriteLine("✅ Job successfully saved.");
+                await tx.CommitAsync();
+                await LogAuditAsync(conn32, tx, job.JobId, "COMMIT", "Committed transaction for SaveJob.");
+
             }
-
-
-
-            // ✅ Clear deletion flag only AFTER all logic
-            // ✅ Clear deletion flags AFTER all logic
-            job.DeletedPaymentId = null;
-            job.DeletedAttachmentId = null;
-
-            Console.WriteLine("🟢 Committing transaction...");
-            Console.WriteLine("✅ Job successfully saved.");
-            await tx.CommitAsync();
-
         }
         catch (Exception ex)
         {
+            try
+            {
+                // Log the error to audit
+                using var conn = new NpgsqlConnection(_connectionString);
+                await conn.OpenAsync();
+                using var auditCmd = new NpgsqlCommand(@"
+            INSERT INTO changehistory (jobid, action, username, details)
+            VALUES (@jobid, @action, @username, @details);", conn);
+
+                auditCmd.Parameters.AddWithValue("jobid", long.Parse(job.JobId ?? "0"));
+                auditCmd.Parameters.AddWithValue("action", "ERROR");
+                auditCmd.Parameters.AddWithValue("username", SessionManager.CurrentUser?.LoginName ?? "Unknown");
+                auditCmd.Parameters.AddWithValue("details", $"Exception: {ex.Message}\n{ex.StackTrace}");
+
+                await auditCmd.ExecuteNonQueryAsync();
+            }
+            catch { /* Swallow to avoid masking the original error */ }
+
             tx.Rollback();
             Console.WriteLine($"🔥 ERROR in SaveJob(): {ex.Message}");
             throw;
@@ -1829,4 +2247,44 @@ public class JobService : INotifyPropertyChanged
     //     }
     // );
     // ... rest of your code ...
+
+    async Task LogAuditAsync(NpgsqlConnection conn, NpgsqlTransaction tx, string jobId, string action, string details)
+    {
+        using var auditCmd = new NpgsqlCommand(@"
+        INSERT INTO changehistory (jobid, action, username, details)
+        VALUES (@jobid, @action, @username, @details);", conn, tx);
+
+        auditCmd.Parameters.AddWithValue("jobid", long.Parse(jobId));
+        auditCmd.Parameters.AddWithValue("action", action);
+        auditCmd.Parameters.AddWithValue("username", SessionManager.CurrentUser?.LoginName ?? "Unknown");
+        auditCmd.Parameters.AddWithValue("details", details);
+
+        await auditCmd.ExecuteNonQueryAsync();
+    }
+
+    public async Task<int> GetJobCountByCaseNumberAsync(string caseNumber)
+    {
+        if (string.IsNullOrWhiteSpace(caseNumber)) return 0;
+        try
+        {
+            await using var conn = new NpgsqlConnection(_connectionString);
+            await conn.OpenAsync();
+            await using (var cmd = new NpgsqlCommand(@"
+            SELECT COUNT(*) FROM papers p
+            JOIN cases c ON p.caseserialnum = c.serialnum
+            WHERE c.casenum = @caseNumber", conn))
+            {
+                cmd.Parameters.AddWithValue("caseNumber", caseNumber.Trim());
+                var result = await cmd.ExecuteScalarAsync();
+                int count = Convert.ToInt32(result);
+                Console.WriteLine($"[INFO] Found {count} jobs with case number '{caseNumber.Trim()}'");
+                return Convert.ToInt32(result);
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[ERROR] Failed to get job count for case number {caseNumber}: {ex.Message}");
+            return 0;
+        }
+    }
 }

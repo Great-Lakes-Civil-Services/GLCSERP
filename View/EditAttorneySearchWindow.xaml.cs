@@ -13,6 +13,8 @@ namespace CivilProcessERP.Views
         private readonly string _initialValue;
 
         public string SelectedAttorneyFullName => lstAttorneys.SelectedItem?.ToString() ?? "";
+        public bool IsNewAttorney { get; set; } = false;
+        public string NewAttorneyFullName { get; set; } = string.Empty;
 
         public EditAttorneySearchWindow(string connectionString, string initialValue = "")
         {
@@ -105,6 +107,19 @@ namespace CivilProcessERP.Views
         {
             DialogResult = false;
             Close();
+        }
+
+        // Add a handler for the 'Other' button (if not present)
+        private void Other_Click(object sender, RoutedEventArgs e)
+        {
+            var input = Microsoft.VisualBasic.Interaction.InputBox("Enter new attorney name:", "Add New Attorney", txtSearch.Text);
+            if (!string.IsNullOrWhiteSpace(input))
+            {
+                IsNewAttorney = true;
+                NewAttorneyFullName = input.Trim();
+                DialogResult = true;
+                Close();
+            }
         }
     }
 }

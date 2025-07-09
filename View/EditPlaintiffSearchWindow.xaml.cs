@@ -11,6 +11,8 @@ namespace CivilProcessERP.Views
     {
         private readonly string _connectionString;
         public string SelectedPlaintiffFullName => lstPlaintiffs.SelectedItem?.ToString() ?? "";
+        public bool IsNewPlaintiff { get; set; } = false;
+        public string NewPlaintiffFullName { get; set; } = string.Empty;
 
         public EditPlaintiffSearchWindow(string connectionString, string currentPlaintiff = "")
         {
@@ -103,6 +105,19 @@ namespace CivilProcessERP.Views
         {
             DialogResult = false;
             Close();
+        }
+
+        // Add a handler for the 'Other' button (if not present)
+        private void Other_Click(object sender, RoutedEventArgs e)
+        {
+            var input = Microsoft.VisualBasic.Interaction.InputBox("Enter new plaintiff name:", "Add New Plaintiff", txtSearch.Text);
+            if (!string.IsNullOrWhiteSpace(input))
+            {
+                IsNewPlaintiff = true;
+                NewPlaintiffFullName = input.Trim();
+                DialogResult = true;
+                Close();
+            }
         }
     }
 }

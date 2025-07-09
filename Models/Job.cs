@@ -1,4 +1,3 @@
-
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 
@@ -27,6 +26,13 @@ public string CaseNumber { get; set; }  // This holds the public display number 
         public string Plaintiffs { get; set; }
         public string Defendant { get; set; }
         public string Address { get; set; }
+
+        public string AddressLine1 { get; set; }
+public string AddressLine2 { get; set; }
+public string City { get; set; }
+public string State { get; set; }
+public string Zip { get; set; }
+
         public string? Status { get; set; }
         //public string CaseNumber { get; set; }
         public string ClientReference { get; set; }
@@ -148,6 +154,17 @@ protected void OnPropertyChanged(string propertyName)
     public string ServiceDate { get; set; }
     public string ServiceTime { get; set; }
         public object AttachmentsModel { get; internal set; }
+        public bool IsPlaintiffsEdited { get; set; }
+        public bool IsPlaintiffEdited { get; set; }
+        // Add these for AddJobView support:
+        public bool IsPlaintiffNew { get; set; }
+        public bool IsPlaintiffsNew { get; set; }
+        public bool IsAttorneyNew { get; set; }
+        public bool IsProcessServerNew { get; set; }
+        public bool IsClientNew { get; set; }
+        public bool IsAttorneyEdited { get; set; }
+        public bool IsProcessServerEdited { get; set; }
+        public bool IsClientEdited { get; set; }
     }
 
     public class InvoiceModel
@@ -199,6 +216,7 @@ protected void OnPropertyChanged(string propertyName)
 
     public class CommentModel
 {
+    public int Seqnum { get; set; }
     public string Date { get; set; }
     public string Time { get; set; }
     public string Body { get; set; }
@@ -210,25 +228,32 @@ protected void OnPropertyChanged(string propertyName)
 
 
     public string Source { get; set; }
+    
+     public long SerialNum { get; set; }
 
     public CommentModel Clone()
-    {
-        return new CommentModel
         {
-            Date = this.Date,
-            Time = this.Time,
-            Body = this.Body,
-            Aff = this.Aff,
-            FS = this.FS,
-            Att = this.Att,
-            Source = this.Source
-        };
-    }
+            return new CommentModel
+            {
+                SerialNum = this.SerialNum,
+                Seqnum = this.Seqnum,
+                Date = this.Date,
+                Time = this.Time,
+                Body = this.Body,
+                Aff = this.Aff,
+                FS = this.FS,
+                Att = this.Att,
+                Source = this.Source
+            };
+        }
 }
 
     public class AttemptsModel
 {
-    public string Date { get; set; }
+public long  SerialNum { get; set; }
+
+public int Seqnum { get; set; }
+        public string Date { get; set; }
     public string Time { get; set; }
     public string Body { get; set; }
 
@@ -243,6 +268,8 @@ protected void OnPropertyChanged(string propertyName)
     {
         return new AttemptsModel
         {
+            SerialNum = this.SerialNum,
+            Seqnum = this.Seqnum,
             Date = this.Date,
             Time = this.Time,
             Body = this.Body,
@@ -266,7 +293,8 @@ public class AttachmentModel
     public string BlobMetadataId { get; set; } // ✅ Optional: string identifier for blobmetadata
 
     public string FilePath { get; set; }      // ✅ Local path used for display/editing (not stored in DB)
-    public string Status { get; set; }        // ✅ "New", "Edited", "Synced", etc.
+    public string Status { get; set; }  
+    public string Filename { get; set; }      // ✅ "New", "Edited", "Synced", etc.
 
     public AttachmentModel Clone()
     {
@@ -279,11 +307,20 @@ public class AttachmentModel
             Format = this.Format,
             FileExtension = this.FileExtension,
             FileData = this.FileData,
+            Filename = this.Filename,
             BlobMetadataId = this.BlobMetadataId,
             FilePath = this.FilePath,
             Status = this.Status
         };
     }
+}
+
+public class ChangeEntryModel
+{
+    public DateTime Date { get; set; }
+    public string FieldName { get; set; } // Action (e.g., "SEARCH")
+    public string OldValue { get; set; }  // Username
+    public string NewValue { get; set; }  // Details
 }
 
 }

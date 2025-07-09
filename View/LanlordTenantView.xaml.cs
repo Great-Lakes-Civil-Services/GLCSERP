@@ -53,9 +53,11 @@ private async void SearchJobButton_Click(object sender, RoutedEventArgs e)
 
         private void AddJobButton_Click(object sender, RoutedEventArgs e)
         {
-            if (DataContext is LandlordTenantViewModel viewModel)
+            if (Application.Current.MainWindow is MainWindow mainWindow)
             {
-                viewModel.AddNewJob();
+                var newJob = new Job(); // Create a blank job object
+                var addJobView = new AddJobView(newJob); // New AddJobView
+                mainWindow.AddNewTab(addJobView, $"Add Job"); // Open in a new tab
             }
         }
 

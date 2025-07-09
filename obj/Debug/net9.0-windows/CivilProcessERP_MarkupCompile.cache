@@ -10,11 +10,11 @@ none
 false
 TRACE;DEBUG;NET;NET9_0;NETCOREAPP
 C:\Users\GLCS\CivilProcessERP\App.xaml
-40-1205839628
+43-1819437443
 
-791867910257
-244-2092954470
-LoginView.xaml;MainWindow.xaml;MfaPromptWindow.xaml;View\AdministrationView.xaml;View\AssignPermissionView.xaml;View\ClientsView.xaml;View\CourtsView.xaml;View\CreateUserView.xaml;View\DeleteGroupView.xaml;View\DeleteUserView.xaml;View\EditAreaSearchWindow.xaml;View\EditAttorneySearchWindow.xaml;View\EditClientSearchWindow.xaml;View\EditCourtSearchWindow.xaml;View\EditDateDialog.xaml;View\EditDateTimeDialog.xaml;View\EditFieldDialog.xaml;View\EditInvoiceWindow.xaml;View\EditLogEntryWindow.xaml;View\EditPaymentWindow.xaml;View\EditPlaintiffSearchWindow.xaml;View\EditProcessServerSearchWindow.xaml;View\EditServeeAddressWindow.xaml;View\EditServiceTypeSearchWindow.xaml;View\EditTimeDialog.xaml;View\EditTypeOfWritSearchWindow.xaml;View\EditUserView.xaml;View\EmployeesCornerView.xaml;View\EnableDisableUserView.xaml;View\EvictionsView.xaml;View\ExecutionsView.xaml;View\FreezeOrganizationView.xaml;View\HuronPortalView.xaml;View\JobDetailsView.xaml;View\LandlordTenantView.xaml;View\MainDashboard.xaml;View\ManagePermissionsView.xaml;View\RolePermissionManagerView.xaml;View\SetupMfaWindow.xaml;View\SingleFieldDialog.xaml;
+83-60479449
+2441102194747
+LoginView.xaml;MainWindow.xaml;MfaPromptWindow.xaml;View\AddJobView.xaml;View\AdministrationView.xaml;View\AssignPermissionView.xaml;View\ClientsView.xaml;View\CourtsView.xaml;View\CreateUserView.xaml;View\DeleteGroupView.xaml;View\DeleteUserView.xaml;View\EditAreaSearchWindow.xaml;View\EditAttachmentWindow.xaml;View\EditAttorneySearchWindow.xaml;View\EditClientSearchWindow.xaml;View\EditCourtSearchWindow.xaml;View\EditDateDialog.xaml;View\EditDateTimeDialog.xaml;View\EditFieldDialog.xaml;View\EditInvoiceWindow.xaml;View\EditLogEntryWindow.xaml;View\EditPaymentWindow.xaml;View\EditPlaintiffSearchWindow.xaml;View\EditPlaintiffsSearchWindow.xaml;View\EditProcessServerSearchWindow.xaml;View\EditServeeAddressWindow.xaml;View\EditServiceTypeSearchWindow.xaml;View\EditTimeDialog.xaml;View\EditTypeOfWritSearchWindow.xaml;View\EditUserView.xaml;View\EmployeesCornerView.xaml;View\EnableDisableUserView.xaml;View\EvictionsView.xaml;View\ExecutionsView.xaml;View\FreezeOrganizationView.xaml;View\HuronPortalView.xaml;View\JobDetailsView.xaml;View\LandlordTenantView.xaml;View\MainDashboard.xaml;View\ManagePermissionsView.xaml;View\RolePermissionManagerView.xaml;View\SetupMfaWindow.xaml;View\SingleFieldDialog.xaml;
 
 False
 
