@@ -105,5 +105,24 @@ namespace CivilProcessERP.Views
             DialogResult = true;
             Close();
         }
+
+        // Add this method for the Other button
+        private void Other_Click(object sender, RoutedEventArgs e)
+        {
+            var dialog = new CivilProcessERP.Views.SingleFieldDialog("Court", txtSearch.Text);
+            if (dialog.ShowDialog() == true)
+            {
+                string newCourt = dialog.Value;
+                if (!string.IsNullOrWhiteSpace(newCourt))
+                {
+                    lstCourts.SelectedItem = null;
+                    txtSearch.Text = newCourt;
+                    if (!lstCourts.Items.Contains(newCourt))
+                        lstCourts.Items.Insert(0, newCourt);
+                    DialogResult = true;
+                    Close();
+                }
+            }
+        }
     }
 }

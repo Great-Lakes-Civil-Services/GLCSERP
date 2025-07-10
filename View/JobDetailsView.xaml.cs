@@ -551,15 +551,19 @@ private async void AddInvoice_Click(object sender, RoutedEventArgs e)
     await _invoiceLock.WaitAsync();
     try
     {
-        var entry = new InvoiceModel();
-        var popup = new EditInvoiceWindow(entry) { Owner = Window.GetWindow(this) };
-
-        if (popup.ShowDialog() == true)
+        var entry = new InvoiceModel
         {
-            Job.InvoiceEntries.Add(entry);
-            OnPropertyChanged(nameof(Job.TotalInvoiceAmount));
-            Console.WriteLine("➕ Invoice added.");
-        }
+            Id = Guid.NewGuid(),
+            Description = "New Invoice",
+            Quantity = 1,
+            Rate = 0m,
+            Amount = 0m
+        };
+        Job.InvoiceEntries.Add(entry);
+        OnPropertyChanged(nameof(Job.TotalInvoiceAmount));
+        Console.WriteLine("➕ Dummy invoice row added.");
+        // Optionally select the new row in the UI:
+        InvoiceListView.SelectedItem = entry;
     }
     finally
     {
@@ -634,15 +638,20 @@ private async void AddPayment_Click(object sender, RoutedEventArgs e)
     await _paymentLock.WaitAsync();
     try
     {
-        var entry = new PaymentModel();
-        var popup = new EditPaymentWindow(entry) { Owner = Window.GetWindow(this) };
-
-        if (popup.ShowDialog() == true)
+        var entry = new PaymentModel
         {
-            Job.Payments.Add(entry);
-            OnPropertyChanged(nameof(Job.TotalPaymentsAmount));
-            Console.WriteLine("➕ New payment added.");
-        }
+            Id = Guid.NewGuid(),
+            Date = DateTime.Now,
+            TimeOnly = DateTime.Now.ToString("HH:mm:ss"),
+            Method = "Cash",
+            Description = "New Payment",
+            Amount = 0m
+        };
+        Job.Payments.Add(entry);
+        OnPropertyChanged(nameof(Job.TotalPaymentsAmount));
+        Console.WriteLine("➕ Dummy payment row added.");
+        // Optionally select the new row in the UI:
+        PaymentsListView.SelectedItem = entry;
     }
     finally
     {
@@ -920,7 +929,16 @@ private async void EditAttorney_MouseDoubleClick(object sender, MouseButtonEvent
 
         if (dialog.ShowDialog() == true)
         {
-            Job.Attorney = dialog.SelectedAttorneyFullName;
+            if (dialog.IsNewAttorney)
+            {
+                Job.Attorney = dialog.NewAttorneyFullName;
+                Job.IsAttorneyNew = true;
+            }
+            else
+            {
+                Job.Attorney = dialog.SelectedAttorneyFullName;
+                Job.IsAttorneyNew = false;
+            }
             OnPropertyChanged(nameof(Job.Attorney));
             Console.WriteLine($"✏️ Attorney updated: {Job.Attorney}");
         }
@@ -949,7 +967,16 @@ private async void EditProcessServer_MouseDoubleClick(object sender, MouseButton
 
         if (dialog2.ShowDialog() == true)
         {
-            Job.ProcessServer = dialog2.SelectedProcessServer;
+            if (dialog2.IsNewProcessServer)
+            {
+                Job.ProcessServer = dialog2.NewProcessServerFullName; // <-- Use the correct property name
+                Job.IsProcessServerNew = true;
+            }
+            else
+            {
+                Job.ProcessServer = dialog2.SelectedProcessServerFullName;
+                Job.IsProcessServerNew = false;
+            }
             OnPropertyChanged(nameof(Job.ProcessServer));
             Console.WriteLine($"✏️ Process server updated: {Job.ProcessServer}");
         }
@@ -977,7 +1004,16 @@ private async void EditClient_MouseDoubleClick(object sender, MouseButtonEventAr
 
         if (dialog3.ShowDialog() == true)
         {
-            Job.Client = dialog3.SelectedClientFullName;
+            if (dialog3.IsNewClient)
+            {
+                Job.Client = dialog3.NewClientFullName;
+                Job.IsClientNew = true;
+            }
+            else
+            {
+                Job.Client = dialog3.SelectedClientFullName;
+                Job.IsClientNew = false;
+            }
             OnPropertyChanged(nameof(Job.Client));
             Console.WriteLine($"✏️ Client updated: {Job.Client}");
         }

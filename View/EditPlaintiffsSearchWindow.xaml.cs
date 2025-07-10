@@ -107,16 +107,21 @@ namespace CivilProcessERP.Views
             Close();
         }
 
-        // Add a handler for the 'Other' button (if not present)
         private void Other_Click(object sender, RoutedEventArgs e)
         {
-            var input = Microsoft.VisualBasic.Interaction.InputBox("Enter new plaintiffs name:", "Add New Plaintiffs", txtSearchs.Text);
-            if (!string.IsNullOrWhiteSpace(input))
+            var dialog = new CivilProcessERP.Views.SingleFieldDialog("Plaintiffs", txtSearchs.Text);
+            if (dialog.ShowDialog() == true)
             {
-                IsNewPlaintiffs = true;
-                NewPlaintiffsFullName = input.Trim();
-                DialogResult = true;
-                Close();
+                string newPlaintiffs = dialog.Value;
+                if (!string.IsNullOrWhiteSpace(newPlaintiffs))
+                {
+                    lstPlaintiffss.SelectedItem = null;
+                    txtSearchs.Text = newPlaintiffs;
+                    if (!lstPlaintiffss.Items.Contains(newPlaintiffs))
+                        lstPlaintiffss.Items.Insert(0, newPlaintiffs);
+                    DialogResult = true;
+                    Close();
+                }
             }
         }
     }

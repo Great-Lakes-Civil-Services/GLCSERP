@@ -712,7 +712,10 @@ job.Zip = zip;
                     {
                         var firstName = reader29["firstname"]?.ToString()?.Trim();
                         var lastName = reader29["lastname"]?.ToString()?.Trim();
-                        job.Plaintiffs = $"{firstName} {lastName}".Trim();
+                        var fullName = $"{firstName} {lastName}".Trim();
+                        if (!string.IsNullOrWhiteSpace(fullName))
+                            job.Plaintiffs = fullName;
+                        // else keep the dudeservedlfm value
                     }
                 }
 
@@ -788,6 +791,24 @@ job.Zip = zip;
                     });
                 }
                 job.ChangeHistory = changeHistory;
+
+                // Fetch workflow status
+                await using (var connWF = new NpgsqlConnection(_connectionString))
+                {
+                    await connWF.OpenAsync();
+                    await using (var cmdWF = new NpgsqlCommand(
+                        "SELECT workflowfcm, workflowsops, workflowiia FROM jobworkflowstatus WHERE jobid = @jobId", connWF))
+                    {
+                        cmdWF.Parameters.AddWithValue("jobId", long.Parse(job.JobId));
+                        await using var readerWF = await cmdWF.ExecuteReaderAsync();
+                        if (await readerWF.ReadAsync())
+                        {
+                            job.WorkflowFCM = readerWF["workflowfcm"] != DBNull.Value && (bool)readerWF["workflowfcm"];
+                            job.WorkflowSOPS = readerWF["workflowsops"] != DBNull.Value && (bool)readerWF["workflowsops"];
+                            job.WorkflowIIA = readerWF["workflowiia"] != DBNull.Value && (bool)readerWF["workflowiia"];
+                        }
+                    }
+                }
 
                 return job;
             }
@@ -2160,6 +2181,23 @@ foreach (var existingSeq in existingAttempts.Keys)
                 Console.WriteLine("✅ Job successfully saved.");
                 await tx.CommitAsync();
                 await LogAuditAsync(conn32, tx, job.JobId, "COMMIT", "Committed transaction for SaveJob.");
+
+                // Upsert workflow status
+                await using (var cmdWF = new NpgsqlCommand(@"
+    INSERT INTO jobworkflowstatus (jobid, workflowfcm, workflowsops, workflowiia)
+    VALUES (@jobid, @fcm, @sops, @iia)
+    ON CONFLICT (jobid) DO UPDATE SET
+        workflowfcm = EXCLUDED.workflowfcm,
+        workflowsops = EXCLUDED.workflowsops,
+        workflowiia = EXCLUDED.workflowiia;
+", conn32, tx))
+                {
+                    cmdWF.Parameters.AddWithValue("jobid", long.Parse(job.JobId));
+                    cmdWF.Parameters.AddWithValue("fcm", job.WorkflowFCM);
+                    cmdWF.Parameters.AddWithValue("sops", job.WorkflowSOPS);
+                    cmdWF.Parameters.AddWithValue("iia", job.WorkflowIIA);
+                    await cmdWF.ExecuteNonQueryAsync();
+                }
 
             }
         }

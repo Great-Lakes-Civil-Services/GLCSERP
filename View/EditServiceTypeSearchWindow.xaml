@@ -7,6 +7,7 @@
         <ListBox x:Name="lstServiceTypes" Height="250" MouseDoubleClick="lstServiceTypes_MouseDoubleClick"/>
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
             <Button Content="Select" Width="75" Margin="5" Click="Select_Click"/>
+            <Button Content="Other" Width="75" Margin="5" Click="Other_Click"/>
             <Button Content="Cancel" Width="75" Margin="5" Click="Close_Click"/>
         </StackPanel>
     </StackPanel>

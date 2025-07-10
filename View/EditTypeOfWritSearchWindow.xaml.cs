@@ -84,5 +84,23 @@ namespace CivilProcessERP.Views
             DialogResult = false;
             Close();
         }
+
+        private void Other_Click(object sender, RoutedEventArgs e)
+        {
+            var dialog = new CivilProcessERP.Views.SingleFieldDialog("Type of Writ", txtSearch.Text);
+            if (dialog.ShowDialog() == true)
+            {
+                string newType = dialog.Value;
+                if (!string.IsNullOrWhiteSpace(newType))
+                {
+                    lstTypes.SelectedItem = null;
+                    txtSearch.Text = newType;
+                    if (!lstTypes.Items.Contains(newType))
+                        lstTypes.Items.Insert(0, newType);
+                    DialogResult = true;
+                    Close();
+                }
+            }
+        }
     }
 }

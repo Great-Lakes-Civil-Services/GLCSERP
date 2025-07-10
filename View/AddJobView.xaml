@@ -141,9 +141,9 @@
 
                 <!-- Workflow Status --> 
                 <TextBlock Text="Workflow Status" FontWeight="Bold" Margin="5"/>
-                <CheckBox Content="FCM – Needs First-class Mailing sent out" Margin="10,0"/>
-                <CheckBox Content="SOPS – Needs to be Sent Out to Process Server" Margin="10,0"/>
-                <CheckBox Content="IIA – Needs Invoice Items Added" Margin="10,0"/>
+                <CheckBox Content="FCM – Needs First-class Mailing sent out" Margin="10,0" IsChecked="{Binding Job.WorkflowFCM}"/>
+                <CheckBox Content="SOPS – Needs to be Sent Out to Process Server" Margin="10,0" IsChecked="{Binding Job.WorkflowSOPS}"/>
+                <CheckBox Content="IIA – Needs Invoice Items Added" Margin="10,0" IsChecked="{Binding Job.WorkflowIIA}"/>
             </StackPanel>
 
           <Grid Grid.Column="1" Margin="10">

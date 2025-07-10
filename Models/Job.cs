@@ -165,6 +165,9 @@ protected void OnPropertyChanged(string propertyName)
         public bool IsAttorneyEdited { get; set; }
         public bool IsProcessServerEdited { get; set; }
         public bool IsClientEdited { get; set; }
+        public bool WorkflowFCM { get; set; }
+        public bool WorkflowSOPS { get; set; }
+        public bool WorkflowIIA { get; set; }
     }
 
     public class InvoiceModel

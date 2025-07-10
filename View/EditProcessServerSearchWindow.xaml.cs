@@ -14,7 +14,9 @@ namespace CivilProcessERP.Views
 
         public string SelectedProcessServer => lstServers.SelectedItem?.ToString() ?? "";
         public bool IsNewProcessServer { get; set; } = false;
-        public string NewProcessServer { get; set; } = string.Empty;
+        public string NewProcessServerFullName { get; set; } = string.Empty;
+        public string SelectedProcessServerFullName => SelectedProcessServer;
+        public string NewProcessServer => NewProcessServerFullName;
 
         public EditProcessServerSearchWindow(string connectionString, string initialValue = "")
         {
@@ -119,7 +121,7 @@ namespace CivilProcessERP.Views
             if (!string.IsNullOrWhiteSpace(input))
             {
                 IsNewProcessServer = true;
-                NewProcessServer = input.Trim();
+                NewProcessServerFullName = input.Trim();
                 DialogResult = true;
                 Close();
             }

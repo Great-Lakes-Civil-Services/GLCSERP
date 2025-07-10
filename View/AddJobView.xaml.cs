@@ -531,21 +531,24 @@ private async void DeleteAttempt_Click(object sender, RoutedEventArgs e)
     }
 }
 
-
 private async void AddInvoice_Click(object sender, RoutedEventArgs e)
 {
     await _invoiceLock.WaitAsync();
     try
     {
-        var entry = new InvoiceModel();
-        var popup = new EditInvoiceWindow(entry) { Owner = Window.GetWindow(this) };
-
-        if (popup.ShowDialog() == true)
+        var entry = new InvoiceModel
         {
-            Job.InvoiceEntries.Add(entry);
-            OnPropertyChanged(nameof(Job.TotalInvoiceAmount));
-            Console.WriteLine("➕ Invoice added.");
-        }
+            Id = Guid.NewGuid(),
+            Description = "New Invoice",
+            Quantity = 1,
+            Rate = 0m,
+            Amount = 0m
+        };
+        Job.InvoiceEntries.Add(entry);
+        OnPropertyChanged(nameof(Job.TotalInvoiceAmount));
+        Console.WriteLine("➕ Dummy invoice row added.");
+        // Optionally select the new row in the UI:
+        InvoiceListView.SelectedItem = entry;
     }
     finally
     {
@@ -620,21 +623,27 @@ private async void AddPayment_Click(object sender, RoutedEventArgs e)
     await _paymentLock.WaitAsync();
     try
     {
-        var entry = new PaymentModel();
-        var popup = new EditPaymentWindow(entry) { Owner = Window.GetWindow(this) };
-
-        if (popup.ShowDialog() == true)
+        var entry = new PaymentModel
         {
-            Job.Payments.Add(entry);
-            OnPropertyChanged(nameof(Job.TotalPaymentsAmount));
-            Console.WriteLine("➕ New payment added.");
-        }
+            Id = Guid.NewGuid(),
+            Date = DateTime.Now,
+            TimeOnly = DateTime.Now.ToString("HH:mm:ss"),
+            Method = "Cash",
+            Description = "New Payment",
+            Amount = 0m
+        };
+        Job.Payments.Add(entry);
+        OnPropertyChanged(nameof(Job.TotalPaymentsAmount));
+        Console.WriteLine("➕ Dummy payment row added.");
+        // Optionally select the new row in the UI:
+        PaymentsListView.SelectedItem = entry;
     }
     finally
     {
         _paymentLock.Release();
     }
 }
+
 
 //private readonly SemaphoreSlim _invoiceLock = new SemaphoreSlim(1, 1);
 private readonly SemaphoreSlim _paymentLock = new SemaphoreSlim(1, 1);
@@ -881,25 +890,16 @@ private async void EditPlaintiffs_MouseDoubleClick(object sender, MouseButtonEve
 
         if (dialog.ShowDialog() == true)
         {
-            if (dialog.IsNewPlaintiffs)
-            {
-                Job.Plaintiffs = dialog.NewPlaintiffsFullName;
-                Job.IsPlaintiffsNew = true;
-            }
-            else
-            {
-                Job.Plaintiffs = dialog.SelectedPlaintiffsFullName;
-                Job.IsPlaintiffsNew = false;
-            }
+            Job.Plaintiffs = dialog.txtSearchs.Text.Trim();
             Job.IsPlaintiffsEdited = true;
             OnPropertyChanged(nameof(Job.Plaintiffs));
             OnPropertyChanged(nameof(Job)); // Force UI refresh
-            Console.WriteLine($"✏️ Plaintiff updated: {Job.Plaintiffs}");
+            Console.WriteLine($"✏️ Plaintiffs updated: {Job.Plaintiffs}");
         }
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"🔥 Error editing plaintiff: {ex.Message}");
+        Console.WriteLine($"🔥 Error editing plaintiffs: {ex.Message}");
     }
     finally
     {
@@ -1070,7 +1070,7 @@ private async void EditArea_MouseDoubleClick(object sender, MouseButtonEventArgs
 
         if (dialog5.ShowDialog() == true)
         {
-            Job.Zone = dialog5.SelectedArea;
+            Job.Zone = dialog5.txtSearch.Text.Trim();
             OnPropertyChanged(nameof(Job.Zone));
             Console.WriteLine($"✏️ Zone updated: {Job.Zone}");
         }
@@ -1083,7 +1083,8 @@ private async void EditArea_MouseDoubleClick(object sender, MouseButtonEventArgs
     {
         _areaLock.Release();
     }
-}private async void EditTypeOfWrit_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+}
+private async void EditTypeOfWrit_MouseDoubleClick(object sender, MouseButtonEventArgs e)
 {
     await _typeOfWritLock.WaitAsync();
     try
@@ -1095,7 +1096,7 @@ private async void EditArea_MouseDoubleClick(object sender, MouseButtonEventArgs
 
         if (dialog6.ShowDialog() == true)
         {
-            Job.TypeOfWrit = dialog6.SelectedTypeOfWrit;
+            Job.TypeOfWrit = dialog6.txtSearch.Text.Trim();
             OnPropertyChanged(nameof(Job.TypeOfWrit));
             Console.WriteLine($"✏️ Type of Writ updated: {Job.TypeOfWrit}");
         }
@@ -1173,7 +1174,7 @@ private async void EditServiceType_MouseDoubleClick(object sender, MouseButtonEv
 
         if (dialog9.ShowDialog() == true)
         {
-            Job.ServiceType = dialog9.SelectedServiceType;
+            Job.ServiceType = dialog9.txtSearch.Text.Trim();
             OnPropertyChanged(nameof(Job.ServiceType));
         }
     }
@@ -1339,7 +1340,8 @@ private async void EditCourt_MouseDoubleClick(object sender, MouseButtonEventArg
 
         if (dialog17.ShowDialog() == true)
         {
-            Job.Court = dialog17.SelectedCourt;
+            // Always use the value from the dialog's textbox
+            Job.Court = dialog17.txtSearch.Text.Trim();
             OnPropertyChanged(nameof(Job.Court));
         }
     }

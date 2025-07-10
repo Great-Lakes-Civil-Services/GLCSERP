@@ -83,5 +83,24 @@ namespace CivilProcessERP.Views
         {
             this.Close();
         }
+
+        // Add this method for the Other button
+        private void Other_Click(object sender, RoutedEventArgs e)
+        {
+            var dialog = new CivilProcessERP.Views.SingleFieldDialog("Service Type", txtSearch.Text);
+            if (dialog.ShowDialog() == true)
+            {
+                string newServiceType = dialog.Value;
+                if (!string.IsNullOrWhiteSpace(newServiceType))
+                {
+                    lstServiceTypes.SelectedItem = null;
+                    txtSearch.Text = newServiceType;
+                    if (!lstServiceTypes.Items.Contains(newServiceType))
+                        lstServiceTypes.Items.Insert(0, newServiceType);
+                    DialogResult = true;
+                    Close();
+                }
+            }
+        }
     }
 }

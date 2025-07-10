@@ -360,227 +360,273 @@ public class AddJobService
                         }
                     }
                 }
-                // ✅ Attorney Update
+                // Always update papers.dudeservedlfm with the full name
+                await using (var cmdUpdateDude = new NpgsqlCommand(
+                    "UPDATE papers SET dudeservedlfm = @fullName WHERE serialnum = @jobId;", conn, tx))
+                {
+                    cmdUpdateDude.Parameters.AddWithValue("fullName", job.Plaintiffs ?? "");
+                    cmdUpdateDude.Parameters.AddWithValue("jobId", long.Parse(job.JobId));
+                    await cmdUpdateDude.ExecuteNonQueryAsync();
+                }
+                // ✅ ATTORNEY - Ensure entity row exists and is linked in papers
                 if (!string.IsNullOrWhiteSpace(job.Attorney))
                 {
                     var parts = job.Attorney.Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
                     var firstName = parts.Length > 0 ? parts[0] : "";
                     var lastName = parts.Length > 1 ? parts[1] : "";
 
-                    Console.WriteLine("➡ Attempting to update Attorney (entity)...");
-
-                    int? attorneySerial = null;
-
-                    await using (var cmdGet = new NpgsqlCommand("SELECT attorneynum FROM papers WHERE serialnum = @jobId;", conn, tx))
+                    if (job.IsAttorneyNew)
                     {
-                        cmdGet.Parameters.AddWithValue("jobId", long.Parse(job.JobId));
-                        await using var reader = await cmdGet.ExecuteReaderAsync();
-                        if (await reader.ReadAsync() && reader["attorneynum"] != DBNull.Value)
-                            attorneySerial = Convert.ToInt32(reader["attorneynum"]);
-                        await reader.CloseAsync();
-                    }
-
-                    if (attorneySerial.HasValue)
-                    {
-                        Console.WriteLine($"✅ attorneynum resolved: {attorneySerial.Value}");
-
-                        await using (var cmdUpdate = new NpgsqlCommand(@"
-            UPDATE entity SET ""FirstName"" = @firstName, ""LastName"" = @lastName
-            WHERE ""SerialNum"" = @serial;", conn, tx))
-                        {
-                            cmdUpdate.Parameters.AddWithValue("firstName", firstName);
-                            cmdUpdate.Parameters.AddWithValue("lastName", lastName);
-                            cmdUpdate.Parameters.AddWithValue("serial", attorneySerial.Value);
-                            int affectedRows = await cmdUpdate.ExecuteNonQueryAsync();
-                            Console.WriteLine($"[DEBUG] Rows affected: {affectedRows}");
-                            Console.WriteLine($"✅ Attorney updated: {firstName} {lastName}");
-                            await LogAuditAsync(conn, tx, job.JobId, "UPDATE", "Updated attorney in entity.");
-                        }
-                    }
-                    else
-                    {
-
-                        Console.WriteLine("⚠️ No attorneynum found — inserting and linking...");
+                        // Always insert new entity for new attorney
                         int newSerial = await GenerateNewSerialAsync("entity", conn, tx);
-
                         await using (var cmdInsert = new NpgsqlCommand(@"
-            INSERT INTO entity (""SerialNum"", ""FirstName"", ""LastName"", ""ChangeNum"")
-            VALUES (@serial, @firstName, @lastName, @changenum);", conn, tx))
+                            INSERT INTO entity (""SerialNum"", ""FirstName"", ""LastName"", ""ChangeNum"")
+                            VALUES (@serial, @firstName, @lastName, 0);", conn, tx))
                         {
                             cmdInsert.Parameters.AddWithValue("serial", newSerial);
                             cmdInsert.Parameters.AddWithValue("firstName", firstName);
                             cmdInsert.Parameters.AddWithValue("lastName", lastName);
-                            cmdInsert.Parameters.AddWithValue("changenum", 0); // or your versioning logic
-                            int affectedRows = await cmdInsert.ExecuteNonQueryAsync();
-                            Console.WriteLine($"[DEBUG] Rows affected: {affectedRows}");
-                            Console.WriteLine($"✅ Attorney entity inserted and linked: {firstName} {lastName}");
-                            await LogAuditAsync(conn, tx, job.JobId, "INSERT", "Inserted and linked new attorney entity.");
+                            await cmdInsert.ExecuteNonQueryAsync();
                         }
-
                         await using (var cmdLink = new NpgsqlCommand(@"
-            UPDATE papers SET attorneynum = @serial WHERE serialnum = @jobId;", conn, tx))
+                            UPDATE papers SET attorneynum = @serial WHERE serialnum = @jobId;", conn, tx))
                         {
                             cmdLink.Parameters.AddWithValue("serial", newSerial);
                             cmdLink.Parameters.AddWithValue("jobId", long.Parse(job.JobId));
-                            int affectedRows = await cmdLink.ExecuteNonQueryAsync();
-                            Console.WriteLine($"[DEBUG] Rows affected: {affectedRows}");
-                            Console.WriteLine($"✅ Attorney entity inserted and linked: {firstName} {lastName}");
-                            await LogAuditAsync(conn, tx, job.JobId, "UPDATE", "Updated attorney in entity.");
+                            await cmdLink.ExecuteNonQueryAsync();
+                        }
+                    }
+                    else
+                    {
+                        // Update existing entity
+                        int? attorneySerial = null;
+                        await using (var cmdGet = new NpgsqlCommand("SELECT attorneynum FROM papers WHERE serialnum = @jobId;", conn, tx))
+                        {
+                            cmdGet.Parameters.AddWithValue("jobId", long.Parse(job.JobId));
+                            await using var reader = await cmdGet.ExecuteReaderAsync();
+                            if (await reader.ReadAsync() && reader["attorneynum"] != DBNull.Value)
+                                attorneySerial = Convert.ToInt32(reader["attorneynum"]);
+                            await reader.CloseAsync();
                         }
 
-                        Console.WriteLine($"✅ Attorney entity inserted and linked: {firstName} {lastName}");
+                        if (attorneySerial.HasValue)
+                        {
+                            Console.WriteLine($"✅ attorneynum resolved: {attorneySerial.Value}");
+
+                            await using (var cmdUpdate = new NpgsqlCommand(@"
+            UPDATE entity SET ""FirstName"" = @firstName, ""LastName"" = @lastName
+            WHERE ""SerialNum"" = @serial;", conn, tx))
+                            {
+                                cmdUpdate.Parameters.AddWithValue("firstName", firstName);
+                                cmdUpdate.Parameters.AddWithValue("lastName", lastName);
+                                cmdUpdate.Parameters.AddWithValue("serial", attorneySerial.Value);
+                                int affectedRows = await cmdUpdate.ExecuteNonQueryAsync();
+                                Console.WriteLine($"[DEBUG] Rows affected: {affectedRows}");
+                                Console.WriteLine($"✅ Attorney updated: {firstName} {lastName}");
+                                await LogAuditAsync(conn, tx, job.JobId, "UPDATE", "Updated attorney in entity.");
+                            }
+                        }
+                        else
+                        {
+                            // This case should ideally not be reached if IsAttorneyNew is false,
+                            // but as a fallback, we can insert a new entity and link it.
+                            int newSerial = await GenerateNewSerialAsync("entity", conn, tx);
+                            await using (var cmdInsert = new NpgsqlCommand(@"
+            INSERT INTO entity (""SerialNum"", ""FirstName"", ""LastName"", ""ChangeNum"")
+            VALUES (@serial, @firstName, @lastName, 0);", conn, tx))
+                            {
+                                cmdInsert.Parameters.AddWithValue("serial", newSerial);
+                                cmdInsert.Parameters.AddWithValue("firstName", firstName);
+                                cmdInsert.Parameters.AddWithValue("lastName", lastName);
+                                await cmdInsert.ExecuteNonQueryAsync();
+                            }
+                            await using (var cmdLink = new NpgsqlCommand(@"
+            UPDATE papers SET attorneynum = @serial WHERE serialnum = @jobId;", conn, tx))
+                            {
+                                cmdLink.Parameters.AddWithValue("serial", newSerial);
+                                cmdLink.Parameters.AddWithValue("jobId", long.Parse(job.JobId));
+                                await cmdLink.ExecuteNonQueryAsync();
+                            }
+                        }
                     }
                 }
 
-                // ✅ Client Update
+                // ✅ CLIENT - Ensure entity row exists and is linked in papers
                 if (!string.IsNullOrWhiteSpace(job.Client))
                 {
                     var parts = job.Client.Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
                     var firstName = parts.Length > 0 ? parts[0] : "";
                     var lastName = parts.Length > 1 ? parts[1] : "";
 
-                    Console.WriteLine("➡ Attempting to update Client (entity)...");
-
-                    int? clientSerial = null;
-                    await using (var cmdGet = new NpgsqlCommand("SELECT clientnum FROM papers WHERE serialnum = @jobId;", conn, tx))
+                    if (job.IsClientNew)
                     {
-                        cmdGet.Parameters.AddWithValue("jobId", long.Parse(job.JobId));
-                        await using var reader = await cmdGet.ExecuteReaderAsync();
-                        if (await reader.ReadAsync() && reader["clientnum"] != DBNull.Value)
-                            clientSerial = Convert.ToInt32(reader["clientnum"]);
-                        await reader.CloseAsync();
-                    }
-
-                    if (clientSerial.HasValue)
-                    {
-                        Console.WriteLine($"✅ clientnum resolved: {clientSerial.Value}");
-                        await using (var cmdUpdate = new NpgsqlCommand(@"
-            UPDATE entity SET ""FirstName"" = @firstName, ""LastName"" = @lastName
-            WHERE ""SerialNum"" = @serial;", conn, tx))
-                        {
-                            cmdUpdate.Parameters.AddWithValue("firstName", firstName);
-                            cmdUpdate.Parameters.AddWithValue("lastName", lastName);
-                            cmdUpdate.Parameters.AddWithValue("serial", clientSerial.Value);
-                            int affectedRows = await cmdUpdate.ExecuteNonQueryAsync();
-                            Console.WriteLine($"[DEBUG] Rows affected: {affectedRows}");
-                            Console.WriteLine($"✅ Client updated: {firstName} {lastName}");
-                            await LogAuditAsync(conn, tx, job.JobId, "UPDATE", "Updated client in entity.");
-                        }
-                        // Update status if provided
-                        if (!string.IsNullOrWhiteSpace(job.ClientStatus))
-                        {
-                            await using (var cmdUpdateStatus = new NpgsqlCommand(@"
-                                UPDATE entity SET ""status"" = @status WHERE ""SerialNum"" = @serial;", conn, tx))
-                            {
-                                cmdUpdateStatus.Parameters.AddWithValue("status", job.ClientStatus);
-                                cmdUpdateStatus.Parameters.AddWithValue("serial", clientSerial.Value);
-                                await cmdUpdateStatus.ExecuteNonQueryAsync();
-                                Console.WriteLine($"✅ Client status updated: {job.ClientStatus}");
-                                await LogAuditAsync(conn, tx, job.JobId, "UPDATE", "Updated client status in entity.");
-                            }
-                        }
-                    }
-                    else
-                    {
-                        Console.WriteLine("⚠️ No clientnum found — inserting and linking...");
+                        // Always insert new entity for new client
                         int newSerial = await GenerateNewSerialAsync("entity", conn, tx);
                         await using (var cmdInsert = new NpgsqlCommand(@"
-            INSERT INTO entity (""SerialNum"", ""FirstName"", ""LastName"", ""ChangeNum"", ""status"")
-            VALUES (@serial, @firstName, @lastName, @changenum, @status);", conn, tx))
+                            INSERT INTO entity (""SerialNum"", ""FirstName"", ""LastName"", ""ChangeNum"")
+                            VALUES (@serial, @firstName, @lastName, 0);", conn, tx))
                         {
                             cmdInsert.Parameters.AddWithValue("serial", newSerial);
                             cmdInsert.Parameters.AddWithValue("firstName", firstName);
                             cmdInsert.Parameters.AddWithValue("lastName", lastName);
-                            cmdInsert.Parameters.AddWithValue("changenum", 0); // or your versioning logic
-                            cmdInsert.Parameters.AddWithValue("status", job.ClientStatus ?? (object)DBNull.Value);
-                            int affectedRows = await cmdInsert.ExecuteNonQueryAsync();
-                            Console.WriteLine($"[DEBUG] Rows affected: {affectedRows}");
-                            Console.WriteLine($"✅ Client entity inserted and linked: {firstName} {lastName}");
-                            await LogAuditAsync(conn, tx, job.JobId, "INSERT", "Inserted and linked new client entity.");
+                            await cmdInsert.ExecuteNonQueryAsync();
                         }
-
                         await using (var cmdLink = new NpgsqlCommand(@"
-            UPDATE papers SET clientnum = @serial WHERE serialnum = @jobId;", conn, tx))
+                            UPDATE papers SET clientnum = @serial WHERE serialnum = @jobId;", conn, tx))
                         {
                             cmdLink.Parameters.AddWithValue("serial", newSerial);
                             cmdLink.Parameters.AddWithValue("jobId", long.Parse(job.JobId));
-                            int affectedRows = await cmdLink.ExecuteNonQueryAsync();
-                            Console.WriteLine($"[DEBUG] Rows affected: {affectedRows}");
-                            Console.WriteLine($"✅ Client entity inserted and linked: {firstName} {lastName}");
-                            await LogAuditAsync(conn, tx, job.JobId, "UPDATE", "Updated client in entity.");
+                            await cmdLink.ExecuteNonQueryAsync();
+                        }
+                    }
+                    else
+                    {
+                        // Update existing entity
+                        int? clientSerial = null;
+                        await using (var cmdGet = new NpgsqlCommand("SELECT clientnum FROM papers WHERE serialnum = @jobId;", conn, tx))
+                        {
+                            cmdGet.Parameters.AddWithValue("jobId", long.Parse(job.JobId));
+                            await using var reader = await cmdGet.ExecuteReaderAsync();
+                            if (await reader.ReadAsync() && reader["clientnum"] != DBNull.Value)
+                                clientSerial = Convert.ToInt32(reader["clientnum"]);
+                            await reader.CloseAsync();
                         }
 
-                        Console.WriteLine($"✅ Client entity inserted and linked: {firstName} {lastName}");
+                        if (clientSerial.HasValue)
+                        {
+                            Console.WriteLine($"✅ clientnum resolved: {clientSerial.Value}");
+                            await using (var cmdUpdate = new NpgsqlCommand(@"
+            UPDATE entity SET ""FirstName"" = @firstName, ""LastName"" = @lastName
+            WHERE ""SerialNum"" = @serial;", conn, tx))
+                            {
+                                cmdUpdate.Parameters.AddWithValue("firstName", firstName);
+                                cmdUpdate.Parameters.AddWithValue("lastName", lastName);
+                                cmdUpdate.Parameters.AddWithValue("serial", clientSerial.Value);
+                                int affectedRows = await cmdUpdate.ExecuteNonQueryAsync();
+                                Console.WriteLine($"[DEBUG] Rows affected: {affectedRows}");
+                                Console.WriteLine($"✅ Client updated: {firstName} {lastName}");
+                                await LogAuditAsync(conn, tx, job.JobId, "UPDATE", "Updated client in entity.");
+                            }
+                            // Update status if provided
+                            if (!string.IsNullOrWhiteSpace(job.ClientStatus))
+                            {
+                                await using (var cmdUpdateStatus = new NpgsqlCommand(@"
+                                    UPDATE entity SET ""status"" = @status WHERE ""SerialNum"" = @serial;", conn, tx))
+                                {
+                                    cmdUpdateStatus.Parameters.AddWithValue("status", job.ClientStatus);
+                                    cmdUpdateStatus.Parameters.AddWithValue("serial", clientSerial.Value);
+                                    await cmdUpdateStatus.ExecuteNonQueryAsync();
+                                    Console.WriteLine($"✅ Client status updated: {job.ClientStatus}");
+                                    await LogAuditAsync(conn, tx, job.JobId, "UPDATE", "Updated client status in entity.");
+                                }
+                            }
+                        }
+                        else
+                        {
+                            // This case should ideally not be reached if IsClientNew is false,
+                            // but as a fallback, we can insert a new entity and link it.
+                            int newSerial = await GenerateNewSerialAsync("entity", conn, tx);
+                            await using (var cmdInsert = new NpgsqlCommand(@"
+            INSERT INTO entity (""SerialNum"", ""FirstName"", ""LastName"", ""ChangeNum"", ""status"")
+            VALUES (@serial, @firstName, @lastName, 0, @status);", conn, tx))
+                            {
+                                cmdInsert.Parameters.AddWithValue("serial", newSerial);
+                                cmdInsert.Parameters.AddWithValue("firstName", firstName);
+                                cmdInsert.Parameters.AddWithValue("lastName", lastName);
+                                cmdInsert.Parameters.AddWithValue("changenum", 0); // or your versioning logic
+                                cmdInsert.Parameters.AddWithValue("status", job.ClientStatus ?? (object)DBNull.Value);
+                                await cmdInsert.ExecuteNonQueryAsync();
+                            }
+                            await using (var cmdLink = new NpgsqlCommand(@"
+            UPDATE papers SET clientnum = @serial WHERE serialnum = @jobId;", conn, tx))
+                            {
+                                cmdLink.Parameters.AddWithValue("serial", newSerial);
+                                cmdLink.Parameters.AddWithValue("jobId", long.Parse(job.JobId));
+                                await cmdLink.ExecuteNonQueryAsync();
+                            }
+                        }
                     }
                 }
 
-                // ✅ Process Server Update
+                // ✅ PROCESS SERVER - Ensure entity row exists and is linked in papers
                 if (!string.IsNullOrWhiteSpace(job.ProcessServer))
                 {
                     var parts = job.ProcessServer.Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
                     var firstName = parts.Length > 0 ? parts[0] : "";
                     var lastName = parts.Length > 1 ? parts[1] : "";
 
-                    Console.WriteLine("➡ Attempting to update Process Server...");
-
-                    int? serverSerial = null;
-
-                    await using (var cmdGet = new NpgsqlCommand("SELECT servercode FROM papers WHERE serialnum = @jobId;", conn, tx))
+                    if (job.IsProcessServerNew)
                     {
-                        cmdGet.Parameters.AddWithValue("jobId", long.Parse(job.JobId));
-                        await using var reader = await cmdGet.ExecuteReaderAsync();
-                        if (await reader.ReadAsync() && reader["servercode"] != DBNull.Value)
-                            serverSerial = Convert.ToInt32(reader["servercode"]);
-                        await reader.CloseAsync();
-                    }
-
-                    if (serverSerial.HasValue)
-                    {
-                        Console.WriteLine($"✅ servercode resolved: {serverSerial.Value}");
-                        await using (var cmdUpdate = new NpgsqlCommand(@"
-            UPDATE entity SET ""FirstName"" = @firstName, ""LastName"" = @lastName
-            WHERE ""SerialNum"" = @serial;", conn, tx))
-                        {
-                            cmdUpdate.Parameters.AddWithValue("firstName", firstName);
-                            cmdUpdate.Parameters.AddWithValue("lastName", lastName);
-                            cmdUpdate.Parameters.AddWithValue("serial", serverSerial.Value);
-                            int affectedRows = await cmdUpdate.ExecuteNonQueryAsync();
-                            Console.WriteLine($"[DEBUG] Rows affected: {affectedRows}");
-                            Console.WriteLine($"✅ Process Server updated: {firstName} {lastName}");
-                            await LogAuditAsync(conn, tx, job.JobId, "UPDATE", "Updated process server in entity.");
-                        }
-                    }
-                    else
-                    {
-                        Console.WriteLine("⚠️ No servercode found — inserting and linking...");
+                        // Always insert new entity for new process server
                         int newSerial = await GenerateNewSerialAsync("entity", conn, tx);
-
                         await using (var cmdInsert = new NpgsqlCommand(@"
-            INSERT INTO entity (""SerialNum"", ""FirstName"", ""LastName"", ""ChangeNum"")
-            VALUES (@serial, @firstName, @lastName, @changenum);", conn, tx))
+                            INSERT INTO entity (""SerialNum"", ""FirstName"", ""LastName"", ""ChangeNum"")
+                            VALUES (@serial, @firstName, @lastName, 0);", conn, tx))
                         {
                             cmdInsert.Parameters.AddWithValue("serial", newSerial);
                             cmdInsert.Parameters.AddWithValue("firstName", firstName);
                             cmdInsert.Parameters.AddWithValue("lastName", lastName);
-                            cmdInsert.Parameters.AddWithValue("changenum", 0); // or your versioning logic
-                            int affectedRows = await cmdInsert.ExecuteNonQueryAsync();
-                            Console.WriteLine($"[DEBUG] Rows affected: {affectedRows}");
-                            Console.WriteLine($"✅ Process Server inserted and linked: {firstName} {lastName}");
-                            await LogAuditAsync(conn, tx, job.JobId, "INSERT", "Inserted and linked new process server entity.");
+                            await cmdInsert.ExecuteNonQueryAsync();
                         }
-
                         await using (var cmdLink = new NpgsqlCommand(@"
-            UPDATE papers SET servercode = @serial WHERE serialnum = @jobId;", conn, tx))
+                            UPDATE papers SET servercode = @serial WHERE serialnum = @jobId;", conn, tx))
                         {
                             cmdLink.Parameters.AddWithValue("serial", newSerial);
                             cmdLink.Parameters.AddWithValue("jobId", long.Parse(job.JobId));
-                            int affectedRows = await cmdLink.ExecuteNonQueryAsync();
-                            Console.WriteLine($"[DEBUG] Rows affected: {affectedRows}");
-                            Console.WriteLine($"✅ Process Server inserted and linked: {firstName} {lastName}");
-                            await LogAuditAsync(conn, tx, job.JobId, "UPDATE", "Updated process server in entity.");
+                            await cmdLink.ExecuteNonQueryAsync();
+                        }
+                    }
+                    else
+                    {
+                        // Update existing entity
+                        int? serverSerial = null;
+                        await using (var cmdGet = new NpgsqlCommand("SELECT servercode FROM papers WHERE serialnum = @jobId;", conn, tx))
+                        {
+                            cmdGet.Parameters.AddWithValue("jobId", long.Parse(job.JobId));
+                            await using var reader = await cmdGet.ExecuteReaderAsync();
+                            if (await reader.ReadAsync() && reader["servercode"] != DBNull.Value)
+                                serverSerial = Convert.ToInt32(reader["servercode"]);
+                            await reader.CloseAsync();
                         }
 
-                        Console.WriteLine($"✅ Process Server inserted and linked: {firstName} {lastName}");
+                        if (serverSerial.HasValue)
+                        {
+                            Console.WriteLine($"✅ servercode resolved: {serverSerial.Value}");
+                            await using (var cmdUpdate = new NpgsqlCommand(@"
+            UPDATE entity SET ""FirstName"" = @firstName, ""LastName"" = @lastName
+            WHERE ""SerialNum"" = @serial;", conn, tx))
+                            {
+                                cmdUpdate.Parameters.AddWithValue("firstName", firstName);
+                                cmdUpdate.Parameters.AddWithValue("lastName", lastName);
+                                cmdUpdate.Parameters.AddWithValue("serial", serverSerial.Value);
+                                int affectedRows = await cmdUpdate.ExecuteNonQueryAsync();
+                                Console.WriteLine($"[DEBUG] Rows affected: {affectedRows}");
+                                Console.WriteLine($"✅ Process Server updated: {firstName} {lastName}");
+                                await LogAuditAsync(conn, tx, job.JobId, "UPDATE", "Updated process server in entity.");
+                            }
+                        }
+                        else
+                        {
+                            // This case should ideally not be reached if IsProcessServerNew is false,
+                            // but as a fallback, we can insert a new entity and link it.
+                            int newSerial = await GenerateNewSerialAsync("entity", conn, tx);
+                            await using (var cmdInsert = new NpgsqlCommand(@"
+            INSERT INTO entity (""SerialNum"", ""FirstName"", ""LastName"", ""ChangeNum"")
+            VALUES (@serial, @firstName, @lastName, 0);", conn, tx))
+                            {
+                                cmdInsert.Parameters.AddWithValue("serial", newSerial);
+                                cmdInsert.Parameters.AddWithValue("firstName", firstName);
+                                cmdInsert.Parameters.AddWithValue("lastName", lastName);
+                                await cmdInsert.ExecuteNonQueryAsync();
+                            }
+                            await using (var cmdLink = new NpgsqlCommand(@"
+            UPDATE papers SET servercode = @serial WHERE serialnum = @jobId;", conn, tx))
+                            {
+                                cmdLink.Parameters.AddWithValue("serial", newSerial);
+                                cmdLink.Parameters.AddWithValue("jobId", long.Parse(job.JobId));
+                                await cmdLink.ExecuteNonQueryAsync();
+                            }
+                        }
                     }
                 }
 
@@ -1185,43 +1231,82 @@ public class AddJobService
                 job.DeletedAttachmentId = null;
 
 
+                // ✅ PLAINTIFF - Ensure entity row exists and is linked in papers
                 if (!string.IsNullOrWhiteSpace(job.Plaintiff))
                 {
-                    // ✅ Update Plaintiff in entity table using caseserialnum from papers
-                    string caseSerialNum = null;
-                    await using (var connCase = new NpgsqlConnection(_connectionString))
+                    // Step 1: Get pliannum from papers
+                    string plianNum = null;
+                    await using (var cmdGetPlian = new NpgsqlCommand("SELECT pliannum FROM papers WHERE serialnum = @jobId;", conn, tx))
                     {
-                        await connCase.OpenAsync();
-                        await using (var cmdCase = new NpgsqlCommand("SELECT pliannum FROM papers WHERE serialnum = @jobId", connCase))
+                        cmdGetPlian.Parameters.AddWithValue("jobId", long.Parse(job.JobId));
+                        await using var reader = await cmdGetPlian.ExecuteReaderAsync();
+                        if (await reader.ReadAsync() && reader["pliannum"] != DBNull.Value)
                         {
-                            cmdCase.Parameters.AddWithValue("jobId", long.Parse(job.JobId));
-                            await using var readerCase = await cmdCase.ExecuteReaderAsync();
-                            if (await readerCase.ReadAsync())
-                            {
-                                caseSerialNum = readerCase["pliannum"]?.ToString();
-                            }
+                            plianNum = reader["pliannum"].ToString();
                         }
                     }
-                    if (!string.IsNullOrWhiteSpace(job.Plaintiff) && int.TryParse(caseSerialNum, out int serialNum))
-                    {
-                        var nameParts = job.Plaintiff.Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
-                        string firstName = nameParts.Length > 0 ? nameParts[0] : "";
-                        string lastName = nameParts.Length > 1 ? nameParts[1] : "";
 
-                        await using (var cmd8 = new NpgsqlCommand(@"
-                        UPDATE entity
-                        SET ""FirstName"" = @firstName, ""LastName"" = @lastName
-                        WHERE ""SerialNum"" = @caseSerialNum;", conn, tx))
+                    // Split name
+                    var nameParts = job.Plaintiff.Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
+                    string firstName = nameParts.Length > 0 ? nameParts[0] : "";
+                    string lastName = nameParts.Length > 1 ? nameParts[1] : "";
+
+                    // Treat null, empty, or '0' as not set
+                    if (!string.IsNullOrEmpty(plianNum) && plianNum != "0")
+                    {
+                        // Update existing entity
+                        await using (var cmdUpdate = new NpgsqlCommand(@"
+                            UPDATE entity
+                            SET ""FirstName"" = @firstName, ""LastName"" = @lastName
+                            WHERE ""SerialNum"" = @plianNum;", conn, tx))
                         {
-                            cmd8.Parameters.AddWithValue("firstName", firstName);
-                            cmd8.Parameters.AddWithValue("lastName", lastName);
-                            cmd8.Parameters.AddWithValue("caseSerialNum", int.Parse(caseSerialNum));
-                            int affectedRows = await cmd8.ExecuteNonQueryAsync();
-                            Console.WriteLine($"[DEBUG] Rows affected: {affectedRows}");
-                            Console.WriteLine($"✅ entity updated for plaintiff: {firstName} {lastName} (SerialNum: {serialNum})");
+                            cmdUpdate.Parameters.AddWithValue("firstName", firstName);
+                            cmdUpdate.Parameters.AddWithValue("lastName", lastName);
+                            cmdUpdate.Parameters.AddWithValue("plianNum", int.Parse(plianNum));
+                            await cmdUpdate.ExecuteNonQueryAsync();
+                            Console.WriteLine($"[DEBUG] Updated entity for plaintiff: {firstName} {lastName} (SerialNum: {plianNum})");
                         }
-                        Console.WriteLine($"✅ entity updated for plaintiff: {firstName} {lastName} (SerialNum: {serialNum})");
                     }
+                    else
+                    {
+                        // Insert new entity and link to papers
+                        int newPlianSerial = await GenerateNewSerialAsync("entity", conn, tx);
+                        await using (var cmdInsert = new NpgsqlCommand(@"
+                            INSERT INTO entity (""SerialNum"", ""FirstName"", ""LastName"", ""ChangeNum"")
+                            VALUES (@serial, @firstName, @lastName, 0);", conn, tx))
+                        {
+                            cmdInsert.Parameters.AddWithValue("serial", newPlianSerial);
+                            cmdInsert.Parameters.AddWithValue("firstName", firstName);
+                            cmdInsert.Parameters.AddWithValue("lastName", lastName);
+                            await cmdInsert.ExecuteNonQueryAsync();
+                            Console.WriteLine($"[DEBUG] Inserted new entity for plaintiff: {firstName} {lastName} (SerialNum: {newPlianSerial})");
+                        }
+                        await using (var cmdLink = new NpgsqlCommand(@"
+                            UPDATE papers SET pliannum = @serial WHERE serialnum = @jobId;", conn, tx))
+                        {
+                            cmdLink.Parameters.AddWithValue("serial", newPlianSerial);
+                            cmdLink.Parameters.AddWithValue("jobId", long.Parse(job.JobId));
+                            await cmdLink.ExecuteNonQueryAsync();
+                            Console.WriteLine($"[DEBUG] Linked new entity to papers.pliannum = {newPlianSerial}");
+                        }
+                    }
+                }
+
+                // Insert workflow status for new job
+                await using (var cmdWF = new NpgsqlCommand(@"
+    INSERT INTO jobworkflowstatus (jobid, workflowfcm, workflowsops, workflowiia)
+    VALUES (@jobid, @fcm, @sops, @iia)
+    ON CONFLICT (jobid) DO UPDATE SET
+        workflowfcm = EXCLUDED.workflowfcm,
+        workflowsops = EXCLUDED.workflowsops,
+        workflowiia = EXCLUDED.workflowiia;
+", conn, tx))
+                {
+                    cmdWF.Parameters.AddWithValue("jobid", long.Parse(job.JobId));
+                    cmdWF.Parameters.AddWithValue("fcm", job.WorkflowFCM);
+                    cmdWF.Parameters.AddWithValue("sops", job.WorkflowSOPS);
+                    cmdWF.Parameters.AddWithValue("iia", job.WorkflowIIA);
+                    await cmdWF.ExecuteNonQueryAsync();
                 }
 
                 Console.WriteLine("🟢 Committing transaction...");
