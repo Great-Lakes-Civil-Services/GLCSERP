@@ -8,7 +8,7 @@ using Npgsql;
 
 namespace CivilProcessERP.Views
 {
-    public partial class FreezeOrganizationView : UserControl
+    public partial class FreezeOrganizationView : System.Windows.Controls.UserControl
     {
         private static readonly string connString = "Host=localhost;Port=5432;Username=postgres;Password=7866;Database=mypg_database";
 
@@ -23,7 +23,7 @@ namespace CivilProcessERP.Views
 
             if (string.IsNullOrWhiteSpace(orgName))
             {
-                MessageBox.Show("Please enter a valid organization name or ID.", "Validation Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                System.Windows.MessageBox.Show("Please enter a valid organization name or ID.", "Validation Error", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
@@ -54,15 +54,15 @@ namespace CivilProcessERP.Views
                     message = $"Organization '{orgName}' has been frozen.";
                 }
 
-                MessageBox.Show(message, "Action Completed", MessageBoxButton.OK, MessageBoxImage.Information);
+                System.Windows.MessageBox.Show(message, "Action Completed", MessageBoxButton.OK, MessageBoxImage.Information);
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"[ERROR] Failed to toggle freeze: {ex.Message}", "Database Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                System.Windows.MessageBox.Show($"[ERROR] Failed to toggle freeze: {ex.Message}", "Database Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
-        private async void OrganizationComboBox_KeyUp(object sender, KeyEventArgs e)
+        private async void OrganizationComboBox_KeyUp(object sender, System.Windows.Input.KeyEventArgs e)
         {
             string input = OrganizationComboBox.Text.Trim();
             if (input.Length < 2) return;

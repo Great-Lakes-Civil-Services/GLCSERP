@@ -78,7 +78,7 @@ namespace CivilProcessERP.Views
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Error loading area list: " + ex.Message);
+                System.Windows.MessageBox.Show("Error loading area list: " + ex.Message);
             }
         }
 
@@ -100,7 +100,7 @@ namespace CivilProcessERP.Views
             }
             else
             {
-                MessageBox.Show("Please select an area.");
+                System.Windows.MessageBox.Show("Please select an area.");
             }
         }
 

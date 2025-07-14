@@ -17,7 +17,7 @@ namespace CivilProcessERP.Views
         }
         else
         {
-            MessageBox.Show("⛔ Invalid time format. Please enter time like '1:55 PM' or '13:55'.", "Invalid Input", MessageBoxButton.OK, MessageBoxImage.Warning);
+            System.Windows.MessageBox.Show("⛔ Invalid time format. Please enter time like '1:55 PM' or '13:55'.", "Invalid Input", MessageBoxButton.OK, MessageBoxImage.Warning);
             return TimeSpan.Zero; // default fallback
         }
     }
@@ -49,7 +49,7 @@ namespace CivilProcessERP.Views
         {
             if (!DateTime.TryParse(SelectedTime.ToString(), out _))
             {
-                MessageBox.Show("Please enter valid time (e.g. 14:30:00)");
+                System.Windows.MessageBox.Show("Please enter valid time (e.g. 14:30:00)");
                 return;
             }
 

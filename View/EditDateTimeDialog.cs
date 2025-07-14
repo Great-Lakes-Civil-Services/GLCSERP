@@ -22,13 +22,13 @@ namespace CivilProcessERP.Views
         {
             if (datePicker.SelectedDate == null)
             {
-                MessageBox.Show("Please select a valid date.", "Validation Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                System.Windows.MessageBox.Show("Please select a valid date.", "Validation Error", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
             if (!TimeSpan.TryParseExact(txtTime.Text.Trim(), "hh\\:mm", CultureInfo.InvariantCulture, out var time))
             {
-                MessageBox.Show("Please enter a valid time in HH:mm format (e.g. 14:30).", "Invalid Time", MessageBoxButton.OK, MessageBoxImage.Warning);
+                System.Windows.MessageBox.Show("Please enter a valid time in HH:mm format (e.g. 14:30).", "Invalid Time", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 

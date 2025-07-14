@@ -13,13 +13,16 @@ using ViewModel = CivilProcessERP.ViewModels;
 using CivilProcessERP.Services;
 using CivilProcessERP.Models.Job;
 using System.Threading.Tasks;
+using System.Windows.Media;
+using System.Windows.Shapes;
+using System.Windows.Forms; // For multi-monitor support
 
 namespace CivilProcessERP
 {
     public partial class MainWindow : Window, INotifyPropertyChanged
     {
-        private readonly Stack<UserControl> _navigationHistory = new Stack<UserControl>();
-        private readonly Stack<UserControl> _forwardHistory = new Stack<UserControl>();
+        private readonly Stack<System.Windows.Controls.UserControl> _navigationHistory = new Stack<System.Windows.Controls.UserControl>();
+        private readonly Stack<System.Windows.Controls.UserControl> _forwardHistory = new Stack<System.Windows.Controls.UserControl>();
         private readonly NavigationService _navigationService;
 
         private bool isDraggingTab = false;
@@ -28,7 +31,7 @@ namespace CivilProcessERP
         private void OnPropertyChanged(string propertyName) =>
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 
-        private Point _dragStartPoint;
+        private System.Windows.Point _dragStartPoint;
 
 
         public bool CanGoBack => _navigationHistory.Count > 0;
@@ -40,14 +43,26 @@ namespace CivilProcessERP
         // Define LoginContent as a ContentControl
         //public ContentControl LoginContent { get; set; }
 
+        // Add a static list to track all open MainWindow instances
+        public static List<MainWindow> OpenWindows { get; } = new List<MainWindow>();
 
         public MainWindow()
         {
             InitializeComponent();
             DataContext = this;
 
-            LoginContent.Content = new LoginView(); // Initial login screen
-            DashboardLayoutGrid.Visibility = Visibility.Collapsed;
+            if (SessionManager.CurrentUser != null && SessionManager.CurrentUser.Enabled)
+            {
+                // User is already logged in, load dashboard
+                LoadMainDashboardAfterLogin(SessionManager.CurrentUser.LoginName);
+            }
+            else
+            {
+                // Show login view
+                DashboardLayoutGrid.Visibility = Visibility.Collapsed;
+                LoginContent.Visibility = Visibility.Visible;
+                LoginContent.Content = new LoginView(); // <-- This is critical!
+            }
 
             _navigationService = new NavigationService();
 
@@ -59,26 +74,41 @@ namespace CivilProcessERP
 
             // Listen to user activity
             InputManager.Current.PreProcessInput += OnActivityDetected;
+            OpenWindows.Add(this);
+            this.Closed += (s, e) => OpenWindows.Remove(this);
+            this.WindowState = WindowState.Maximized; // Always open maximized
+
+            // Single sign-on logic: skip login if already logged in
+            if (SessionManager.CurrentUser != null && SessionManager.CurrentUser.Enabled)
+            {
+                // User is already logged in, load dashboard
+                LoadMainDashboardAfterLogin(SessionManager.CurrentUser.LoginName);
+            }
+            else
+            {
+                // Not logged in, show login view as usual
+                // (Assume your existing logic already does this)
+            }
         }
 
 
         private void NavigateToPage(object sender, RoutedEventArgs e)
         {
-            if (sender is Button button && button.Tag is string pageName)
+            if (sender is System.Windows.Controls.Button button && button.Tag is string pageName)
             {
-                UserControl newPage = _navigationService.GetView(pageName);
+                System.Windows.Controls.UserControl newPage = _navigationService.GetView(pageName);
                 if (newPage != null)
                 {
                     NavigateTo(newPage);
                 }
                 else
                 {
-                    MessageBox.Show($"Page '{pageName}' not found!", "Navigation Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    System.Windows.MessageBox.Show($"Page '{pageName}' not found!", "Navigation Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
             }
         }
 
-        private void NavigateTo(UserControl newPage)
+        private void NavigateTo(System.Windows.Controls.UserControl newPage)
         {
             if (DataContext is MainDashboardViewModel viewModel)
             {
@@ -93,7 +123,7 @@ namespace CivilProcessERP
             }
         }
 
-       public void AddNewTab(UserControl content, string title)
+       public void AddNewTab(System.Windows.Controls.UserControl content, string title)
 {
     if (DataContext is MainDashboardViewModel viewModel)
     {
@@ -101,7 +131,7 @@ namespace CivilProcessERP
 
         if (viewModel.OpenTabs.Count >= 6)
         {
-            MessageBox.Show("You can only have 6 tabs open at a time. Please close one before opening a new tab.",
+            System.Windows.MessageBox.Show("You can only have 6 tabs open at a time. Please close one before opening a new tab.",
                 "Tab Limit Reached", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
@@ -126,7 +156,7 @@ namespace CivilProcessERP
 
         private void CloseTabButton_Click(object sender, RoutedEventArgs e)
 {
-    if (sender is Button btn && btn.Tag is TabItemViewModel tabVM)
+    if (sender is System.Windows.Controls.Button btn && btn.Tag is TabItemViewModel tabVM)
     {
         Console.WriteLine($"[DEBUG] ❌ Close button clicked for tab: {tabVM.Title}");
         RemoveTab(tabVM.Content); // ✅ same logic used by TestCloseTab
@@ -158,66 +188,111 @@ namespace CivilProcessERP
             OnPropertyChanged(nameof(CanGoForward));
         }
 
-       private void TabControl_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
-{
-    _dragStartPoint = e.GetPosition(null); // record the mouse down position
-}
-
-private void TabControl_PreviewMouseMove(object sender, MouseEventArgs e)
-{
-    if (e.LeftButton != MouseButtonState.Pressed)
-        return;
-
-    Point currentPosition = e.GetPosition(null);
-    Vector diff = _dragStartPoint - currentPosition;
-
-    // Only treat as a drag if the mouse moved more than a few pixels
-    if (Math.Abs(diff.X) > 10 || Math.Abs(diff.Y) > 10)
-    {
-        var tabControl = sender as TabControl;
-        if (tabControl?.SelectedItem is TabItemViewModel tabVM)
+       // --- Tab Drag/Drop Logic ---
+        private TabItemViewModel _draggedTab;
+        private void TabControl_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
-            Console.WriteLine($"[DEBUG] Drag initiated for tab: {tabVM.Title}");
-            DragDrop.DoDragDrop(tabControl, tabVM, DragDropEffects.Move);
-            isDraggingTab = true;
-        }
-    }
-}
-        private void TabControl_Drop(object sender, DragEventArgs e)
-        {
-            isDraggingTab = false;
-        }
-
-        private void TabControl_DragOver(object sender, DragEventArgs e)
-        {
-            if (isDraggingTab && e.GetPosition(this).X >= this.ActualWidth - 20) // near right edge
+            var tabControl = sender as System.Windows.Controls.TabControl;
+            var tabItem = FindAncestor<TabItem>((DependencyObject)e.OriginalSource);
+            if (tabItem != null)
             {
-                if ((FindName("MainTabControl") as TabControl)?.SelectedItem is TabItemViewModel tabVM)
+                _dragStartPoint = e.GetPosition(null);
+                _draggedTab = tabItem.DataContext as TabItemViewModel;
+            }
+        }
+
+        private void TabControl_PreviewMouseMove(object sender, System.Windows.Input.MouseEventArgs e)
+        {
+            if (e.LeftButton == MouseButtonState.Pressed && _draggedTab != null)
+            {
+                System.Windows.Point currentPosition = e.GetPosition(null);
+                if (Math.Abs(currentPosition.X - _dragStartPoint.X) > SystemParameters.MinimumHorizontalDragDistance ||
+                    Math.Abs(currentPosition.Y - _dragStartPoint.Y) > SystemParameters.MinimumVerticalDragDistance)
                 {
-                    Console.WriteLine($"[DEBUG] Dragged tab reached right edge. Detaching: {tabVM.Title}");
-                    DetachTab(tabVM);
-                    isDraggingTab = false; // prevent repeated triggers
+                    DragDrop.DoDragDrop((DependencyObject)sender, _draggedTab, System.Windows.DragDropEffects.Move);
                 }
             }
         }
 
+        private void TabControl_Drop(object sender, System.Windows.DragEventArgs e)
+        {
+            if (e.Data.GetDataPresent(typeof(TabItemViewModel)))
+            {
+                var droppedTab = e.Data.GetData(typeof(TabItemViewModel)) as TabItemViewModel;
+                if (droppedTab != null && droppedTab != _draggedTab)
+                {
+                    var vm = this.DataContext as MainDashboardViewModel;
+                    if (vm != null && !vm.OpenTabs.Contains(droppedTab))
+                    {
+                        vm.OpenTabs.Add(droppedTab);
+                        droppedTab.ParentWindow = this;
+                    }
+                }
+            }
+        }
+
+        private void TabControl_PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+        {
+            _draggedTab = null;
+        }
+
+        private void TabControl_DragOver(object sender, System.Windows.DragEventArgs e)
+        {
+            // Optionally, set e.Effects or handle drag feedback here
+            e.Effects = System.Windows.DragDropEffects.Move;
+            e.Handled = true;
+        }
+
+        // Helper to find ancestor of a type
+        private static T FindAncestor<T>(DependencyObject current) where T : DependencyObject
+        {
+            while (current != null)
+            {
+                if (current is T)
+                    return (T)current;
+                current = VisualTreeHelper.GetParent(current);
+            }
+            return null;
+        }
+
+        // Detach tab to new window (with multi-monitor support)
         private void DetachTab(TabItemViewModel tabVM)
         {
-            Console.WriteLine($"[DEBUG] Detaching tab: {tabVM.Title}");
-
-            if (DataContext is MainDashboardViewModel viewModel)
+            var vm = this.DataContext as MainDashboardViewModel;
+            if (vm != null && vm.OpenTabs.Contains(tabVM))
             {
-                viewModel.OpenTabs.Remove(tabVM);
-
-                var newWindow = new Window
-                {
-                    Title = tabVM.Title,
-                    Width = 1000,
-                    Height = 700,
-                    Content = tabVM.Content
-                };
-
+                vm.OpenTabs.Remove(tabVM);
+                // Determine the screen where the mouse is
+                var mousePos = System.Windows.Forms.Control.MousePosition;
+                var targetScreen = Screen.FromPoint(mousePos);
+                // Create new window
+                var newWindow = new MainWindow();
+                var newVm = new MainDashboardViewModel(newWindow._navigationService);
+                newVm.OpenTabs.Add(tabVM);
+                tabVM.ParentWindow = newWindow;
+                newWindow.DataContext = newVm;
+                // Set window position and size to match the target screen
+                newWindow.WindowStartupLocation = WindowStartupLocation.Manual;
+                newWindow.Left = targetScreen.WorkingArea.Left;
+                newWindow.Top = targetScreen.WorkingArea.Top;
+                newWindow.Width = targetScreen.WorkingArea.Width;
+                newWindow.Height = targetScreen.WorkingArea.Height;
                 newWindow.Show();
+                newWindow.WindowState = WindowState.Maximized;
+                // If this window has no tabs left, close it
+                if (vm.OpenTabs.Count == 0)
+                    this.Close();
+            }
+        }
+
+        // Accept tab from another window
+        public void AcceptTab(TabItemViewModel tabVM)
+        {
+            var vm = this.DataContext as MainDashboardViewModel;
+            if (vm != null && !vm.OpenTabs.Contains(tabVM))
+            {
+                vm.OpenTabs.Add(tabVM);
+                tabVM.ParentWindow = this;
             }
         }
 
@@ -234,7 +309,7 @@ private void TabControl_PreviewMouseMove(object sender, MouseEventArgs e)
 
                 if (viewModel.OpenTabs.Count >= 6)
                 {
-                    MessageBox.Show("You can only have 6 tabs open at a time. Please close one before opening a new job.",
+                    System.Windows.MessageBox.Show("You can only have 6 tabs open at a time. Please close one before opening a new job.",
                         "Tab Limit Reached", MessageBoxButton.OK, MessageBoxImage.Warning);
                     return;
                 }
@@ -259,7 +334,7 @@ viewModel.SelectedTab = newTab;
             else
             {
                 Console.WriteLine("[ERROR] MainDashboardViewModel not set as DataContext in MainWindow.");
-                MessageBox.Show("Dashboard not loaded. Cannot open job tab.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                System.Windows.MessageBox.Show("Dashboard not loaded. Cannot open job tab.", "Error", MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
             }
         }
 
@@ -269,7 +344,7 @@ viewModel.SelectedTab = newTab;
             {
                 if (viewModel.OpenTabs.Count >= 6)
                 {
-                    MessageBox.Show("You can only have 6 tabs open at a time. Please close one before opening a new tab.",
+                    System.Windows.MessageBox.Show("You can only have 6 tabs open at a time. Please close one before opening a new tab.",
                         "Tab Limit Reached", MessageBoxButton.OK, MessageBoxImage.Warning);
                     return;
                 }
@@ -309,15 +384,15 @@ viewModel.SelectedTab = newTab;
             SessionManager.CurrentUser = fullUser;
 
             // Switch UI visibility
-            LoginContent.Visibility = Visibility.Collapsed;
             DashboardLayoutGrid.Visibility = Visibility.Visible;
+            LoginContent.Visibility = Visibility.Collapsed;
 
-            NavigateTo((UserControl)_navigationService.GetView("Dashboard"));
+            NavigateTo((System.Windows.Controls.UserControl)_navigationService.GetView("Dashboard"));
             _lastActivityTime = DateTime.Now;
             _idleTimer.Start(); // Resume idle tracking
         }
 
-        public void RemoveTab(UserControl content)
+        public void RemoveTab(System.Windows.Controls.UserControl content)
         {
             if (DataContext is MainDashboardViewModel viewModel)
             {
@@ -371,14 +446,14 @@ viewModel.SelectedTab = newTab;
             if ((DateTime.Now - _lastActivityTime).TotalMinutes >= IdleTimeoutMinutes)
             {
                 _idleTimer.Stop();
-                MessageBox.Show("Session expired due to inactivity.", "Auto Logout", MessageBoxButton.OK, MessageBoxImage.Warning);
+                System.Windows.MessageBox.Show("Session expired due to inactivity.", "Auto Logout", MessageBoxButton.OK, MessageBoxImage.Warning);
                 Logout();
             }
         }
 
         private void OnActivityDetected(object sender, PreProcessInputEventArgs e)
         {
-            if (e.StagingItem.Input is MouseEventArgs || e.StagingItem.Input is KeyEventArgs)
+            if (e.StagingItem.Input is System.Windows.Input.MouseEventArgs || e.StagingItem.Input is System.Windows.Input.KeyEventArgs)
             {
                 _lastActivityTime = DateTime.Now;
             }
@@ -386,7 +461,7 @@ viewModel.SelectedTab = newTab;
 
         private void Logout_Click(object sender, RoutedEventArgs e)
         {
-            var result = MessageBox.Show(
+            var result =  System.Windows.MessageBox.Show(
                 "Are you sure you want to logout?",
                 "Confirm Logout",
                 MessageBoxButton.YesNo,
@@ -432,12 +507,79 @@ viewModel.SelectedTab = newTab;
 
             if (!effectivePerms.Contains("ViewAdministration"))
             {
-                MessageBox.Show("You do not have permission to access the Administration panel.", "Access Denied",
+                System.Windows.MessageBox.Show("You do not have permission to access the Administration panel.", "Access Denied",
                     MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
             AddNewTab(new AdministrationView(currentUser), "Administration");
+        }
+
+        // Handler for the '+' button to open a new ERP window (MainWindow)
+        private void AddNewMainWindow_Click(object sender, RoutedEventArgs e)
+        {
+            // Multi-monitor support: open on the monitor where the mouse is
+            var mousePos = System.Windows.Forms.Control.MousePosition;
+            var targetScreen = System.Windows.Forms.Screen.FromPoint(mousePos);
+            var newWindow = new MainWindow();
+            newWindow.WindowStartupLocation = WindowStartupLocation.Manual;
+            newWindow.Left = targetScreen.WorkingArea.Left;
+            newWindow.Top = targetScreen.WorkingArea.Top;
+            newWindow.Width = targetScreen.WorkingArea.Width;
+            newWindow.Height = targetScreen.WorkingArea.Height;
+            newWindow.Show();
+            newWindow.WindowState = WindowState.Maximized;
+        }
+
+        // Keyboard shortcut handling
+        private void Window_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+        {
+            var vm = this.DataContext as MainDashboardViewModel;
+            if (vm == null) return;
+
+            if (Keyboard.Modifiers == ModifierKeys.Control && e.Key == Key.T)
+            {
+                // Ctrl+T: Open a new ERP window (not a tab)
+                AddNewMainWindow_Click(this, null);
+                e.Handled = true;
+            }
+            else if (Keyboard.Modifiers == ModifierKeys.Control && e.Key == Key.W)
+            {
+                // Ctrl+W: Close current tab
+                if (vm.SelectedTab != null)
+                    vm.SelectedTab.CloseTab();
+                e.Handled = true;
+            }
+            else if (Keyboard.Modifiers == ModifierKeys.Control && e.Key == Key.Tab)
+            {
+                // Ctrl+Tab: Next tab
+                int idx = vm.OpenTabs.IndexOf(vm.SelectedTab);
+                if (idx >= 0 && vm.OpenTabs.Count > 1)
+                {
+                    int next = (idx + 1) % vm.OpenTabs.Count;
+                    vm.SelectedTab = vm.OpenTabs[next];
+                }
+                e.Handled = true;
+            }
+        }
+
+        // Handler for context menu 'New Tab'
+        private void NewTabMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            OpenNewTab();
+        }
+
+        // Open a new dashboard tab (or whatever is default)
+        private void OpenNewTab()
+        {
+            var vm = this.DataContext as MainDashboardViewModel;
+            if (vm != null)
+            {
+                var dashboard = new MainDashboard(_navigationService);
+                var tab = new TabItemViewModel("Dashboard", dashboard) { ParentWindow = this };
+                vm.OpenTabs.Add(tab);
+                vm.SelectedTab = tab;
+            }
         }
     }
 }

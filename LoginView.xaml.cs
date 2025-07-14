@@ -8,7 +8,7 @@ using Npgsql;
 
 namespace CivilProcessERP.Views
 {
-    public partial class LoginView : UserControl
+    public partial class LoginView : System.Windows.Controls.UserControl
     {
         public LoginView()
         {
@@ -67,13 +67,13 @@ namespace CivilProcessERP.Views
 
                         if (result != true)
                         {
-                            MessageBox.Show("MFA verification failed.", "MFA Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                            System.Windows.MessageBox.Show("MFA verification failed.", "MFA Error", MessageBoxButton.OK, MessageBoxImage.Error);
                             return;
                         }
                     }
 
                     // ✅ Navigate to dashboard
-                    var mainWindow = Application.Current.MainWindow as MainWindow;
+                    var mainWindow = System.Windows.Application.Current.MainWindow as MainWindow;
                     mainWindow?.LoadMainDashboardAfterLogin(user.LoginName);
                 }
                 else

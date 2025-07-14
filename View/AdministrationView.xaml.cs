@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 
 namespace CivilProcessERP.Views
 {
-    public partial class AdministrationView : UserControl
+    public partial class AdministrationView : System.Windows.Controls.UserControl
     {
 
 
@@ -57,7 +57,7 @@ namespace CivilProcessERP.Views
         private async void CreateUserButton_Click(object sender, RoutedEventArgs e)
         {
             Console.WriteLine("[DEBUG] Create User button clicked — navigating to new tab...");
-            var mainWindow = Application.Current.MainWindow as MainWindow;
+            var mainWindow = System.Windows.Application.Current.MainWindow as MainWindow;
             if (mainWindow != null)
             {
                 var createUserPage = new CreateUserView();
@@ -65,7 +65,7 @@ namespace CivilProcessERP.Views
             }
             else
             {
-                MessageBox.Show("❌ Main window is not available.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                System.Windows.MessageBox.Show("❌ Main window is not available.", "Error", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
                 Console.WriteLine("[ERROR] MainWindow reference is null.");
             }
         }
@@ -74,7 +74,7 @@ namespace CivilProcessERP.Views
        private async void EditUserButton_Click(object sender, RoutedEventArgs e)
 {
     Console.WriteLine("[DEBUG] Edit User button clicked — navigating via MainContentArea...");
-    var mainWindow = Application.Current.MainWindow as MainWindow;
+    var mainWindow = System.Windows.Application.Current.MainWindow as MainWindow;
     if (mainWindow != null)
     {
         string loginInput = UserSearchComboBox.Text.Trim();
@@ -87,12 +87,12 @@ namespace CivilProcessERP.Views
         }
         else
         {
-            MessageBox.Show("⚠ Please type or select a valid user before editing.", "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
+            System.Windows.MessageBox.Show("⚠ Please type or select a valid user before editing.", "Warning", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
         }
     }
     else
     {
-        MessageBox.Show("Main window is not available.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        System.Windows.MessageBox.Show("Main window is not available.", "Error", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
     }
 }
 
@@ -107,7 +107,7 @@ namespace CivilProcessERP.Views
         private async void DeleteUserButton_Click(object sender, RoutedEventArgs e)
         {
             Console.WriteLine("[DEBUG] Delete User button clicked — navigating to DeleteUserView...");
-            var mainWindow = Application.Current.MainWindow as MainWindow;
+            var mainWindow = System.Windows.Application.Current.MainWindow as MainWindow;
             if (mainWindow != null)
             {
                 var deleteUserPage = new DeleteUserView();
@@ -115,14 +115,14 @@ namespace CivilProcessERP.Views
             }
             else
             {
-                MessageBox.Show("Main window is not available.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                System.Windows.MessageBox.Show("Main window is not available.", "Error", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
             }
         }
 
         private async void ToggleUserStatusButton_Click(object sender, RoutedEventArgs e)
         {
             Console.WriteLine("[DEBUG] Toggle User Status clicked — navigating to view...");
-            var mainWindow = Application.Current.MainWindow as MainWindow;
+            var mainWindow = System.Windows.Application.Current.MainWindow as MainWindow;
             if (mainWindow != null)
             {
                 var togglePage = new EnableDisableUserView();
@@ -130,33 +130,33 @@ namespace CivilProcessERP.Views
             }
             else
             {
-                MessageBox.Show("Main window not found.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                System.Windows.MessageBox.Show("Main window not found.", "Error", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
             }
         }
         private async void AssignPermissionsButton_Click(object sender, RoutedEventArgs e)
         {
             Console.WriteLine("[DEBUG] AssignPermissionsButton clicked — opening tab...");
-            var mainWindow = Application.Current.MainWindow as MainWindow;
+            var mainWindow = System.Windows.Application.Current.MainWindow as MainWindow;
             if (mainWindow != null)
             {
                 mainWindow.AddNewTab(new AssignPermissionView(), "Assign Permissions");
             }
             else
             {
-                MessageBox.Show("Main window not found.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                System.Windows.MessageBox.Show("Main window not found.", "Error", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
             }
         }
 
         private async void FreezeOrgButton_Click(object sender, RoutedEventArgs e)
         {
-            var mainWindow = Application.Current.MainWindow as MainWindow;
+            var mainWindow = System.Windows.Application.Current.MainWindow as MainWindow;
             if (mainWindow != null)
             {
                 mainWindow.AddNewTab(new FreezeOrganizationView(), "Manage Organization Freeze Status");
             }
             else
             {
-                MessageBox.Show("Main window not found.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                System.Windows.MessageBox.Show("Main window not found.", "Error", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
             }
         }
 
@@ -169,7 +169,7 @@ namespace CivilProcessERP.Views
             UserAuditLogDataGrid.ItemsSource = logs;
         }
 
-        private async void UserSearchComboBox_KeyUp(object sender, KeyEventArgs e)
+        private async void UserSearchComboBox_KeyUp(object sender, System.Windows.Input.KeyEventArgs e)
         {
             string query = UserSearchComboBox.Text.Trim();
             if (query.Length >= 2)
@@ -251,27 +251,27 @@ namespace CivilProcessERP.Views
 
 private async void DeleteGroupButton_Click(object sender, RoutedEventArgs e)
 {
-    var mainWindow = Application.Current.MainWindow as MainWindow;
+    var mainWindow = System.Windows.Application.Current.MainWindow as MainWindow;
     mainWindow?.AddNewTab(new DeleteGroupView(), "Delete Group");
 }
 
         private async void ManagePermissionsButton_Click(object sender, RoutedEventArgs e)
         {
-            var mainWindow = Application.Current.MainWindow as MainWindow;
+            var mainWindow = System.Windows.Application.Current.MainWindow as MainWindow;
             mainWindow?.AddNewTab(new ManagePermissionsView(), "Manage Permissions");
         }
 
 private async void ManageRolePermissionsButton_Click(object sender, RoutedEventArgs e)
 {
     Console.WriteLine("[DEBUG] ManageRolePermissionsButton clicked — opening RolePermissionManagerView...");
-    var mainWindow = Application.Current.MainWindow as MainWindow;
+    var mainWindow = System.Windows.Application.Current.MainWindow as MainWindow;
     if (mainWindow != null)
     {
         mainWindow.AddNewTab(new RolePermissionManagerView(), "Manage Role Permissions");
     }
     else
     {
-        MessageBox.Show("Main window not found.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        System.Windows.MessageBox.Show("Main window not found.", "Error", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
     }
 }
 
@@ -354,7 +354,7 @@ private async Task LoadCurrentUserPermissionsAsync()
                 if (GroupListBox.SelectedItem is string selectedGroup)
                 {
                     await _groupPermissionService.SavePermissionsForGroupAsync(selectedGroup, permissions);
-                    MessageBox.Show($"Applied '{selectedTemplate}' to group '{selectedGroup}' successfully.");
+                    System.Windows.MessageBox.Show($"Applied '{selectedTemplate}' to group '{selectedGroup}' successfully.");
                 }
                 SelectedUserPermissionsGrid.ItemsSource = permissions.Select(p => new PermissionModel
                 {
@@ -369,19 +369,19 @@ private async Task LoadCurrentUserPermissionsAsync()
             var groupName = NewGroupNameTextBox.Text.Trim();
             if (string.IsNullOrWhiteSpace(groupName))
             {
-                MessageBox.Show("Please enter a valid group name.");
+                System.Windows.MessageBox.Show("Please enter a valid group name.");
                 return;
             }
             bool created = await _groupService.CreateGroupAsync(groupName);
             if (created)
             {
-                MessageBox.Show("Group created successfully.");
+                System.Windows.MessageBox.Show("Group created successfully.");
                 NewGroupNameTextBox.Clear();
                 await RefreshGroupListsAsync();
             }
             else
             {
-                MessageBox.Show("Group already exists.");
+                System.Windows.MessageBox.Show("Group already exists.");
             }
         }
 
@@ -453,7 +453,7 @@ private async Task LoadCurrentUserPermissionsAsync()
             string groupName = GroupListBox.SelectedItem as string;
             if (string.IsNullOrWhiteSpace(groupName))
             {
-                MessageBox.Show("Please select or create a group.");
+                System.Windows.MessageBox.Show("Please select or create a group.");
                 return;
             }
             var selectedPermissions = GroupPermissionsListBox?.SelectedItems.Cast<string>().ToList() ?? new List<string>();
@@ -463,27 +463,27 @@ private async Task LoadCurrentUserPermissionsAsync()
             {
                 await _groupService.SaveGroupsForUserAsync(user.UserNumber, new List<string> { groupName });
             }
-            MessageBox.Show($"✅ Saved group '{groupName}' with {selectedUsers.Count} users and {selectedPermissions.Count} permissions.");
+            System.Windows.MessageBox.Show($"✅ Saved group '{groupName}' with {selectedUsers.Count} users and {selectedPermissions.Count} permissions.");
         }
 
         private async void SaveUsersToGroup_Click(object sender, RoutedEventArgs e)
         {
             if (GroupListBox.SelectedItem is not string selectedGroup)
             {
-                MessageBox.Show("Select a group first.");
+                System.Windows.MessageBox.Show("Select a group first.");
                 return;
             }
             var selectedUsers = UserAssignmentListBox.SelectedItems.Cast<UserModel>().ToList();
             if (!selectedUsers.Any())
             {
-                MessageBox.Show("Select at least one user to assign.");
+                System.Windows.MessageBox.Show("Select at least one user to assign.");
                 return;
             }
             foreach (var user in selectedUsers)
             {
                 await _groupService.SaveGroupsForUserAsync(user.UserNumber, new List<string> { selectedGroup });
             }
-            MessageBox.Show($"Assigned {selectedUsers.Count} users to group '{selectedGroup}'.");
+            System.Windows.MessageBox.Show($"Assigned {selectedUsers.Count} users to group '{selectedGroup}'.");
         }
 
 
@@ -491,7 +491,7 @@ private async void GenerateNewAccessKey_Click(object sender, RoutedEventArgs e)
 {
     if (UserSearchComboBox.SelectedItem is not UserModel selectedUser)
     {
-        MessageBox.Show("Please select a user first.");
+        System.Windows.MessageBox.Show("Please select a user first.");
         return;
     }
     string accessKey = Guid.NewGuid().ToString("N");
@@ -500,7 +500,7 @@ private async void GenerateNewAccessKey_Click(object sender, RoutedEventArgs e)
     await credentialService.CreateOrUpdateCredentialAsync(selectedUser.UserNumber, accessKey, secretKey);
     AccessKeyTextBox.Text = accessKey;
     SecretKeyTextBox.Text = secretKey;
-    MessageBox.Show($"🔐 API credentials generated for user '{selectedUser.LoginName}'.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+    System.Windows.MessageBox.Show($"🔐 API credentials generated for user '{selectedUser.LoginName}'.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
 }
     }
 }

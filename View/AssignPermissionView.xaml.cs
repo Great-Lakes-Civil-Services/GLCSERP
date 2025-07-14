@@ -9,7 +9,7 @@ using CivilProcessERP.Services;
 
 namespace CivilProcessERP.Views
 {
-    public partial class AssignPermissionView : UserControl
+    public partial class AssignPermissionView : System.Windows.Controls.UserControl
     {
         private readonly UserSearchService _userService = new();
         private readonly UserPermissionService _userPermissionService = new();
@@ -38,7 +38,7 @@ namespace CivilProcessERP.Views
             }
             catch (Exception ex)
             {
-                Dispatcher.Invoke(() => MessageBox.Show("Failed to load users: " + ex.Message));
+                Dispatcher.Invoke(() => System.Windows.MessageBox.Show("Failed to load users: " + ex.Message));
             }
         }
 
@@ -52,7 +52,7 @@ namespace CivilProcessERP.Views
             }
             catch (Exception ex)
             {
-                Dispatcher.Invoke(() => MessageBox.Show("Failed to load permissions: " + ex.Message));
+                Dispatcher.Invoke(() => System.Windows.MessageBox.Show("Failed to load permissions: " + ex.Message));
             }
         }
 
@@ -78,7 +78,7 @@ namespace CivilProcessERP.Views
             }
             catch (Exception ex)
             {
-                Dispatcher.Invoke(() => MessageBox.Show("Failed to load user permissions: " + ex.Message));
+                Dispatcher.Invoke(() => System.Windows.MessageBox.Show("Failed to load user permissions: " + ex.Message));
             }
         }
 
@@ -86,7 +86,7 @@ namespace CivilProcessERP.Views
         {
             if (UserComboBox.SelectedItem is not UserModel user)
             {
-                MessageBox.Show("Select a user first.");
+                System.Windows.MessageBox.Show("Select a user first.");
                 return;
             }
 
@@ -97,11 +97,11 @@ namespace CivilProcessERP.Views
                 await Task.Run(() =>
                     _userPermissionService.SavePermissionsForUserAsync(user.UserNumber, selectedPerms)).ConfigureAwait(false);
 
-                Dispatcher.Invoke(() => MessageBox.Show("Permissions saved directly to user."));
+                Dispatcher.Invoke(() => System.Windows.MessageBox.Show("Permissions saved directly to user."));
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Failed to save permissions: " + ex.Message);
+                System.Windows.MessageBox.Show("Failed to save permissions: " + ex.Message);
             }
         }
 

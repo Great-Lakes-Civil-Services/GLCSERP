@@ -8,7 +8,7 @@ using CivilProcessERP.Services;
 
 namespace CivilProcessERP.Views
 {
-    public partial class DeleteUserView : UserControl
+    public partial class DeleteUserView : System.Windows.Controls.UserControl
     {
         private static readonly string connString = "Host=localhost;Port=5432;Username=postgres;Password=7866;Database=mypg_database";
         private readonly UserSearchService _userSearchService = new UserSearchService();
@@ -18,7 +18,7 @@ namespace CivilProcessERP.Views
             InitializeComponent();
         }
 
-        private async void UsernameSearchComboBox_KeyUp(object sender, KeyEventArgs e)
+        private async void UsernameSearchComboBox_KeyUp(object sender, System.Windows.Input.KeyEventArgs e)
         {
             string query = UsernameSearchComboBox.Text.Trim();
 
@@ -36,11 +36,11 @@ namespace CivilProcessERP.Views
 
     if (string.IsNullOrWhiteSpace(usernameToDelete))
     {
-        MessageBox.Show("Please enter a username to delete.", "Validation Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+        System.Windows.MessageBox.Show("Please enter a username to delete.", "Validation Error", MessageBoxButton.OK, MessageBoxImage.Warning);
         return;
     }
 
-    var confirm = MessageBox.Show(
+    var confirm = System.Windows.MessageBox.Show(
         $"Are you sure you want to delete user '{usernameToDelete}'?",
         "Confirm Deletion",
         MessageBoxButton.YesNo,
@@ -96,16 +96,16 @@ namespace CivilProcessERP.Views
 
         if (deleted)
         {
-            MessageBox.Show($"User '{usernameToDelete}' deleted successfully.", "User Deleted", MessageBoxButton.OK, MessageBoxImage.Information);
+            System.Windows.MessageBox.Show($"User '{usernameToDelete}' deleted successfully.", "User Deleted", MessageBoxButton.OK, MessageBoxImage.Information);
         }
         else
         {
-            MessageBox.Show($"No user found with username '{usernameToDelete}' or deletion failed.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            System.Windows.MessageBox.Show($"No user found with username '{usernameToDelete}' or deletion failed.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
     catch (Exception ex)
     {
-        MessageBox.Show($"Unexpected error: {ex.Message}", "Database Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        System.Windows.MessageBox.Show($"Unexpected error: {ex.Message}", "Database Error", MessageBoxButton.OK, MessageBoxImage.Error);
     }
 }
 

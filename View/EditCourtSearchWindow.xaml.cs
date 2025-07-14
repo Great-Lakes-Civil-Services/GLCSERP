@@ -54,7 +54,7 @@ namespace CivilProcessERP.Views
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Error loading courts: " + ex.Message);
+                System.Windows.MessageBox.Show("Error loading courts: " + ex.Message);
             }
 
             // ✅ Retain previous selection
@@ -90,7 +90,7 @@ namespace CivilProcessERP.Views
             }
             else
             {
-                MessageBox.Show("Please select a court before clicking OK.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
+                System.Windows.MessageBox.Show("Please select a court before clicking OK.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
         }
 
@@ -98,7 +98,7 @@ namespace CivilProcessERP.Views
         {
             if (lstCourts.SelectedItem == null)
             {
-                MessageBox.Show("Please select a court from the list.");
+                System.Windows.MessageBox.Show("Please select a court from the list.");
                 return;
             }
 

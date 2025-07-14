@@ -16,7 +16,7 @@ public class JobService : INotifyPropertyChanged
     // Define AttachmentsListView as a property or field
 
     private static readonly SemaphoreSlim _jobLock = new(1, 1);
-    public ListView AttachmentsListView { get; set; }
+    public System.Windows.Controls.ListView AttachmentsListView { get; set; }
     private readonly string _connectionString = "Host=localhost;Port=5432;Database=mypg_database;Username=postgres;Password=7866";
 
     public List<AttachmentModel> Attachments { get; set; } = new List<AttachmentModel>();

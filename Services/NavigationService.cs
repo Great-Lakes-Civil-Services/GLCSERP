@@ -7,12 +7,12 @@ using CivilProcessERP.ViewModels; // Add this line to include the namespace wher
 
 public class NavigationService
 {
-    private readonly Dictionary<string, Func<UserControl>> _viewMappings;
+    private readonly Dictionary<string, Func<System.Windows.Controls.UserControl>> _viewMappings;
     private MainDashboard? _dashboardInstance; // ✅ Singleton instance
 
     public NavigationService()
     {
-        _viewMappings = new Dictionary<string, Func<UserControl>>
+        _viewMappings = new Dictionary<string, Func<System.Windows.Controls.UserControl>>
         {
             { "Dashboard", GetDashboardInstance }, // ✅ Use the singleton instance method
             { "Executions", () => new ExecutionsView() },
@@ -25,8 +25,8 @@ public class NavigationService
         {
             if (SessionManager.CurrentUser == null)
             {
-                MessageBox.Show("No user session. Please login again.", "Access Denied", MessageBoxButton.OK, MessageBoxImage.Warning);
-                return new UserControl(); // Or redirect to login
+                System.Windows.MessageBox.Show("No user session. Please login again.", "Access Denied", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return new System.Windows.Controls.UserControl(); // Or redirect to login
             }
 
             return new AdministrationView(SessionManager.CurrentUser);
@@ -40,7 +40,7 @@ public class NavigationService
     }
 
     // ✅ Ensure only ONE instance of MainDashboard exists
-    private UserControl GetDashboardInstance()
+    private System.Windows.Controls.UserControl GetDashboardInstance()
     {
         if (_dashboardInstance == null)
         {
@@ -54,12 +54,12 @@ public class NavigationService
         return _dashboardInstance;
     }
 
-    public UserControl GetView(string viewName)
+    public System.Windows.Controls.UserControl GetView(string viewName)
     {
         if (string.IsNullOrWhiteSpace(viewName))
         {
             Console.WriteLine("[ERROR] View name is null or empty.");
-            return new UserControl { Content = new TextBlock { Text = "Error: View name is missing!", Foreground = System.Windows.Media.Brushes.Red } };
+            return new System.Windows.Controls.UserControl { Content = new TextBlock { Text = "Error: View name is missing!", Foreground = System.Windows.Media.Brushes.Red } };
         }
 
         if (_viewMappings.TryGetValue(viewName, out var createView))
@@ -70,7 +70,7 @@ public class NavigationService
         else
         {
             Console.WriteLine($"[ERROR] View Not Found: {viewName}");
-            return new UserControl { Content = new TextBlock { Text = $"Error: {viewName} not implemented!", Foreground = System.Windows.Media.Brushes.Red } };
+            return new System.Windows.Controls.UserControl { Content = new TextBlock { Text = $"Error: {viewName} not implemented!", Foreground = System.Windows.Media.Brushes.Red } };
         }
     }
 

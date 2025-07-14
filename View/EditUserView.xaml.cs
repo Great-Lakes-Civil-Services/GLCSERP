@@ -8,7 +8,7 @@ using CivilProcessERP.Services;
 
 namespace CivilProcessERP.Views
 {
-    public partial class EditUserView : UserControl
+    public partial class EditUserView : System.Windows.Controls.UserControl
     {
         private static readonly string connString = "Host=localhost;Port=5432;Username=postgres;Password=7866;Database=mypg_database";
         private readonly UserModel selectedUser;
@@ -34,9 +34,9 @@ namespace CivilProcessERP.Views
             MfaEnabledCheckBox.IsChecked = selectedUser.MfaEnabled;
         }
 
-        private ComboBoxItem GetComboBoxItemByContent(ComboBox comboBox, string content)
+        private System.Windows.Controls.ComboBoxItem GetComboBoxItemByContent(System.Windows.Controls.ComboBox comboBox, string content)
         {
-            foreach (ComboBoxItem item in comboBox.Items)
+            foreach (System.Windows.Controls.ComboBoxItem item in comboBox.Items)
             {
                 if (item.Content.ToString().Equals(content, StringComparison.OrdinalIgnoreCase))
                     return item;
@@ -54,7 +54,7 @@ namespace CivilProcessERP.Views
              // ✅ Validation: Role must be selected
     if (RoleComboBox.SelectedItem == null)
     {
-        MessageBox.Show("❌ Please select a role before submitting.", "Validation Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+        System.Windows.MessageBox.Show("❌ Please select a role before submitting.", "Validation Error", MessageBoxButton.OK, MessageBoxImage.Warning);
         return;
     }
 
@@ -63,7 +63,7 @@ namespace CivilProcessERP.Views
     // Optional: Entity dropdown validation too
     if (EntityComboBox.SelectedItem == null)
     {
-        MessageBox.Show("❌ Please select an entity before submitting.", "Validation Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+        System.Windows.MessageBox.Show("❌ Please select an entity before submitting.", "Validation Error", MessageBoxButton.OK, MessageBoxImage.Warning);
         return;
     }
 
@@ -104,18 +104,18 @@ namespace CivilProcessERP.Views
                 {
                     if (rows > 0)
                     {
-                        MessageBox.Show("✅ User updated successfully.");
+                        System.Windows.MessageBox.Show("✅ User updated successfully.");
                         new AuditLogService(connString).LogActionAsync("EditUser", selectedUser.LoginName, "User info updated", SessionManager.CurrentUser.LoginName);
                     }
                     else
                     {
-                        MessageBox.Show("⚠️ No changes were made.");
+                        System.Windows.MessageBox.Show("⚠️ No changes were made.");
                     }
                 });
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"❌ Failed to update user: {ex.Message}");
+                System.Windows.MessageBox.Show($"❌ Failed to update user: {ex.Message}");
             }
         }
 
@@ -191,7 +191,7 @@ namespace CivilProcessERP.Views
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Failed to load permissions: " + ex.Message);
+                System.Windows.MessageBox.Show("Failed to load permissions: " + ex.Message);
             }
         }
     }

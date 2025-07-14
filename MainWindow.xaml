@@ -1,7 +1,11 @@
 ﻿<Window x:Class="CivilProcessERP.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Civil Process ERP" Height="800" Width="1400">
+        xmlns:local="clr-namespace:CivilProcessERP"
+        Title="Civil Process ERP" Height="900" Width="1600"
+        WindowStartupLocation="CenterScreen"
+        WindowState="Maximized"
+        KeyDown="Window_KeyDown">
 
     <Grid>
         <!-- 🔐 Login View -->
@@ -36,6 +40,8 @@
                         <Button Content="Courts" Click="NavigateToPage" Tag="Courts"/>
                         <Button Content="Clients" Click="NavigateToPage" Tag="Clients"/>
                         <Button Content="Employee's Corner" Click="NavigateToPage" Tag="EmployeesCorner"/>
+                        <!-- Add the + button for new ERP window -->
+                        <Button Content="+" Width="36" Height="36" Margin="8,0,0,0" VerticalAlignment="Center" Click="AddNewMainWindow_Click" ToolTip="Open new ERP window"/>
                         <Button Content="Logout" Click="Logout_Click" Background="Red" Foreground="White" Margin="20,0,0,0"/>
                     </StackPanel>
                 </StackPanel>
@@ -56,38 +62,39 @@
 <TabControl x:Name="MainTabControl"
             Grid.Row="1" Grid.Column="0"
             ItemsSource="{Binding OpenTabs}"
-            SelectedItem="{Binding SelectedTab}"
+            SelectedItem="{Binding SelectedTab, Mode=TwoWay}"
             Margin="20,10,10,10"
             AllowDrop="True"
             PreviewMouseLeftButtonDown="TabControl_PreviewMouseLeftButtonDown"
             PreviewMouseMove="TabControl_PreviewMouseMove"
+            PreviewMouseLeftButtonUp="TabControl_PreviewMouseLeftButtonUp"
             Drop="TabControl_Drop"
-            DragOver="TabControl_DragOver">
+            DragOver="TabControl_DragOver"
+            KeyboardNavigation.TabNavigation="Continue"
+            >
     
     <TabControl.ItemTemplate>
         <DataTemplate>
             <StackPanel Orientation="Horizontal">
                 <TextBlock Text="{Binding Title}" Margin="0,0,5,0"/>
-                <Button Content="X"
-                        Width="20"
-                        Height="20"
-                        Background="Red"
-                        Foreground="White"
-                        FontWeight="Bold"
-                        ToolTip="Close Tab"
-                        Padding="0"
-                        VerticalContentAlignment="Center"
-                        HorizontalContentAlignment="Center"
-                        Command="{Binding CloseCommand}" />
+                <Button Content="×" Width="18" Height="18" Padding="0" Margin="2,0,0,0"
+                        Command="{Binding CloseCommand}" ToolTip="Close Tab"
+                        Style="{StaticResource {x:Static ToolBar.ButtonStyleKey}}"/>
             </StackPanel>
         </DataTemplate>
     </TabControl.ItemTemplate>
 
     <TabControl.ContentTemplate>
         <DataTemplate>
-            <ContentControl Content="{Binding Content}" />
+            <ContentControl Content="{Binding Content}"/>
         </DataTemplate>
     </TabControl.ContentTemplate>
+    <TabControl.ContextMenu>
+        <ContextMenu>
+            <MenuItem Header="Close Tab" Command="{Binding SelectedTab.CloseCommand, RelativeSource={RelativeSource AncestorType=TabControl}}"/>
+            <MenuItem Header="New Tab (Ctrl+T)" Click="NewTabMenuItem_Click"/>
+        </ContextMenu>
+    </TabControl.ContextMenu>
 </TabControl>
 
 

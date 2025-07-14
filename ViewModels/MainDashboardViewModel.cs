@@ -95,7 +95,7 @@ namespace CivilProcessERP.ViewModels
             // ✅ Add 6-tab limit check
             if (OpenTabs.Count >= 6)
             {
-                MessageBox.Show("You can only have 6 tabs open at a time. Please close one before opening a new tab.",
+                System.Windows.MessageBox.Show("You can only have 6 tabs open at a time. Please close one before opening a new tab.",
                     "Tab Limit Reached", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
@@ -112,7 +112,7 @@ namespace CivilProcessERP.ViewModels
                 return;
             }
 
-            UserControl? view = null;
+            System.Windows.Controls.UserControl? view = null;
 
 if (param is Job jobData)
 {
@@ -185,21 +185,50 @@ if (param is Job jobData)
     public class TabItemViewModel : BaseViewModel
     {
         public string Title { get; }
-        public UserControl Content { get; }
+        public System.Windows.Controls.UserControl Content { get; }
         public ICommand CloseCommand { get; }
         public event EventHandler? TabCloseRequested;
 
-        public TabItemViewModel(string title, UserControl content)
+        // Track parent window for drag/drop and close logic
+        public MainWindow ParentWindow { get; set; }
+
+        public TabItemViewModel(string title, System.Windows.Controls.UserControl content)
         {
             Title = title;
             Content = content;
+            CloseCommand = new RelayCommand(_ => CloseTab());
+        }
 
-            CloseCommand = new RelayCommand(_ =>
+        public void CloseTab()
+        {
+            if (ParentWindow != null)
             {
-                Console.WriteLine($"[DEBUG] CloseCommand triggered for {Title}");
-                // Let MainWindow handle tab closure via event
-                TabCloseRequested?.Invoke(this, EventArgs.Empty);
-            });
+                var vm = ParentWindow.DataContext as MainDashboardViewModel;
+                if (vm != null && vm.OpenTabs.Contains(this))
+                {
+                    vm.OpenTabs.Remove(this);
+                    if (vm.OpenTabs.Count == 0)
+                        ParentWindow.Close();
+                }
+            }
+            TabCloseRequested?.Invoke(this, EventArgs.Empty);
+        }
+
+        // Move this tab to another window
+        public void MoveToWindow(MainWindow targetWindow)
+        {
+            if (ParentWindow != null)
+            {
+                var oldVm = ParentWindow.DataContext as MainDashboardViewModel;
+                if (oldVm != null && oldVm.OpenTabs.Contains(this))
+                    oldVm.OpenTabs.Remove(this);
+            }
+            var newVm = targetWindow.DataContext as MainDashboardViewModel;
+            if (newVm != null && !newVm.OpenTabs.Contains(this))
+            {
+                newVm.OpenTabs.Add(this);
+                ParentWindow = targetWindow;
+            }
         }
     }
 }

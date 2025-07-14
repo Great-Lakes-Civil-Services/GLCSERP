@@ -68,7 +68,7 @@ namespace CivilProcessERP.Views
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Error loading process servers: " + ex.Message, "Database Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                System.Windows.MessageBox.Show("Error loading process servers: " + ex.Message, "Database Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
 
             // Auto-select if exact match
@@ -104,7 +104,7 @@ namespace CivilProcessERP.Views
             }
             else
             {
-                MessageBox.Show("Please select a server before clicking Select.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
+                System.Windows.MessageBox.Show("Please select a server before clicking Select.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
         }
 

@@ -131,7 +131,6 @@ C:\Users\GLCS\CivilProcessERP\bin\Debug\net9.0-windows\zh-Hans\Microsoft.CodeAna
 C:\Users\GLCS\CivilProcessERP\bin\Debug\net9.0-windows\zh-Hant\Microsoft.CodeAnalysis.Workspaces.MSBuild.BuildHost.resources.dll
 C:\Users\GLCS\CivilProcessERP\obj\Debug\net9.0-windows\CivilProcessERP.csproj.AssemblyReference.cache
 C:\Users\GLCS\CivilProcessERP\obj\Debug\net9.0-windows\LoginView.baml
-C:\Users\GLCS\CivilProcessERP\obj\Debug\net9.0-windows\MainWindow.baml
 C:\Users\GLCS\CivilProcessERP\obj\Debug\net9.0-windows\MfaPromptWindow.baml
 C:\Users\GLCS\CivilProcessERP\obj\Debug\net9.0-windows\View\AddJobView.baml
 C:\Users\GLCS\CivilProcessERP\obj\Debug\net9.0-windows\View\AssignPermissionView.baml
@@ -219,6 +218,7 @@ C:\Users\GLCS\CivilProcessERP\obj\Debug\net9.0-windows\View\SingleFieldDialog.g.
 C:\Users\GLCS\CivilProcessERP\obj\Debug\net9.0-windows\App.g.cs
 C:\Users\GLCS\CivilProcessERP\obj\Debug\net9.0-windows\CivilProcessERP_MarkupCompile.cache
 C:\Users\GLCS\CivilProcessERP\obj\Debug\net9.0-windows\CivilProcessERP_MarkupCompile.lref
+C:\Users\GLCS\CivilProcessERP\obj\Debug\net9.0-windows\MainWindow.baml
 C:\Users\GLCS\CivilProcessERP\obj\Debug\net9.0-windows\View\AdministrationView.baml
 C:\Users\GLCS\CivilProcessERP\obj\Debug\net9.0-windows\CivilProcessERP.g.resources
 C:\Users\GLCS\CivilProcessERP\obj\Debug\net9.0-windows\CivilProcessERP.GeneratedMSBuildEditorConfig.editorconfig

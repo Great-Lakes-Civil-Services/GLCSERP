@@ -13,7 +13,7 @@ using Npgsql;
 
 namespace CivilProcessERP.Views
 {
-    public partial class AddJobView : UserControl, INotifyPropertyChanged
+    public partial class AddJobView : System.Windows.Controls.UserControl, INotifyPropertyChanged
     {
         public Job Job { get; set; }
         public AddJobView(Job job)
@@ -63,7 +63,7 @@ namespace CivilProcessERP.Views
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Initialization failed: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                System.Windows.MessageBox.Show($"Initialization failed: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -77,7 +77,7 @@ namespace CivilProcessERP.Views
                 var dbJob = await Task.Run(() => jobService.GetJobById(jobId));
                 if (!string.IsNullOrEmpty(dbJob?.Court))
                 {
-                    Application.Current.Dispatcher.Invoke(() =>
+                    System.Windows.Application.Current.Dispatcher.Invoke(() =>
                     {
                         Job.Court = dbJob.Court;
                         OnPropertyChanged(nameof(Job));
@@ -86,7 +86,7 @@ namespace CivilProcessERP.Views
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Failed to load job from DB: {ex.Message}", "Database Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                System.Windows.MessageBox.Show($"Failed to load job from DB: {ex.Message}", "Database Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -118,7 +118,7 @@ namespace CivilProcessERP.Views
 
         private void CloseButton_Click(object sender, RoutedEventArgs e)
         {
-            if (Application.Current.MainWindow is MainWindow mainWindow)
+            if (System.Windows.Application.Current.MainWindow is MainWindow mainWindow)
                 mainWindow.RemoveTab(this);
         }
 
@@ -189,7 +189,7 @@ private async void AttachmentsListView_MouseDoubleClick(object sender, MouseButt
 
     if (string.IsNullOrEmpty(blobmetadataId))
     {
-        MessageBox.Show("Invalid attachment metadata.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        System.Windows.MessageBox.Show("Invalid attachment metadata.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
         Console.WriteLine("❌ Attachment missing BlobMetadataId.");
         return;
     }
@@ -201,7 +201,7 @@ private async void AttachmentsListView_MouseDoubleClick(object sender, MouseButt
 
         if (fileData == null || fileData.Length == 0)
         {
-            MessageBox.Show("Failed to retrieve file data.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            System.Windows.MessageBox.Show("Failed to retrieve file data.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             Console.WriteLine("❌ No file data retrieved.");
             return;
         }
@@ -220,7 +220,7 @@ private async void AttachmentsListView_MouseDoubleClick(object sender, MouseButt
     }
     catch (Exception ex)
     {
-        MessageBox.Show($"Could not open file: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        System.Windows.MessageBox.Show($"Could not open file: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
         Console.WriteLine($"🔥 File open error: {ex.Message}");
     }
     finally
@@ -289,7 +289,7 @@ private async void AddAttachment_Click(object sender, RoutedEventArgs e)
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Failed to read file: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            System.Windows.MessageBox.Show($"Failed to read file: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             return;
         }
 
@@ -331,7 +331,7 @@ private async void AddAttachment_Click(object sender, RoutedEventArgs e)
                     }
                     catch (Exception ex)
                     {
-                        MessageBox.Show($"Could not read new file: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                        System.Windows.MessageBox.Show($"Could not read new file: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                         return;
                     }
 
@@ -408,7 +408,7 @@ private async void EditComment_Click(object sender, RoutedEventArgs e)
 {
     if (CommentsListView.SelectedItem is not CommentModel selected)
     {
-        MessageBox.Show("Please select a comment to edit.", "No Selection", MessageBoxButton.OK, MessageBoxImage.Warning);
+        System.Windows.MessageBox.Show("Please select a comment to edit.", "No Selection", MessageBoxButton.OK, MessageBoxImage.Warning);
         return;
     }
 
@@ -505,7 +505,7 @@ private void AddAttempt_Click(object sender, RoutedEventArgs e)
     }
     else
     {
-        MessageBox.Show("Please select an attempt to edit.");
+        System.Windows.MessageBox.Show("Please select an attempt to edit.");
     }
 }
 
@@ -561,7 +561,7 @@ private async void EditInvoice_Click(object sender, RoutedEventArgs e)
 {
     if (InvoiceListView.SelectedItem is not InvoiceModel selected)
     {
-        MessageBox.Show("Please select an invoice to edit.");
+        System.Windows.MessageBox.Show("Please select an invoice to edit.");
         return;
     }
 
@@ -651,7 +651,7 @@ private readonly SemaphoreSlim _paymentLock = new SemaphoreSlim(1, 1);
         {
             if (PaymentsListView.SelectedItem is not PaymentModel selected)
             {
-                MessageBox.Show("Please select a payment to edit.");
+                System.Windows.MessageBox.Show("Please select a payment to edit.");
                 return;
             }
 
@@ -677,7 +677,7 @@ private readonly SemaphoreSlim _paymentLock = new SemaphoreSlim(1, 1);
                     }
                     else
                     {
-                        MessageBox.Show("Invalid date/time format.");
+                        System.Windows.MessageBox.Show("Invalid date/time format.");
                         return;
                     }
 
@@ -701,7 +701,7 @@ private async void DeletePayment_Click(object sender, RoutedEventArgs e)
 {
     if (PaymentsListView.SelectedItem is not PaymentModel selected)
     {
-        MessageBox.Show("Please select a payment to delete.");
+        System.Windows.MessageBox.Show("Please select a payment to delete.");
         return;
     }
 
@@ -716,7 +716,7 @@ private async void DeletePayment_Click(object sender, RoutedEventArgs e)
                     Job.DeletedPaymentId = selected.Id;
                 }
 
-                Application.Current.Dispatcher.Invoke(() =>
+                System.Windows.Application.Current.Dispatcher.Invoke(() =>
                 {
                     Job.Payments.Remove(selected);
                     OnPropertyChanged(nameof(Job.TotalPaymentsAmount));
@@ -728,7 +728,7 @@ private async void DeletePayment_Click(object sender, RoutedEventArgs e)
     }
     catch (Exception ex)
     {
-        MessageBox.Show($"Failed to delete payment: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        System.Windows.MessageBox.Show($"Failed to delete payment: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
         Console.WriteLine($"❌ Exception in DeletePayment_Click: {ex.Message}");
     }
 }
@@ -1361,26 +1361,26 @@ private async void EditCourt_MouseDoubleClick(object sender, MouseButtonEventArg
         {
             if (string.IsNullOrWhiteSpace(Job.CaseNumber))
             {
-                MessageBox.Show("Case Number is required.", "Validation Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                System.Windows.MessageBox.Show("Case Number is required.", "Validation Error", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
             try
             {
                 var service = new AddJobService();
                 await service.AddJob(Job);
-                MessageBox.Show("Job added successfully!", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
-                if (Application.Current.MainWindow is MainWindow mainWindow)
+                System.Windows.MessageBox.Show("Job added successfully!", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+                if (System.Windows.Application.Current.MainWindow is MainWindow mainWindow)
                     mainWindow.RemoveTab(this);
             }
             catch (System.Exception ex)
             {
-                MessageBox.Show($"Failed to add job: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                System.Windows.MessageBox.Show($"Failed to add job: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
         private void CancelButton_Click(object sender, RoutedEventArgs e)
         {
-            if (Application.Current.MainWindow is MainWindow mainWindow)
+            if (System.Windows.Application.Current.MainWindow is MainWindow mainWindow)
                 mainWindow.RemoveTab(this);
         }
 
@@ -1401,7 +1401,7 @@ private void EditAttachmentPurpose_Click(object sender, RoutedEventArgs e)
     }
     else
     {
-        MessageBox.Show("Please select an attachment to edit.", "No Selection", MessageBoxButton.OK, MessageBoxImage.Warning);
+        System.Windows.MessageBox.Show("Please select an attachment to edit.", "No Selection", MessageBoxButton.OK, MessageBoxImage.Warning);
     }
 }
 

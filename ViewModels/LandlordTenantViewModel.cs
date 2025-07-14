@@ -146,7 +146,7 @@ namespace CivilProcessERP.ViewModels
         SearchResult = "Searching...";
         var dbJob = await LoadDataAsync(SearchJobNumber, _cts.Token);
 
-        Application.Current.Dispatcher.Invoke(() =>
+        System.Windows.Application.Current.Dispatcher.Invoke(() =>
         {
             FilteredJobs.Clear();
             if (dbJob != null)

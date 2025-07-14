@@ -68,7 +68,7 @@ if (!string.IsNullOrWhiteSpace(filter))
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Error loading clients: " + ex.Message);
+                System.Windows.MessageBox.Show("Error loading clients: " + ex.Message);
             }
 
             // Select if match exists
@@ -104,7 +104,7 @@ if (!string.IsNullOrWhiteSpace(filter))
             }
             else
             {
-                MessageBox.Show("Please select a client from the list.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
+                System.Windows.MessageBox.Show("Please select a client from the list.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
         }
 

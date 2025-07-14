@@ -20,7 +20,7 @@ namespace CivilProcessERP.Views
             bool valid = await ValidateTimeAsync(txtTime.Text);
             if (!valid)
             {
-                MessageBox.Show("Invalid time format. Use HH:MM or HH:MM AM/PM.", "Time Format Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                System.Windows.MessageBox.Show("Invalid time format. Use HH:MM or HH:MM AM/PM.", "Time Format Error", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 

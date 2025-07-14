@@ -10,6 +10,8 @@ namespace CivilProcessERP.Views
         public string State => txtState.Text;
         public string Zip => txtZip.Text;
 
+        
+
         public EditServeeAddressWindow(string address1, string address2, string city, string state, string zip)
         {
             InitializeComponent();

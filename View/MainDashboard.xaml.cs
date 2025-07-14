@@ -11,7 +11,7 @@ using CivilProcessERP.ViewModels;
 
 namespace CivilProcessERP.Views
 {
-    public partial class MainDashboard : UserControl
+    public partial class MainDashboard : System.Windows.Controls.UserControl
     {
         private readonly JobRepository _jobRepository = new();
         private readonly NavigationService _navigationService;
@@ -28,28 +28,28 @@ namespace CivilProcessERP.Views
 
         private void NavigateToPage(object sender, RoutedEventArgs e)
         {
-            if (sender is Button button && button.Tag is string pageName)
+            if (sender is System.Windows.Controls.Button button && button.Tag is string pageName)
             {
                 Console.WriteLine($"[DEBUG] Button Clicked: {pageName}");
 
-                UserControl newPage = _navigationService.GetView(pageName);
+                System.Windows.Controls.UserControl newPage = _navigationService.GetView(pageName);
 
                 if (newPage != null)
                 {
                     Console.WriteLine($"[DEBUG] Navigating to: {pageName}");
-                    var mainWindow = Application.Current.MainWindow as MainWindow;
+                    var mainWindow = System.Windows.Application.Current.MainWindow as MainWindow;
                     mainWindow?.AddNewTab(newPage, pageName);
                 }
                 else
                 {
                     Console.WriteLine($"[ERROR] Page '{pageName}' not found!");
-                    MessageBox.Show($"Page '{pageName}' not found!", "Navigation Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    System.Windows.MessageBox.Show($"Page '{pageName}' not found!", "Navigation Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
             }
         }
 
 
-        private async void SearchBox_KeyDown(object sender, KeyEventArgs e)
+        private async void SearchBox_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
         {
             if (e.Key == Key.Enter)
             {
@@ -69,12 +69,12 @@ namespace CivilProcessERP.Views
                         }
                         else
                         {
-                            MessageBox.Show("Job not found.", "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                            System.Windows.MessageBox.Show("Job not found.", "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
                         }
                     }
                     catch (Exception ex)
                     {
-                        MessageBox.Show($"Failed to fetch job: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                        System.Windows.MessageBox.Show($"Failed to fetch job: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                     }
                 }
             }
@@ -82,11 +82,11 @@ namespace CivilProcessERP.Views
 
         private void OpenJobInNewTab(Job job)
         {
-            var mainWindow = Application.Current.MainWindow as MainWindow;
+            var mainWindow = System.Windows.Application.Current.MainWindow as MainWindow;
             mainWindow?.AddJobTab(job);
         }
 
-        private void AddNewTab(UserControl content, string title)
+        private void AddNewTab(System.Windows.Controls.UserControl content, string title)
         {
             if (DataContext is MainDashboardViewModel viewModel)
             {

@@ -18,7 +18,7 @@ namespace CivilProcessERP.Views
         {
             if (SelectedDate == null)
             {
-                MessageBox.Show("Please select a valid date.", "Validation Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                System.Windows.MessageBox.Show("Please select a valid date.", "Validation Error", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 

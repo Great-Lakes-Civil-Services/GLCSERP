@@ -76,7 +76,7 @@ namespace CivilProcessERP.Views
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Error loading plaintiffs: " + ex.Message, "Database Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                System.Windows.MessageBox.Show("Error loading plaintiffs: " + ex.Message, "Database Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -93,7 +93,7 @@ namespace CivilProcessERP.Views
         {
             if (lstPlaintiffs.SelectedItem == null)
             {
-                MessageBox.Show("Please select a plaintiff.");
+                System.Windows.MessageBox.Show("Please select a plaintiff.");
                 return;
             }
 

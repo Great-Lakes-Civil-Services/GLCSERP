@@ -54,7 +54,7 @@ namespace CivilProcessERP.Views
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Error loading service types: " + ex.Message, "Database Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                System.Windows.MessageBox.Show("Error loading service types: " + ex.Message, "Database Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -62,7 +62,7 @@ namespace CivilProcessERP.Views
         {
             if (lstServiceTypes.SelectedItem == null)
             {
-                MessageBox.Show("Please select a service type.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
+                System.Windows.MessageBox.Show("Please select a service type.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 

@@ -6,7 +6,7 @@ using CivilProcessERP.Services;
 
 namespace CivilProcessERP.Views
 {
-    public partial class ManagePermissionsView : UserControl
+    public partial class ManagePermissionsView : System.Windows.Controls.UserControl
     {
         private readonly GroupPermissionService _permService = new();
 
@@ -26,7 +26,7 @@ namespace CivilProcessERP.Views
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Failed to load permissions: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                System.Windows.MessageBox.Show($"Failed to load permissions: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -65,7 +65,7 @@ namespace CivilProcessERP.Views
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Failed to add permission: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                System.Windows.MessageBox.Show($"Failed to add permission: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -81,7 +81,7 @@ namespace CivilProcessERP.Views
                 return;
             }
 
-            var confirm = MessageBox.Show($"Are you sure you want to delete permission '{selected}'?", "Confirm Deletion", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+            var confirm = System.Windows.MessageBox.Show($"Are you sure you want to delete permission '{selected}'?", "Confirm Deletion", MessageBoxButton.YesNo, MessageBoxImage.Warning);
             if (confirm != MessageBoxResult.Yes) return;
 
             try
@@ -104,7 +104,7 @@ namespace CivilProcessERP.Views
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Failed to delete permission: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                System.Windows.MessageBox.Show($"Failed to delete permission: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 

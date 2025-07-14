@@ -9,7 +9,7 @@ using CivilProcessERP.Models;
 
 namespace CivilProcessERP.Views
 {
-    public partial class RolePermissionManagerView : UserControl
+    public partial class RolePermissionManagerView : System.Windows.Controls.UserControl
     {
         private readonly RolePermissionService _rolePermService = new();
         private Dictionary<string, int> _roleMap = new();  // rolename -> rolenumber
@@ -34,7 +34,7 @@ namespace CivilProcessERP.Views
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Failed to load roles: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                System.Windows.MessageBox.Show($"Failed to load roles: {ex.Message}", "Error", MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
             }
         }
 
@@ -46,7 +46,7 @@ namespace CivilProcessERP.Views
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Failed to load permissions: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                System.Windows.MessageBox.Show($"Failed to load permissions: {ex.Message}", "Error", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
             }
         }
 
@@ -72,7 +72,7 @@ namespace CivilProcessERP.Views
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Failed to load assigned permissions: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                System.Windows.MessageBox.Show($"Failed to load assigned permissions: {ex.Message}", "Error", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
             }
         }
 
@@ -80,7 +80,7 @@ namespace CivilProcessERP.Views
         {
             if (RoleComboBox.SelectedItem is not string roleName || !_roleMap.TryGetValue(roleName, out int roleId))
             {
-                MessageBox.Show("Please select a valid role.");
+                System.Windows.MessageBox.Show("Please select a valid role.");
                 return;
             }
 
@@ -89,11 +89,11 @@ namespace CivilProcessERP.Views
             try
             {
                 await _rolePermService.SavePermissionsForRoleAsync(roleId, selectedPermissions);
-                MessageBox.Show($"✅ Permissions updated for role: {roleName}");
+                System.Windows.MessageBox.Show($"✅ Permissions updated for role: {roleName}");
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Failed to save permissions: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                System.Windows.MessageBox.Show($"Failed to save permissions: {ex.Message}", "Error", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
             }
         }
 

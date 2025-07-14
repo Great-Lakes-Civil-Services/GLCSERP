@@ -24,7 +24,7 @@ namespace CivilProcessERP.ViewModels
             RefreshCommand = new RelayCommand(async (param) => await LoadLeaseAgreementsAsync());
 
             // Fire-and-forget async load on startup (safe inside constructor)
-            Application.Current.Dispatcher.InvokeAsync(async () => await LoadLeaseAgreementsAsync());
+            System.Windows.Application.Current.Dispatcher.InvokeAsync(async () => await LoadLeaseAgreementsAsync());
         }
 
         public async Task LoadLeaseAgreementsAsync()
@@ -34,7 +34,7 @@ namespace CivilProcessERP.ViewModels
                 var agreements = await _context.LeaseAgreements.ToListAsync();
 
                 // Ensure updates happen on UI thread
-                Application.Current.Dispatcher.Invoke(() =>
+                System.Windows.Application.Current.Dispatcher.Invoke(() =>
                 {
                     LeaseAgreements.Clear();
                     foreach (var agreement in agreements)

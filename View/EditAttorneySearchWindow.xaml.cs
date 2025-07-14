@@ -63,7 +63,7 @@ namespace CivilProcessERP.Views
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Error loading attorneys: " + ex.Message);
+                System.Windows.MessageBox.Show("Error loading attorneys: " + ex.Message);
             }
 
             // Restore selection if possible
@@ -99,7 +99,7 @@ namespace CivilProcessERP.Views
             }
             else
             {
-                MessageBox.Show("Please select an attorney from the list.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
+                System.Windows.MessageBox.Show("Please select an attorney from the list.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
         }
 

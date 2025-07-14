@@ -53,7 +53,7 @@ namespace CivilProcessERP.Views
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Failed to generate QR code: " + ex.Message, "QR Code Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                System.Windows.MessageBox.Show("Failed to generate QR code: " + ex.Message, "QR Code Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 

@@ -7,7 +7,7 @@ using CivilProcessERP.Services;
 
 namespace CivilProcessERP.Views
 {
-    public partial class DeleteGroupView : UserControl
+    public partial class DeleteGroupView : System.Windows.Controls.UserControl
     {
         private readonly GroupService _groupService = new();
 
@@ -32,12 +32,12 @@ namespace CivilProcessERP.Views
             if (GroupComboBox.SelectedItem is not string groupName)
             {
                 StatusText.Text = "⚠ Please select a group to delete.";
-                StatusText.Foreground = Brushes.Red;
+                StatusText.Foreground = System.Windows.Media.Brushes.Red;
                 StatusText.Visibility = Visibility.Visible;
                 return;
             }
 
-            var confirm = MessageBox.Show(
+            var confirm = System.Windows.MessageBox.Show(
                 $"Are you sure you want to delete group '{groupName}'?",
                 "Confirm Deletion",
                 MessageBoxButton.YesNo,
@@ -48,12 +48,12 @@ namespace CivilProcessERP.Views
                 bool deleted = await Task.Run(() => _groupService.DeleteGroupAsync(groupName));
                 if (deleted)
                 {
-                    StatusText.Foreground = Brushes.Green;
+                    StatusText.Foreground = System.Windows.Media.Brushes.Green;
                     StatusText.Text = $"✅ Group '{groupName}' deleted successfully.";
                 }
                 else
                 {
-                    StatusText.Foreground = Brushes.Red;
+                    StatusText.Foreground = System.Windows.Media.Brushes.Red;
                     StatusText.Text = $"❌ Failed to delete group '{groupName}'.";
                 }
 

@@ -75,7 +75,7 @@ namespace CivilProcessERP.Views
             }
             else
             {
-                MessageBox.Show("Please select a Type of Writ.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
+                System.Windows.MessageBox.Show("Please select a Type of Writ.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
         }
 

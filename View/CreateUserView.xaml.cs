@@ -8,7 +8,7 @@ using CivilProcessERP.Services;
 
 namespace CivilProcessERP.Views
 {
-    public partial class CreateUserView : UserControl
+    public partial class CreateUserView : System.Windows.Controls.UserControl
     {
         private static readonly string connString = "Host=localhost;Port=5432;Username=postgres;Password=7866;Database=mypg_database";
 
@@ -32,7 +32,7 @@ namespace CivilProcessERP.Views
 
             if (password != confirmPassword)
             {
-                MessageBox.Show("Passwords do not match.");
+                System.Windows.MessageBox.Show("Passwords do not match.");
                 return;
             }
 
@@ -58,13 +58,13 @@ namespace CivilProcessERP.Views
 
             if (success)
             {
-                MessageBox.Show("User created successfully!");
+                System.Windows.MessageBox.Show("User created successfully!");
                 var auditLogService = new AuditLogService(connString);
                 auditLogService.LogActionAsync("CreateUser", loginName, "New user created", SessionManager.CurrentUser.LoginName);
             }
             else
             {
-                MessageBox.Show("Failed to create user.");
+                System.Windows.MessageBox.Show("Failed to create user.");
             }
         }
 
@@ -140,7 +140,7 @@ namespace CivilProcessERP.Views
                         var exists = (long)(await checkCmd.ExecuteScalarAsync());
                         if (exists > 0)
                         {
-                            MessageBox.Show("A user with this login name already exists.");
+                            System.Windows.MessageBox.Show("A user with this login name already exists.");
                             return false;
                         }
                     }

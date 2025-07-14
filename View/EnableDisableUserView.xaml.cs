@@ -10,7 +10,7 @@ using CivilProcessERP.Models;
 
 namespace CivilProcessERP.Views
 {
-    public partial class EnableDisableUserView : UserControl
+    public partial class EnableDisableUserView : System.Windows.Controls.UserControl
     {
         private static readonly string connString = "Host=localhost;Port=5432;Username=postgres;Password=7866;Database=mypg_database";
 
@@ -22,7 +22,7 @@ namespace CivilProcessERP.Views
             InitializeComponent();
         }
 
-        private async void UsernameSearchComboBox_KeyUp(object sender, KeyEventArgs e)
+        private async void UsernameSearchComboBox_KeyUp(object sender, System.Windows.Input.KeyEventArgs e)
         {
             string query = UsernameSearchComboBox.Text.Trim();
 
@@ -38,7 +38,7 @@ namespace CivilProcessERP.Views
         {
             if (UsernameSearchComboBox.SelectedItem is not UserModel selectedUser)
             {
-                MessageBox.Show("Please select a valid user from the dropdown.", "Validation Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                System.Windows.MessageBox.Show("Please select a valid user from the dropdown.", "Validation Error", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
@@ -58,7 +58,7 @@ namespace CivilProcessERP.Views
                 if (result == null)
                 {
                     Dispatcher.Invoke(() =>
-                        MessageBox.Show($"No user found with username: {username}", "Error", MessageBoxButton.OK, MessageBoxImage.Error));
+                        System.Windows.MessageBox.Show($"No user found with username: {username}", "Error", MessageBoxButton.OK, MessageBoxImage.Error));
                     return;
                 }
 
@@ -82,7 +82,7 @@ namespace CivilProcessERP.Views
                 {
                     if (affected > 0)
                     {
-                        MessageBox.Show(
+                        System.Windows.MessageBox.Show(
                             $"User '{username}' is now {(newStatus ? "enabled" : "disabled")}.",
                             "Success", MessageBoxButton.OK, MessageBoxImage.Information);
 
@@ -94,14 +94,14 @@ namespace CivilProcessERP.Views
                     }
                     else
                     {
-                        MessageBox.Show("Failed to update user status.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                        System.Windows.MessageBox.Show("Failed to update user status.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                     }
                 });
             }
             catch (Exception ex)
             {
                 Dispatcher.Invoke(() =>
-                    MessageBox.Show($"Unexpected error: {ex.Message}", "Database Error", MessageBoxButton.OK, MessageBoxImage.Error));
+                    System.Windows.MessageBox.Show($"Unexpected error: {ex.Message}", "Database Error", MessageBoxButton.OK, MessageBoxImage.Error));
             }
         }
 
