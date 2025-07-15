@@ -24,7 +24,9 @@ namespace CivilProcessERP.Views
 
             try
             {
+                LoginError.Text = "Logging in... please wait.";
                 var user = await loginService.AuthenticateUserAsync(username, password);
+                Console.WriteLine("Login DB call finished.");
 
                 if (user != null && user.Enabled)
                 {

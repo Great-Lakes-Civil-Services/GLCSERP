@@ -46,52 +46,90 @@ namespace CivilProcessERP
         // Add a static list to track all open MainWindow instances
         public static List<MainWindow> OpenWindows { get; } = new List<MainWindow>();
 
+        // Add this property to reference the ContentControl from XAML
+
         public MainWindow()
         {
-            InitializeComponent();
-            DataContext = this;
-
-            if (SessionManager.CurrentUser != null && SessionManager.CurrentUser.Enabled)
+            try
             {
-                // User is already logged in, load dashboard
-                LoadMainDashboardAfterLogin(SessionManager.CurrentUser.LoginName);
+                Console.WriteLine("[DEBUG] MainWindow constructor started");
+                InitializeComponent();
+                Console.WriteLine("[DEBUG] InitializeComponent completed");
+
+                // FIX: Initialize the navigation service!
+                _navigationService = new NavigationService();
+
+                if (DashboardLayoutGrid == null)
+                {
+                    Console.WriteLine("[ERROR] DashboardLayoutGrid is null after InitializeComponent");
+                    System.Windows.MessageBox.Show("DashboardLayoutGrid is null after InitializeComponent");
+                }
+                if (LoginContent == null)
+                {
+                    Console.WriteLine("[ERROR] LoginContent is null after InitializeComponent");
+                    System.Windows.MessageBox.Show("LoginContent is null after InitializeComponent");
+                }
+                if (MainContentControl == null)
+                {
+                    Console.WriteLine("[ERROR] MainContentControl is null after InitializeComponent");
+                    System.Windows.MessageBox.Show("MainContentControl is null after InitializeComponent");
+                }
+                if (_navigationService == null)
+                {
+                    Console.WriteLine("[ERROR] _navigationService is null in MainWindow constructor");
+                    System.Windows.MessageBox.Show("_navigationService is null in MainWindow constructor");
+                }
+                // Add more checks for other fields if needed
+
+                DataContext = this;
+
+                // Defensive null checks for critical controls
+                if (DashboardLayoutGrid == null || LoginContent == null || MainContentControl == null)
+                {
+                    string msg = $"[MainWindow] One or more critical controls are null.\n" +
+                                 $"DashboardLayoutGrid: {(DashboardLayoutGrid == null ? "null" : "ok")}\n" +
+                                 $"LoginContent: {(LoginContent == null ? "null" : "ok")}\n" +
+                                 $"MainContentControl: {(MainContentControl == null ? "null" : "ok")}";
+                    System.IO.File.AppendAllText("output.log", msg + "\n");
+                    System.Windows.MessageBox.Show(msg, "MainWindow Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    return;
+                }
+
+                if (SessionManager.CurrentUser != null && SessionManager.CurrentUser.Enabled)
+                {
+                    LoadMainDashboardAfterLogin(SessionManager.CurrentUser.LoginName);
+                }
+                else
+                {
+                    DashboardLayoutGrid.Visibility = Visibility.Collapsed;
+                    LoginContent.Visibility = Visibility.Visible;
+                    LoginContent.Content = new LoginView();
+                }
+
+                // Initialize idle timer
+                _lastActivityTime = DateTime.Now;
+                _idleTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(10) };
+                _idleTimer.Tick += IdleTimer_Tick;
+                _idleTimer.Start();
+
+                // Listen to user activity
+                InputManager.Current.PreProcessInput += OnActivityDetected;
+                OpenWindows.Add(this);
+                this.Closed += (s, e) => OpenWindows.Remove(this);
+                this.WindowState = WindowState.Maximized; // Always open maximized
+                Console.WriteLine("[DEBUG] MainWindow constructor finished");
             }
-            else
+            catch (Exception ex)
             {
-                // Show login view
-                DashboardLayoutGrid.Visibility = Visibility.Collapsed;
-                LoginContent.Visibility = Visibility.Visible;
-                LoginContent.Content = new LoginView(); // <-- This is critical!
-            }
-
-            _navigationService = new NavigationService();
-
-            // Initialize idle timer
-            _lastActivityTime = DateTime.Now;
-            _idleTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(10) };
-            _idleTimer.Tick += IdleTimer_Tick;
-            _idleTimer.Start();
-
-            // Listen to user activity
-            InputManager.Current.PreProcessInput += OnActivityDetected;
-            OpenWindows.Add(this);
-            this.Closed += (s, e) => OpenWindows.Remove(this);
-            this.WindowState = WindowState.Maximized; // Always open maximized
-
-            // Single sign-on logic: skip login if already logged in
-            if (SessionManager.CurrentUser != null && SessionManager.CurrentUser.Enabled)
-            {
-                // User is already logged in, load dashboard
-                LoadMainDashboardAfterLogin(SessionManager.CurrentUser.LoginName);
-            }
-            else
-            {
-                // Not logged in, show login view as usual
-                // (Assume your existing logic already does this)
+                string msg = $"MainWindow failed to initialize: {ex.Message}\n{ex.StackTrace}";
+                Console.WriteLine("[FATAL] " + msg);
+                System.Windows.MessageBox.Show(msg, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                throw;
             }
         }
 
 
+        // Refactored navigation: update MainContentControl.Content for this window only
         private void NavigateToPage(object sender, RoutedEventArgs e)
         {
             if (sender is System.Windows.Controls.Button button && button.Tag is string pageName)
@@ -110,17 +148,14 @@ namespace CivilProcessERP
 
         private void NavigateTo(System.Windows.Controls.UserControl newPage)
         {
-            if (DataContext is MainDashboardViewModel viewModel)
+            if (MainContentControl.Content is System.Windows.Controls.UserControl currentView && currentView != newPage)
             {
-                if (viewModel.SelectedTab != null)
-                {
-                    _navigationHistory.Push(viewModel.SelectedTab.Content);
-                }
-
+                _navigationHistory.Push(currentView);
+                // Clear forward history on new navigation
                 _forwardHistory.Clear();
-                AddNewTab(newPage, newPage.GetType().Name);
-                UpdateNavigationButtons();
             }
+            MainContentControl.Content = newPage;
+            UpdateNavigationButtons();
         }
 
        public void AddNewTab(System.Windows.Controls.UserControl content, string title)
@@ -168,8 +203,14 @@ namespace CivilProcessERP
         {
             if (_navigationHistory.Count > 0)
             {
-                _forwardHistory.Push((DataContext as MainDashboardViewModel)?.SelectedTab.Content);
-                NavigateTo(_navigationHistory.Pop());
+                var currentView = MainContentControl.Content as System.Windows.Controls.UserControl;
+                if (currentView != null)
+                {
+                    _forwardHistory.Push(currentView);
+                }
+                var previousView = _navigationHistory.Pop();
+                MainContentControl.Content = previousView;
+                UpdateNavigationButtons();
             }
         }
 
@@ -177,19 +218,24 @@ namespace CivilProcessERP
         {
             if (_forwardHistory.Count > 0)
             {
-                _navigationHistory.Push((DataContext as MainDashboardViewModel)?.SelectedTab.Content);
-                NavigateTo(_forwardHistory.Pop());
+                var currentView = MainContentControl.Content as System.Windows.Controls.UserControl;
+                if (currentView != null)
+                {
+                    _navigationHistory.Push(currentView);
+                }
+                var nextView = _forwardHistory.Pop();
+                MainContentControl.Content = nextView;
+                UpdateNavigationButtons();
             }
         }
 
         private void UpdateNavigationButtons()
         {
-            OnPropertyChanged(nameof(CanGoBack));
-            OnPropertyChanged(nameof(CanGoForward));
+            GoBackBtn.IsEnabled = _navigationHistory.Count > 0;
+            GoForwardBtn.IsEnabled = _forwardHistory.Count > 0;
         }
 
        // --- Tab Drag/Drop Logic ---
-        private TabItemViewModel _draggedTab;
         private void TabControl_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
             var tabControl = sender as System.Windows.Controls.TabControl;
@@ -197,43 +243,43 @@ namespace CivilProcessERP
             if (tabItem != null)
             {
                 _dragStartPoint = e.GetPosition(null);
-                _draggedTab = tabItem.DataContext as TabItemViewModel;
+                // _draggedTab = tabItem.DataContext as TabItemViewModel; // Removed
             }
         }
 
         private void TabControl_PreviewMouseMove(object sender, System.Windows.Input.MouseEventArgs e)
         {
-            if (e.LeftButton == MouseButtonState.Pressed && _draggedTab != null)
-            {
-                System.Windows.Point currentPosition = e.GetPosition(null);
-                if (Math.Abs(currentPosition.X - _dragStartPoint.X) > SystemParameters.MinimumHorizontalDragDistance ||
-                    Math.Abs(currentPosition.Y - _dragStartPoint.Y) > SystemParameters.MinimumVerticalDragDistance)
-                {
-                    DragDrop.DoDragDrop((DependencyObject)sender, _draggedTab, System.Windows.DragDropEffects.Move);
-                }
-            }
+            // if (e.LeftButton == MouseButtonState.Pressed && _draggedTab != null) // Removed
+            // {
+            //     System.Windows.Point currentPosition = e.GetPosition(null);
+            //     if (Math.Abs(currentPosition.X - _dragStartPoint.X) > SystemParameters.MinimumHorizontalDragDistance ||
+            //         Math.Abs(currentPosition.Y - _dragStartPoint.Y) > SystemParameters.MinimumVerticalDragDistance)
+            //     {
+            //         DragDrop.DoDragDrop((DependencyObject)sender, _draggedTab, System.Windows.DragDropEffects.Move);
+            //     }
+            // }
         }
 
         private void TabControl_Drop(object sender, System.Windows.DragEventArgs e)
         {
-            if (e.Data.GetDataPresent(typeof(TabItemViewModel)))
-            {
-                var droppedTab = e.Data.GetData(typeof(TabItemViewModel)) as TabItemViewModel;
-                if (droppedTab != null && droppedTab != _draggedTab)
-                {
-                    var vm = this.DataContext as MainDashboardViewModel;
-                    if (vm != null && !vm.OpenTabs.Contains(droppedTab))
-                    {
-                        vm.OpenTabs.Add(droppedTab);
-                        droppedTab.ParentWindow = this;
-                    }
-                }
-            }
+            // if (e.Data.GetDataPresent(typeof(TabItemViewModel))) // Removed
+            // {
+            //     var droppedTab = e.Data.GetData(typeof(TabItemViewModel)) as TabItemViewModel;
+            //     if (droppedTab != null && droppedTab != _draggedTab)
+            //     {
+            //         var vm = this.DataContext as MainDashboardViewModel;
+            //         if (vm != null && !vm.OpenTabs.Contains(droppedTab))
+            //         {
+            //             vm.OpenTabs.Add(droppedTab);
+            //             droppedTab.ParentWindow = this;
+            //         }
+            //     }
+            // }
         }
 
         private void TabControl_PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
         {
-            _draggedTab = null;
+            // _draggedTab = null; // Removed
         }
 
         private void TabControl_DragOver(object sender, System.Windows.DragEventArgs e)
@@ -296,100 +342,44 @@ namespace CivilProcessERP
             }
         }
 
-        public void OpenJobTab(Job job)
+        // Add this method to open a job in the current window
+        public void OpenJob(Job job)
         {
             if (job == null) return;
-            
-            string tabTitle = $"Job #{job.JobId}";
-
-            if (DataContext is MainDashboardViewModel viewModel)
-            {
-                Console.WriteLine($"[DEBUG] OpenJobTab() called with Job ID: {job?.JobId}");
-                Console.WriteLine($"[DEBUG] Current Open Tabs: {string.Join(", ", viewModel.OpenTabs.Select(t => t.Title))}");
-
-                if (viewModel.OpenTabs.Count >= 6)
-                {
-                    System.Windows.MessageBox.Show("You can only have 6 tabs open at a time. Please close one before opening a new job.",
-                        "Tab Limit Reached", MessageBoxButton.OK, MessageBoxImage.Warning);
-                    return;
-                }
-                // Check if the job tab already exists
-                var existingTab = viewModel.OpenTabs.FirstOrDefault(tab => tab.Title == tabTitle);
-                if (existingTab != null)
-                {
-                    viewModel.SelectedTab = existingTab; // ✅ Switch to it
-                    return;
-                }
-
-                // Create JobDetailsView and new tab
-                var jobDetailsView = new JobDetailsView(job);
-var newTab = new TabItemViewModel(tabTitle, jobDetailsView);
-newTab.TabCloseRequested += (_, __) => RemoveTab(jobDetailsView);
-
-viewModel.OpenTabs.Add(newTab);
-viewModel.SelectedTab = newTab;
-
-                //MainContentArea.Content = newTab.Content; // ✅ Ensure content updates
-            }
-            else
-            {
-                Console.WriteLine("[ERROR] MainDashboardViewModel not set as DataContext in MainWindow.");
-                System.Windows.MessageBox.Show("Dashboard not loaded. Cannot open job tab.", "Error", MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
-            }
+            NavigateTo(new JobDetailsView(job));
         }
 
-        public void AddJobTab(Job job)
+        // When loading dashboard after login, set MainContentControl.Content
+        public void LoadMainDashboardAfterLogin(string username)
         {
-            if (DataContext is MainDashboardViewModel viewModel)
+            if (DashboardLayoutGrid == null || LoginContent == null || MainContentControl == null)
             {
-                if (viewModel.OpenTabs.Count >= 6)
-                {
-                    System.Windows.MessageBox.Show("You can only have 6 tabs open at a time. Please close one before opening a new tab.",
-                        "Tab Limit Reached", MessageBoxButton.OK, MessageBoxImage.Warning);
-                    return;
-                }
-
-                // Use JobId consistently for tab title
-                string tabTitle = $"Job #{job.JobId}";
-
-                // Check if the job tab already exists
-                var existingTab = viewModel.OpenTabs.FirstOrDefault(tab => tab.Title == tabTitle);
-                if (existingTab != null)
-                {
-                    viewModel.SelectedTab = existingTab; // Switch to existing tab
-                    return;
-                }
-
-                // Create new JobDetailsView and bind job data
-                var jobDetailsView = new JobDetailsView(job);
-                var newTab = new TabItemViewModel(tabTitle, jobDetailsView);
-
-                // Add new tab
-                viewModel.OpenTabs.Add(newTab);
-                viewModel.SelectedTab = newTab; // Switch to the new tab
-                
-                Console.WriteLine($"[DEBUG] Job tab added: {tabTitle}");
+                string msg = $"[MainWindow] One or more critical controls are null in LoadMainDashboardAfterLogin.\n" +
+                             $"DashboardLayoutGrid: {(DashboardLayoutGrid == null ? "null" : "ok")}\n" +
+                             $"LoginContent: {(LoginContent == null ? "null" : "ok")}\n" +
+                             $"MainContentControl: {(MainContentControl == null ? "null" : "ok")}";
+                System.IO.File.AppendAllText("output.log", msg + "\n");
+                System.Windows.MessageBox.Show(msg, "MainWindow Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
             }
-        }
-
-        public async void LoadMainDashboardAfterLogin(string username)
-        {
-            var dashboardVM = new MainDashboardViewModel(_navigationService);
-            DataContext = dashboardVM;
-            
-            Console.WriteLine("[DEBUG] MainDashboardViewModel set as DataContext");
-
-            UserSearchService _userSearch = new();
-            var fullUser = await _userSearch.GetUserByLoginAsync(username); // Use async version
-            SessionManager.CurrentUser = fullUser;
-
-            // Switch UI visibility
+        
+            // FIX: Show dashboard, hide login
             DashboardLayoutGrid.Visibility = Visibility.Visible;
             LoginContent.Visibility = Visibility.Collapsed;
 
-            NavigateTo((System.Windows.Controls.UserControl)_navigationService.GetView("Dashboard"));
-            _lastActivityTime = DateTime.Now;
-            _idleTimer.Start(); // Resume idle tracking
+            var dashboard = _navigationService.GetView("Dashboard");
+             
+            if (MainContentControl == null)
+            {
+                System.Windows.MessageBox.Show("MainContentControl is null in LoadMainDashboardAfterLogin!");
+                return;
+            }
+            if (dashboard == null)
+            {
+                System.Windows.MessageBox.Show("NavigationService.GetView(\"Dashboard\") returned null!");
+                return;
+            }
+            NavigateTo(dashboard);
         }
 
         public void RemoveTab(System.Windows.Controls.UserControl content)
@@ -502,7 +492,7 @@ viewModel.SelectedTab = newTab;
             var userPermissionService = new UserPermissionService();
             var directPerms = await userPermissionService.GetPermissionsForUserAsync(currentUser.UserNumber);
             var rolePerms = (await new RolePermissionService().GetPermissionsForRoleAsync(currentUser.RoleNumber))
-                                                        .Select(p => p.Permission);
+                                                .Select(p => p.Permission);
             var effectivePerms = new HashSet<string>(rolePerms.Concat(directPerms));
 
             if (!effectivePerms.Contains("ViewAdministration"))
@@ -512,12 +502,17 @@ viewModel.SelectedTab = newTab;
                 return;
             }
 
-            AddNewTab(new AdministrationView(currentUser), "Administration");
+            NavigateTo(new AdministrationView(currentUser));
         }
 
         // Handler for the '+' button to open a new ERP window (MainWindow)
         private void AddNewMainWindow_Click(object sender, RoutedEventArgs e)
         {
+            if (MainWindow.OpenWindows.Count >= 6)
+            {
+                System.Windows.MessageBox.Show("You cannot open more than 6 ERP shells at the same time.", "Window Limit", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
             // Multi-monitor support: open on the monitor where the mouse is
             var mousePos = System.Windows.Forms.Control.MousePosition;
             var targetScreen = System.Windows.Forms.Screen.FromPoint(mousePos);

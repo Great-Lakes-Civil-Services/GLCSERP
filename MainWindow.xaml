@@ -49,7 +49,6 @@
 
             <!-- ✅ Back/Forward Buttons -->
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="10" Grid.Row="0">
-                <TextBlock Text="{Binding TestProperty}" Foreground="Green" VerticalAlignment="Center" Margin="0,0,10,0"/>
                 <Button Content="← BACK" Click="GoBack" Name="GoBackBtn" 
                         Width="100" Height="30" Background="Blue" Foreground="White"/>
                 <Button Content="FORWARD →" Click="GoForward" Name="GoForwardBtn" 
@@ -58,45 +57,10 @@
                         Width="100" Height="30" Background="Orange" Foreground="White" Margin="10,0,0,0"/> -->
             </StackPanel>
 
-            <!-- ✅ Main Content Area (Tabs) -->
-<TabControl x:Name="MainTabControl"
-            Grid.Row="1" Grid.Column="0"
-            ItemsSource="{Binding OpenTabs}"
-            SelectedItem="{Binding SelectedTab, Mode=TwoWay}"
-            Margin="20,10,10,10"
-            AllowDrop="True"
-            PreviewMouseLeftButtonDown="TabControl_PreviewMouseLeftButtonDown"
-            PreviewMouseMove="TabControl_PreviewMouseMove"
-            PreviewMouseLeftButtonUp="TabControl_PreviewMouseLeftButtonUp"
-            Drop="TabControl_Drop"
-            DragOver="TabControl_DragOver"
-            KeyboardNavigation.TabNavigation="Continue"
-            >
-    
-    <TabControl.ItemTemplate>
-        <DataTemplate>
-            <StackPanel Orientation="Horizontal">
-                <TextBlock Text="{Binding Title}" Margin="0,0,5,0"/>
-                <Button Content="×" Width="18" Height="18" Padding="0" Margin="2,0,0,0"
-                        Command="{Binding CloseCommand}" ToolTip="Close Tab"
-                        Style="{StaticResource {x:Static ToolBar.ButtonStyleKey}}"/>
-            </StackPanel>
-        </DataTemplate>
-    </TabControl.ItemTemplate>
-
-    <TabControl.ContentTemplate>
-        <DataTemplate>
-            <ContentControl Content="{Binding Content}"/>
-        </DataTemplate>
-    </TabControl.ContentTemplate>
-    <TabControl.ContextMenu>
-        <ContextMenu>
-            <MenuItem Header="Close Tab" Command="{Binding SelectedTab.CloseCommand, RelativeSource={RelativeSource AncestorType=TabControl}}"/>
-            <MenuItem Header="New Tab (Ctrl+T)" Click="NewTabMenuItem_Click"/>
-        </ContextMenu>
-    </TabControl.ContextMenu>
-</TabControl>
-
+            <!-- Main content area (no tabs, just a single content control) -->
+            <Grid Grid.Row="1" Grid.Column="0" Background="#F0F0F0">
+                <ContentControl x:Name="MainContentControl" />
+            </Grid>
 
             <!-- ✅ Right Sidebar -->
             <Grid Grid.Row="1" Grid.Column="1" Background="#007272">

@@ -59,10 +59,11 @@ namespace CivilProcessERP.ViewModels
 
             Console.WriteLine("[DEBUG] MainDashboardViewModel initialized with CloseTabCommand");
 
-            if (!OpenTabs.Any(tab => tab.Title == "Dashboard"))
-            {
-                _ = OpenNewTabAsync("Dashboard"); // Fire and forget on startup
-            }
+            // Removed: Opening Dashboard tab in constructor to prevent recursion
+            // if (!OpenTabs.Any(tab => tab.Title == "Dashboard"))
+            // {
+            //     _ = OpenNewTabAsync("Dashboard"); // Fire and forget on startup
+            // }
         }
         
        

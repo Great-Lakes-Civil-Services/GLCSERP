@@ -23,6 +23,9 @@ namespace CivilProcessERP.Views
             InitializeComponent();
             _navigationService = navigationService;
 
+            // Set DataContext to MainDashboardViewModel for SearchText binding
+            this.DataContext = new MainDashboardViewModel(navigationService);
+
             Loaded += (s, e) => Console.WriteLine("[INFO] MainDashboard Loaded Successfully!");
         }
 
@@ -37,7 +40,7 @@ namespace CivilProcessERP.Views
                 if (newPage != null)
                 {
                     Console.WriteLine($"[DEBUG] Navigating to: {pageName}");
-                    var mainWindow = System.Windows.Application.Current.MainWindow as MainWindow;
+                    var mainWindow = Window.GetWindow(this) as MainWindow;
                     mainWindow?.AddNewTab(newPage, pageName);
                 }
                 else
@@ -64,7 +67,8 @@ namespace CivilProcessERP.Views
                         
                         if (job != null)
                         {
-                            OpenJobInNewTab(job);
+                            var mainWindow = Window.GetWindow(this) as MainWindow;
+                            mainWindow?.OpenJob(job); // Use new method
                             SearchBox.Text = ""; // Clear search box after successful search
                         }
                         else
@@ -76,31 +80,6 @@ namespace CivilProcessERP.Views
                     {
                         System.Windows.MessageBox.Show($"Failed to fetch job: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                     }
-                }
-            }
-        }
-
-        private void OpenJobInNewTab(Job job)
-        {
-            var mainWindow = System.Windows.Application.Current.MainWindow as MainWindow;
-            mainWindow?.AddJobTab(job);
-        }
-
-        private void AddNewTab(System.Windows.Controls.UserControl content, string title)
-        {
-            if (DataContext is MainDashboardViewModel viewModel)
-            {
-                var existingTab = viewModel.OpenTabs.FirstOrDefault(tab => tab.Title == title);
-
-                if (existingTab == null)
-                {
-                    var newTab = new TabItemViewModel(title, content);
-                    viewModel.OpenTabs.Add(newTab);
-                    viewModel.SelectedTab = newTab;
-                }
-                else
-                {
-                    viewModel.SelectedTab = existingTab;
                 }
             }
         }

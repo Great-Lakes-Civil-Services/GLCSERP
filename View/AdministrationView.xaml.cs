@@ -56,12 +56,12 @@ namespace CivilProcessERP.Views
         // ✅ Navigate to CreateUserView as a new full tab/page
         private async void CreateUserButton_Click(object sender, RoutedEventArgs e)
         {
-            Console.WriteLine("[DEBUG] Create User button clicked — navigating to new tab...");
-            var mainWindow = System.Windows.Application.Current.MainWindow as MainWindow;
+            Console.WriteLine("[DEBUG] Create User button clicked — navigating to new page...");
+            var mainWindow = Window.GetWindow(this) as MainWindow;
             if (mainWindow != null)
             {
                 var createUserPage = new CreateUserView();
-                mainWindow.AddNewTab(createUserPage, "Create User");
+                mainWindow.MainContentControl.Content = createUserPage;
             }
             else
             {
@@ -74,7 +74,7 @@ namespace CivilProcessERP.Views
        private async void EditUserButton_Click(object sender, RoutedEventArgs e)
 {
     Console.WriteLine("[DEBUG] Edit User button clicked — navigating via MainContentArea...");
-    var mainWindow = System.Windows.Application.Current.MainWindow as MainWindow;
+    var mainWindow = Window.GetWindow(this) as MainWindow;
     if (mainWindow != null)
     {
         string loginInput = UserSearchComboBox.Text.Trim();
@@ -83,7 +83,7 @@ namespace CivilProcessERP.Views
         if (matchedUser != null)
         {
             var editUserPage = new EditUserView(matchedUser);
-            mainWindow.AddNewTab(editUserPage, $"Edit: {matchedUser.LoginName}");
+            mainWindow.MainContentControl.Content = editUserPage;
         }
         else
         {
@@ -107,11 +107,11 @@ namespace CivilProcessERP.Views
         private async void DeleteUserButton_Click(object sender, RoutedEventArgs e)
         {
             Console.WriteLine("[DEBUG] Delete User button clicked — navigating to DeleteUserView...");
-            var mainWindow = System.Windows.Application.Current.MainWindow as MainWindow;
+            var mainWindow = Window.GetWindow(this) as MainWindow;
             if (mainWindow != null)
             {
                 var deleteUserPage = new DeleteUserView();
-                mainWindow.AddNewTab(deleteUserPage, "Delete User");
+                mainWindow.MainContentControl.Content = deleteUserPage;
             }
             else
             {
@@ -122,11 +122,11 @@ namespace CivilProcessERP.Views
         private async void ToggleUserStatusButton_Click(object sender, RoutedEventArgs e)
         {
             Console.WriteLine("[DEBUG] Toggle User Status clicked — navigating to view...");
-            var mainWindow = System.Windows.Application.Current.MainWindow as MainWindow;
+            var mainWindow = Window.GetWindow(this) as MainWindow;
             if (mainWindow != null)
             {
                 var togglePage = new EnableDisableUserView();
-                mainWindow.AddNewTab(togglePage, "Enable/Disable User");
+                mainWindow.MainContentControl.Content = togglePage;
             }
             else
             {
@@ -136,10 +136,10 @@ namespace CivilProcessERP.Views
         private async void AssignPermissionsButton_Click(object sender, RoutedEventArgs e)
         {
             Console.WriteLine("[DEBUG] AssignPermissionsButton clicked — opening tab...");
-            var mainWindow = System.Windows.Application.Current.MainWindow as MainWindow;
+            var mainWindow = Window.GetWindow(this) as MainWindow;
             if (mainWindow != null)
             {
-                mainWindow.AddNewTab(new AssignPermissionView(), "Assign Permissions");
+                mainWindow.MainContentControl.Content = new AssignPermissionView();
             }
             else
             {
@@ -149,10 +149,10 @@ namespace CivilProcessERP.Views
 
         private async void FreezeOrgButton_Click(object sender, RoutedEventArgs e)
         {
-            var mainWindow = System.Windows.Application.Current.MainWindow as MainWindow;
+            var mainWindow = Window.GetWindow(this) as MainWindow;
             if (mainWindow != null)
             {
-                mainWindow.AddNewTab(new FreezeOrganizationView(), "Manage Organization Freeze Status");
+                mainWindow.MainContentControl.Content = new FreezeOrganizationView();
             }
             else
             {
@@ -251,23 +251,25 @@ namespace CivilProcessERP.Views
 
 private async void DeleteGroupButton_Click(object sender, RoutedEventArgs e)
 {
-    var mainWindow = System.Windows.Application.Current.MainWindow as MainWindow;
-    mainWindow?.AddNewTab(new DeleteGroupView(), "Delete Group");
+    var mainWindow = Window.GetWindow(this) as MainWindow;
+    if (mainWindow != null)
+        mainWindow.MainContentControl.Content = new DeleteGroupView();
 }
 
         private async void ManagePermissionsButton_Click(object sender, RoutedEventArgs e)
         {
-            var mainWindow = System.Windows.Application.Current.MainWindow as MainWindow;
-            mainWindow?.AddNewTab(new ManagePermissionsView(), "Manage Permissions");
+            var mainWindow = Window.GetWindow(this) as MainWindow;
+            if (mainWindow != null)
+                mainWindow.MainContentControl.Content = new ManagePermissionsView();
         }
 
 private async void ManageRolePermissionsButton_Click(object sender, RoutedEventArgs e)
 {
     Console.WriteLine("[DEBUG] ManageRolePermissionsButton clicked — opening RolePermissionManagerView...");
-    var mainWindow = System.Windows.Application.Current.MainWindow as MainWindow;
+    var mainWindow = Window.GetWindow(this) as MainWindow;
     if (mainWindow != null)
     {
-        mainWindow.AddNewTab(new RolePermissionManagerView(), "Manage Role Permissions");
+        mainWindow.MainContentControl.Content = new RolePermissionManagerView();
     }
     else
     {

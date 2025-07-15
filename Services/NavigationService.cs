@@ -1,9 +1,10 @@
 using System.Windows.Controls;
 using System.Windows; // Add this line to use MessageBoxButton and MessageBoxImage
-using CivilProcessERP.Views; // Add this line to include the namespace where MainDashboard is defined
+using CivilProcessERP.Views; // Add this line to include the namespace where MainDashboard and LandlordTenantView are defined
+// If LandlordTenantView is in a different namespace, add the correct using statement below:
+// using CivilProcessERP.Views.LandlordTenant; // <-- Removed or update this line if LandlordTenantView is not in this namespace
 using CivilProcessERP.ViewModels; // Add this line to include the namespace where LandlordTenantViewModel is defined
 using CivilProcessERP.Models.Job; // Add this line to include the namespace where Job is defined
-using CivilProcessERP.ViewModels; // Add this line to include the namespace where LandlordTenantViewModel is defined
 
 public class NavigationService
 {

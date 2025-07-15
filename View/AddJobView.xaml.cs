@@ -1369,7 +1369,8 @@ private async void EditCourt_MouseDoubleClick(object sender, MouseButtonEventArg
                 var service = new AddJobService();
                 await service.AddJob(Job);
                 System.Windows.MessageBox.Show("Job added successfully!", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
-                if (System.Windows.Application.Current.MainWindow is MainWindow mainWindow)
+                var mainWindow = Window.GetWindow(this) as MainWindow;
+                if (mainWindow != null)
                     mainWindow.RemoveTab(this);
             }
             catch (System.Exception ex)
@@ -1380,7 +1381,8 @@ private async void EditCourt_MouseDoubleClick(object sender, MouseButtonEventArg
 
         private void CancelButton_Click(object sender, RoutedEventArgs e)
         {
-            if (System.Windows.Application.Current.MainWindow is MainWindow mainWindow)
+            var mainWindow = Window.GetWindow(this) as MainWindow;
+            if (mainWindow != null)
                 mainWindow.RemoveTab(this);
         }
 

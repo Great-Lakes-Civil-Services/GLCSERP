@@ -5,12 +5,14 @@ using CivilProcessERP.Models;
 
 public class LoginService
 {
-    private readonly string _connectionString = "Host=localhost;Port=5432;Database=mypg_database;Username=postgres;Password=7866";
+    private readonly string _connectionString = "Host=localhost;Port=5432;Database=mypg_database;Username=postgres;Password=7866;Timeout=5;CommandTimeout=5";
 
     public async Task<UserModel?> AuthenticateUserAsync(string loginname, string password)
     {
         await using var conn = new NpgsqlConnection(_connectionString);
+        Console.WriteLine("Opening DB connection...");
         await conn.OpenAsync();
+        Console.WriteLine("DB connection opened.");
 
         var cmd = new NpgsqlCommand("SELECT * FROM users WHERE loginname = @login AND password = @pass", conn);
         cmd.Parameters.AddWithValue("@login", loginname);

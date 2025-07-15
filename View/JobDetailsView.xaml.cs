@@ -132,7 +132,8 @@ namespace CivilProcessERP.Views
 
         private void CloseButton_Click(object sender, RoutedEventArgs e)
         {
-            if (System.Windows.Application.Current.MainWindow is MainWindow mainWindow)
+            var mainWindow = Window.GetWindow(this) as MainWindow;
+            if (mainWindow != null)
                 mainWindow.RemoveTab(this);
         }
 
@@ -1376,7 +1377,7 @@ private async void CancelButton_Click(object sender, RoutedEventArgs e)
 
         System.Windows.MessageBox.Show("All unsaved changes were discarded.", "Cancelled", MessageBoxButton.OK, MessageBoxImage.Information);
 
-        var mainWindow = System.Windows.Application.Current.MainWindow as MainWindow;
+        var mainWindow = Window.GetWindow(this) as MainWindow;
         mainWindow?.RemoveTab(this);
     }
     finally

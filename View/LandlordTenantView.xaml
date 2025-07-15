@@ -14,7 +14,7 @@
        <!-- ✅ Search & Add Job Section -->
 <StackPanel Orientation="Horizontal" Margin="20" Grid.Row="0">
     <TextBlock Text="Search Job:" FontSize="16" FontWeight="Bold" Margin="5"/>
-    <TextBox x:Name="JobSearchBox"
+    <TextBox x:Name="JobSearchBox" 
          Text="{Binding SearchJobNumber, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
          Width="250" Height="40" FontSize="16" />
 
