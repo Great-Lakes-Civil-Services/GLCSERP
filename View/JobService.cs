@@ -2,7 +2,6 @@ using System;
 using Npgsql;
 using CivilProcessERP.Models.Job;
 using static CivilProcessERP.Models.Job.InvoiceModel;
-using CivilProcessERP.Models.Job; // Ensure this namespace contains PaymentEntryModel
 using System.ComponentModel;
 using System.Windows.Input;
 using System.Windows.Controls; // Added for ListView
@@ -16,7 +15,7 @@ public class JobService : INotifyPropertyChanged
     // Define AttachmentsListView as a property or field
 
     private static readonly SemaphoreSlim _jobLock = new(1, 1);
-    public System.Windows.Controls.ListView AttachmentsListView { get; set; }
+    public System.Windows.Controls.ListView? AttachmentsListView { get; set; }
     private readonly string _connectionString = "Host=localhost;Port=5432;Database=mypg_database;Username=postgres;Password=7866";
 
     public List<AttachmentModel> Attachments { get; set; } = new List<AttachmentModel>();
@@ -24,7 +23,7 @@ public class JobService : INotifyPropertyChanged
     public bool IsPlaintiffsEdited { get; set; }
     public bool IsPlaintiffEdited { get; set; }
 
-    public event PropertyChangedEventHandler PropertyChanged;
+    public event PropertyChangedEventHandler? PropertyChanged;
 
 
     protected void OnPropertyChanged(string propertyName)
@@ -32,7 +31,7 @@ public class JobService : INotifyPropertyChanged
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
     }
 
-    public async Task<Job> GetJobById(string jobId)
+    public async Task<Job?> GetJobById(string jobId)
     {
         Job job = new();
         try
@@ -57,40 +56,54 @@ public class JobService : INotifyPropertyChanged
                     job.CaseNumber = caseSerial;
                 }
             }
+            Console.WriteLine("[DEBUG] After papers query, JobId: " + job.JobId);
 
             // Step 2: Fetch Court number (courtnum) from cases table
-            string courtNum = null;
-            await using (var cmd2 = new NpgsqlCommand("SELECT courtnum FROM cases WHERE serialnum = @caseserialnum", conn))
-            {
-                cmd2.Parameters.AddWithValue("caseserialnum", int.Parse(job.CaseNumber));
-                await using (var reader2 = await cmd2.ExecuteReaderAsync())
+            string? courtNum = null;
+            try {
+                await using (var cmd2 = new NpgsqlCommand("SELECT courtnum FROM cases WHERE serialnum = @caseserialnum", conn))
                 {
-                    if (await reader2.ReadAsync())
+                    cmd2.Parameters.AddWithValue("caseserialnum", int.Parse(job.CaseNumber));
+                    await using (var reader2 = await cmd2.ExecuteReaderAsync())
                     {
-                        courtNum = reader2["courtnum"]?.ToString();
+                        if (await reader2.ReadAsync())
+                        {
+                            courtNum = reader2["courtnum"]?.ToString();
+                        }
                     }
                 }
+                Console.WriteLine($"[DEBUG] After cases.courtnum query, courtNum: {courtNum}");
+            } catch (Exception ex) {
+                Console.WriteLine($"[ERROR] Exception fetching cases.courtnum: {ex.Message}");
             }
 
             // Step 3: Fetch Court name from courts table based on courtnum
             if (!string.IsNullOrEmpty(courtNum))
             {
-                await using var conn2 = new NpgsqlConnection(_connectionString);
-                await conn2.OpenAsync();
-                await using (var cmd24 = new NpgsqlCommand("SELECT name FROM courts WHERE serialnum = @courtnum", conn2))
-                {
-                    cmd24.Parameters.AddWithValue("courtnum", int.Parse(courtNum));
-                    await using (var reader24 = await cmd24.ExecuteReaderAsync())
+                try {
+                    await using var conn2 = new NpgsqlConnection(_connectionString);
+                    await conn2.OpenAsync();
+                    await using (var cmd24 = new NpgsqlCommand("SELECT name FROM courts WHERE serialnum = @courtnum", conn2))
                     {
-                        if (await reader24.ReadAsync())
+                        cmd24.Parameters.AddWithValue("courtnum", int.Parse(courtNum));
+                        await using (var reader24 = await cmd24.ExecuteReaderAsync())
                         {
-                            job.Court = reader24["name"]?.ToString(); // Assign the court name to the Job object
+                            if (await reader24.ReadAsync())
+                            {
+                                job.Court = reader24["name"]?.ToString() ?? string.Empty;
+                            }
                         }
                     }
+                    Console.WriteLine($"[DEBUG] After courts.name query, Court: {job.Court}");
+                } catch (Exception ex) {
+                    Console.WriteLine($"[ERROR] Exception fetching courts.name: {ex.Message}");
                 }
+            }
+
+            // Step 4: Fetch Defendant from cases table
+            try {
                 await using var conn3 = new NpgsqlConnection(_connectionString);
                 await conn3.OpenAsync();
-                // Step 4: Fetch Defendant from cases table
                 await using (var cmd3 = new NpgsqlCommand("SELECT defend1 FROM cases WHERE serialnum = @caseserialnum", conn3))
                 {
                     cmd3.Parameters.AddWithValue("caseserialnum", int.Parse(job.CaseNumber));
@@ -98,7 +111,7 @@ public class JobService : INotifyPropertyChanged
                     {
                         if (await reader3.ReadAsync())
                         {
-                            job.Defendant = reader3["defend1"]?.ToString();
+                            job.Defendant = reader3["defend1"]?.ToString() ?? string.Empty;
                         }
                     }
                 }
@@ -115,7 +128,7 @@ public class JobService : INotifyPropertyChanged
                     {
                         if (await reader4.ReadAsync())
                         {
-                            job.Zone = reader4["zone"]?.ToString();
+                            job.Zone = reader4["zone"]?.ToString() ?? string.Empty;
                         }
                     }
                 }
@@ -130,7 +143,20 @@ public class JobService : INotifyPropertyChanged
                     {
                         if (await reader5.ReadAsync())
                         {
-                            job.SqlDateTimeCreated = reader5["sqldatetimerecd"]?.ToString();
+                            object sqlDateTimeRecdRaw = reader5["sqldatetimerecd"];
+                            if (sqlDateTimeRecdRaw == DBNull.Value)
+                                job.SqlDateTimeCreated = null;
+                            else if (sqlDateTimeRecdRaw is DateTime dt)
+                            {
+                                if (dt == new DateTime(1972, 1, 1, 0, 0, 0))
+                                    job.SqlDateTimeCreated = new DateTime(1972, 1, 1, 0, 0, 0);
+                                else
+                                    job.SqlDateTimeCreated = dt;
+                            }
+                            else if (sqlDateTimeRecdRaw is string s && DateTime.TryParse(s, out var parsed))
+                                job.SqlDateTimeCreated = parsed;
+                            else
+                                job.SqlDateTimeCreated = null;
                         }
                     }
                 }
@@ -144,7 +170,15 @@ public class JobService : INotifyPropertyChanged
                     await using var reader6 = await cmd6.ExecuteReaderAsync();
                     if (await reader6.ReadAsync())
                     {
-                        job.LastDayToServe = reader6["sqldatetimeserved"]?.ToString();
+                        var servedDateRaw = reader6["sqldatetimeserved"];
+                        if (servedDateRaw == DBNull.Value)
+                            job.LastDayToServe = null;
+                        else if (servedDateRaw is DateTime dt)
+                            job.LastDayToServe = dt;
+                        else if (servedDateRaw is string s && DateTime.TryParse(s, out var parsed))
+                            job.LastDayToServe = parsed;
+                        else
+                            job.LastDayToServe = null;
                     }
                 }
 
@@ -157,12 +191,25 @@ public class JobService : INotifyPropertyChanged
                     await using var reader7 = await cmd7.ExecuteReaderAsync();
                     if (await reader7.ReadAsync())
                     {
-                        job.ExpirationDate = reader7["sqlexpiredate"]?.ToString();
+                        object sqlExpireDateRaw = reader7["sqlexpiredate"];
+                        if (sqlExpireDateRaw == DBNull.Value)
+                            job.ExpirationDate = null;
+                        else if (sqlExpireDateRaw is DateTime dt)
+                        {
+                            if (dt == new DateTime(1972, 1, 1, 0, 0, 0))
+                                job.ExpirationDate = new DateTime(1972, 1, 1, 0, 0, 0);
+                            else
+                                job.ExpirationDate = dt;
+                        }
+                        else if (sqlExpireDateRaw is string s && DateTime.TryParse(s, out var parsed))
+                            job.ExpirationDate = parsed;
+                        else
+                            job.ExpirationDate = null;
                     }
                 }
 
                 // Step 8: Get typeservice from papers
-                string typeServiceId = null;
+                string? typeServiceId = null;
                 await using var conn8 = new NpgsqlConnection(_connectionString);
                 await conn8.OpenAsync();
                 await using (var cmd8 = new NpgsqlCommand("SELECT typeservice FROM papers WHERE serialnum = @jobId", conn8))
@@ -186,12 +233,12 @@ public class JobService : INotifyPropertyChanged
                         await using var reader9 = await cmd9.ExecuteReaderAsync();
                         if (await reader9.ReadAsync())
                         {
-                            job.ServiceType = reader9["servicename"]?.ToString();
+                            job.ServiceType = reader9["servicename"]?.ToString() ?? string.Empty;
                         }
                     }
                 }
                 // Step 10: Get caseserialnum from papers
-                string caseSerialNum = null;
+                string? caseSerialNum = null;
                 await using var conn10 = new NpgsqlConnection(_connectionString);
                 await conn10.OpenAsync();
                 await using (var cmd10 = new NpgsqlCommand("SELECT caseserialnum FROM papers WHERE serialnum = @jobId", conn10))
@@ -215,7 +262,7 @@ public class JobService : INotifyPropertyChanged
                         await using var reader11 = await cmd11.ExecuteReaderAsync();
                         if (await reader11.ReadAsync())
                         {
-                            job.CaseNumber = reader11["casenum"]?.ToString();  // ✅ correctly assign
+                            job.CaseNumber = reader11["casenum"]?.ToString() ?? string.Empty;  // ✅ correctly assign, never null
                         }
                     }
                 }
@@ -229,7 +276,7 @@ public class JobService : INotifyPropertyChanged
                     await using var reader12 = await cmd12.ExecuteReaderAsync();
                     if (await reader12.ReadAsync())
                     {
-                        job.ClientReference = reader12["clientrefnum"]?.ToString();  // ✅ assign ClientReference
+                        job.ClientReference = reader12["clientrefnum"]?.ToString() ?? string.Empty;  // ✅ assign ClientReference, never null
                     }
                 }
 
@@ -247,7 +294,7 @@ public class JobService : INotifyPropertyChanged
                             await using var readerCase = await cmdCase.ExecuteReaderAsync();
                             if (await readerCase.ReadAsync())
                             {
-                                caseSerialNum = readerCase["pliannum"]?.ToString();
+                                caseSerialNum = readerCase["pliannum"] != DBNull.Value ? readerCase["pliannum"].ToString() : null;
                             }
                         }
                     }
@@ -272,7 +319,7 @@ public class JobService : INotifyPropertyChanged
                 }
 
                 // Step 13: Get attorneynum from papers table
-                string attorneySerial = null;
+                string? attorneySerial = null;
                 await using var conn14 = new NpgsqlConnection(_connectionString);
                 await conn14.OpenAsync();
                 await using (var cmd14 = new NpgsqlCommand("SELECT attorneynum FROM papers WHERE serialnum = @jobId", conn14))
@@ -304,7 +351,7 @@ public class JobService : INotifyPropertyChanged
                 }
 
                 // Step 15: Get clientnum from papers table
-                string clientSerial = null;
+                string? clientSerial = null;
                 await using var conn16 = new NpgsqlConnection(_connectionString);
                 await conn16.OpenAsync();
                 await using (var cmd16 = new NpgsqlCommand("SELECT clientnum FROM papers WHERE serialnum = @jobId", conn16))
@@ -337,7 +384,7 @@ public class JobService : INotifyPropertyChanged
                 }
 
                 // Step 17: Get servercode from papers
-                string serverCode = null;
+                string? serverCode = null;
                 await using var conn18 = new NpgsqlConnection(_connectionString);
                 await conn18.OpenAsync();
                 await using (var cmd18 = new NpgsqlCommand("SELECT servercode FROM papers WHERE serialnum = @jobId", conn18))
@@ -375,12 +422,12 @@ public class JobService : INotifyPropertyChanged
                     await using var reader20 = await cmd20.ExecuteReaderAsync();
                     if (await reader20.ReadAsync())
                     {
-                        job.TypeOfWrit = reader20["typewrit"]?.ToString();
+                        job.TypeOfWrit = reader20["typewrit"]?.ToString() ?? string.Empty;
                     }
                 }
 
                 // Step 20 & 21: Get clientnum from papers → then status from entity
-                string clientnum = null;
+                string? clientnum = null;
                 await using var conn26 = new NpgsqlConnection(_connectionString);
                 await conn26.OpenAsync();
                 await using (var cmd26 = new NpgsqlCommand("SELECT clientnum FROM papers WHERE serialnum = @jobId", conn26))
@@ -403,13 +450,13 @@ public class JobService : INotifyPropertyChanged
                         await using var reader21 = await cmd21.ExecuteReaderAsync();
                         if (await reader21.ReadAsync())
                         {
-                            job.ClientStatus = reader21["status"]?.ToString();
+                            job.ClientStatus = reader21["status"]?.ToString() ?? string.Empty;
                         }
                     }
                 }
                 // Step 22: Fetch courtdatecode and datetimeserved from papers
-                string courtDateCodeRaw = null;
-                string datetimeServedRaw = null;
+                string? courtDateCodeRaw = null;
+                string? datetimeServedRaw = null;
                 await using var conn22 = new NpgsqlConnection(_connectionString);
                 await conn22.OpenAsync();
                 await using (var cmd22 = new NpgsqlCommand("SELECT courtdatecode, datetimeserved FROM papers WHERE serialnum = @jobId", conn22))
@@ -427,39 +474,26 @@ public class JobService : INotifyPropertyChanged
                 // Debug: Show raw input
                 Console.WriteLine($"Raw Value (courtdatecode): {courtDateCodeRaw}");
 
-                // ✅ THE CORRECT OFFSET YOU DERIVED IN SQL
-                const long timestampOffset = 1225178692;  // From your SQL calculation
-
                 // --- COURT DATE ---
-                if (long.TryParse(courtDateCodeRaw, out long courtTimestamp) && courtTimestamp != 0)
+                Console.WriteLine($"[DEBUG] Raw value for courtdatecode: '{courtDateCodeRaw}', Type: {courtDateCodeRaw?.GetType()}");
+                if (DateTime.TryParse(courtDateCodeRaw, out DateTime courtDateTime))
                 {
-                    var correctedCourtTimestamp = courtTimestamp + timestampOffset;
-                    var courtDateTime = DateTimeOffset.FromUnixTimeSeconds(correctedCourtTimestamp).UtcDateTime;
-                    Console.WriteLine($"Final UTC court date: {courtDateTime}");
-
-                    job.Date = courtDateTime.ToString("MM/dd/yyyy");
-                    job.Time = courtDateTime.ToString("h:mm tt");
+                    job.CourtDateTime = courtDateTime;
                 }
                 else
                 {
-                    job.Date = "N/A";
-                    job.Time = "N/A";
+                    job.CourtDateTime = null;
                 }
 
                 // --- DATETIME SERVED ---
-                if (long.TryParse(datetimeServedRaw, out long servedTimestamp) && servedTimestamp != 0)
+                Console.WriteLine($"[DEBUG] Raw value for datetimeserved: '{datetimeServedRaw}', Type: {datetimeServedRaw?.GetType()}");
+                if (DateTime.TryParse(datetimeServedRaw, out DateTime servedDateTime))
                 {
-                    var correctedServedTimestamp = servedTimestamp + timestampOffset;
-                    var servedDateTime = DateTimeOffset.FromUnixTimeSeconds(correctedServedTimestamp).UtcDateTime;
-                    Console.WriteLine($"Final UTC served date: {servedDateTime}");
-
-                    job.ServiceDate = servedDateTime.ToString("MM/dd/yyyy");
-                    job.ServiceTime = servedDateTime.ToString("h:mm tt");
+                    job.ServiceDateTime = servedDateTime;
                 }
                 else
                 {
-                    job.ServiceDate = "N/A";
-                    job.ServiceTime = "N/A";
+                    job.ServiceDateTime = null;
                 }
 
                 await using var conn23 = new NpgsqlConnection(_connectionString);
@@ -487,7 +521,7 @@ public class JobService : INotifyPropertyChanged
                             Console.WriteLine($"[INFO] Zero data found for description: {invoiceItem.Description}. Consider verifying database.");
                         }
 
-                        job.InvoiceEntries.Add(invoiceItem);
+                        System.Windows.Application.Current.Dispatcher.Invoke(() => job.InvoiceEntries.Add(invoiceItem));
                     }
                 }
 
@@ -502,28 +536,31 @@ public class JobService : INotifyPropertyChanged
                     cmdPayment.Parameters.AddWithValue("jobId", long.Parse(job.JobId));
                     await using var readerPayment = await cmdPayment.ExecuteReaderAsync();
 
+                    // Clear payments on UI thread
+                    System.Windows.Application.Current.Dispatcher.Invoke(() => job.Payments.Clear());
+
                     while (await readerPayment.ReadAsync())
                     {
                         var dateTimeRaw = readerPayment["date"] != DBNull.Value
                             ? Convert.ToDateTime(readerPayment["date"])
-                            : DateTime.MinValue;
-
-                        string extractedDate = dateTimeRaw.ToString("yyyy-MM-dd");
-                        string extractedTime = dateTimeRaw.ToString("HH:mm:ss");
+                            : (DateTime?)null;
 
                         var payment = new PaymentModel
                         {
                             Id = readerPayment.GetGuid(0),
-                            Date = DateTime.Parse(extractedDate),
-                            TimeOnly = extractedTime,
-                            Method = readerPayment["method"]?.ToString(),
-                            Description = readerPayment["description"]?.ToString(),
+                            DateTime = dateTimeRaw,
+                            Method = GetPaymentMethodString(readerPayment["method"]),
+                            Description = readerPayment["description"]?.ToString() ?? string.Empty,
                             Amount = readerPayment["amount"] != DBNull.Value
                                 ? Convert.ToDecimal(readerPayment["amount"])
                                 : 0m
                         };
 
-                        job.Payments.Add(payment);
+                        // Only add if not already present by Id
+                        System.Windows.Application.Current.Dispatcher.Invoke(() => {
+                            if (!job.Payments.Any(p => p.Id == payment.Id))
+                                job.Payments.Add(payment);
+                        });
                     }
                 }
 
@@ -534,10 +571,10 @@ public class JobService : INotifyPropertyChanged
                 await using var conn40 = new NpgsqlConnection(_connectionString);
                 await conn40.OpenAsync();
                 await using (var cmd90 = new NpgsqlCommand(@"SELECT 
-                                            serialnum, seqnum, comment, datetime, source, isattempt, 
-                                            printonaff, printonfs, reviewed 
-                                            FROM comments 
-                                            WHERE serialnum = @jobId AND isattempt = false", conn40))
+    serialnum, seqnum, comment, datetime, source, isattempt, 
+    printonaff, printonfs, reviewed 
+    FROM comments 
+    WHERE serialnum = @jobId AND isattempt = false", conn40))
                 {
                     cmd90.Parameters.AddWithValue("jobId", long.Parse(job.JobId));
                     await using var reader90 = await cmd90.ExecuteReaderAsync();
@@ -545,27 +582,25 @@ public class JobService : INotifyPropertyChanged
                     while (await reader90.ReadAsync())
                     {
                         var comment = reader90["comment"]?.ToString() ?? string.Empty;
-                        var datetimeRaw = reader90["datetime"];
-                        DateTime datetimeParsed = DateTime.MinValue;
-
-                        if (datetimeRaw != DBNull.Value)
+                        object datetimeRaw = reader90["datetime"];
+                        DateTime? datetimeParsed = null;
+                        if (datetimeRaw == DBNull.Value)
+                            datetimeParsed = null;
+                        else if (datetimeRaw is DateTime dt)
+                            datetimeParsed = dt;
+                        else if (datetimeRaw is long l && l > 946684800)
+                            datetimeParsed = DateTimeOffset.FromUnixTimeSeconds(l).UtcDateTime;
+                        else if (datetimeRaw is int i && i > 946684800)
+                            datetimeParsed = DateTimeOffset.FromUnixTimeSeconds(i).UtcDateTime;
+                        else if (datetimeRaw is string s)
                         {
-                            if (datetimeRaw is int || datetimeRaw is long)
-                            {
-                                long rawTimestamp = Convert.ToInt64(datetimeRaw);
-                                long correctedTimestamp = rawTimestamp + timestampOffset;
-                                datetimeParsed = DateTimeOffset.FromUnixTimeSeconds(correctedTimestamp).UtcDateTime;
-                            }
-                            else
-                            {
-                                datetimeParsed = Convert.ToDateTime(datetimeRaw);
-                            }
+                            if (DateTime.TryParse(s, out var dtStr))
+                                datetimeParsed = dtStr;
+                            else if (long.TryParse(s, out var l2) && l2 > 946684800)
+                                datetimeParsed = DateTimeOffset.FromUnixTimeSeconds(l2).UtcDateTime;
                         }
                         int id = reader90["serialnum"] != DBNull.Value ? Convert.ToInt32(reader90["serialnum"]) : 0;
                         int seqNum = reader90["seqnum"] != DBNull.Value ? Convert.ToInt32(reader90["seqnum"]) : 0;
-                        var date = datetimeParsed.ToString("yyyy-MM-dd");
-                        var time = datetimeParsed.ToString("HH:mm:ss");
-
                         var source = reader90["source"]?.ToString() ?? "Unknown Source";
                         bool affChecked = reader90["printonaff"] != DBNull.Value && Convert.ToInt32(reader90["printonaff"]) > 0;
                         bool dsChecked = reader90["printonfs"] != DBNull.Value && Convert.ToInt32(reader90["printonfs"]) > 0;
@@ -575,8 +610,7 @@ public class JobService : INotifyPropertyChanged
                         {
                             SerialNum = id,
                             Seqnum = seqNum,
-                            Date = date,
-                            Time = time,
+                            DateTime = datetimeParsed,
                             Body = comment,
                             Source = source,
                             Aff = affChecked,
@@ -584,7 +618,7 @@ public class JobService : INotifyPropertyChanged
                             Att = attChecked
                         };
 
-                        job.Comments.Add(commentModel);
+                        System.Windows.Application.Current.Dispatcher.Invoke(() => job.Comments.Add(commentModel));
                     }
                 }
 
@@ -592,10 +626,10 @@ public class JobService : INotifyPropertyChanged
                 await using var conn25 = new NpgsqlConnection(_connectionString);
                 await conn25.OpenAsync();
                 await using (var cmd25 = new NpgsqlCommand(@"SELECT 
-                                                serialnum, seqnum, comment, datetime, source, isattempt, 
-                                                printonaff, printonfs, reviewed 
-                                                FROM comments 
-                                                WHERE serialnum = @jobId AND isattempt = true", conn25))
+    serialnum, seqnum, comment, datetime, source, isattempt, 
+    printonaff, printonfs, reviewed 
+    FROM comments 
+    WHERE serialnum = @jobId AND isattempt = true", conn25))
                 {
                     cmd25.Parameters.AddWithValue("jobId", long.Parse(job.JobId));
                     await using var reader25 = await cmd25.ExecuteReaderAsync();
@@ -603,28 +637,25 @@ public class JobService : INotifyPropertyChanged
                     while (await reader25.ReadAsync())
                     {
                         var comment = reader25["comment"]?.ToString() ?? string.Empty;
-                        var datetimeRaw = reader25["datetime"];
-                        DateTime datetimeParsed = DateTime.MinValue;
-
-                        if (datetimeRaw != DBNull.Value)
+                        object datetimeRawA = reader25["datetime"];
+                        DateTime? datetimeParsedA = null;
+                        if (datetimeRawA == DBNull.Value)
+                            datetimeParsedA = null;
+                        else if (datetimeRawA is DateTime dtA)
+                            datetimeParsedA = dtA;
+                        else if (datetimeRawA is long l && l > 946684800)
+                            datetimeParsedA = DateTimeOffset.FromUnixTimeSeconds(l).UtcDateTime;
+                        else if (datetimeRawA is int i && i > 946684800)
+                            datetimeParsedA = DateTimeOffset.FromUnixTimeSeconds(i).UtcDateTime;
+                        else if (datetimeRawA is string s)
                         {
-                            if (datetimeRaw is int || datetimeRaw is long)
-                            {
-                                long rawTimestamp = Convert.ToInt64(datetimeRaw);
-                                long correctedTimestamp = rawTimestamp + timestampOffset;
-                                datetimeParsed = DateTimeOffset.FromUnixTimeSeconds(correctedTimestamp).UtcDateTime;
-                            }
-                            else
-                            {
-                                datetimeParsed = Convert.ToDateTime(datetimeRaw);
-                            }
+                            if (DateTime.TryParse(s, out var dtStr))
+                                datetimeParsedA = dtStr;
+                            else if (long.TryParse(s, out var l2) && l2 > 946684800)
+                                datetimeParsedA = DateTimeOffset.FromUnixTimeSeconds(l2).UtcDateTime;
                         }
                         int id = reader25["serialnum"] != DBNull.Value ? Convert.ToInt32(reader25["serialnum"]) : 0;
                         int seqNum = reader25["seqnum"] != DBNull.Value ? Convert.ToInt32(reader25["seqnum"]) : 0;
-
-                        var date = datetimeParsed.ToString("yyyy-MM-dd");
-                        var time = datetimeParsed.ToString("HH:mm:ss");
-
                         var source = reader25["source"]?.ToString() ?? "Unknown Source";
                         bool affChecked = reader25["printonaff"] != DBNull.Value && Convert.ToInt32(reader25["printonaff"]) > 0;
                         bool dsChecked = reader25["printonfs"] != DBNull.Value && Convert.ToInt32(reader25["printonfs"]) > 0;
@@ -633,9 +664,8 @@ public class JobService : INotifyPropertyChanged
                         var attemptsModel = new AttemptsModel
                         {
                             SerialNum = id,
-                            Seqnum = seqNum, // Assuming seqnum is not used for attempts
-                            Date = date,
-                            Time = time,
+                            Seqnum = seqNum,
+                            DateTime = datetimeParsedA,
                             Body = comment,
                             Source = source,
                             Aff = affChecked,
@@ -643,11 +673,11 @@ public class JobService : INotifyPropertyChanged
                             Att = attChecked
                         };
 
-                        job.Attempts.Add(attemptsModel);
+                        System.Windows.Application.Current.Dispatcher.Invoke(() => job.Attempts.Add(attemptsModel));
                     }
                 }
 
-                string address1 = null, address2 = null, state = null, city = null, zip = null;
+                string address1 = "", address2 = "", state = "", city = "", zip = "";
 
                 await using var conn41 = new NpgsqlConnection(_connectionString);
                 await conn41.OpenAsync();
@@ -658,11 +688,11 @@ public class JobService : INotifyPropertyChanged
                     await using var reader26 = await cmd26.ExecuteReaderAsync();
                     if (await reader26.ReadAsync())
                     {
-                        address1 = reader26["address1"]?.ToString();
-                        address2 = reader26["address2"]?.ToString();
-                        state = reader26["state"]?.ToString();
-                        city = reader26["city"]?.ToString();
-                        zip = reader26["zip"]?.ToString();
+                        address1 = reader26["address1"]?.ToString() ?? "";
+                        address2 = reader26["address2"]?.ToString() ?? "";
+                        state = reader26["state"]?.ToString() ?? "";
+                        city = reader26["city"]?.ToString() ?? "";
+                        zip = reader26["zip"]?.ToString() ?? "";
                     }
                     job.AddressLine1 = address1;
 job.AddressLine2 = address2;
@@ -688,7 +718,7 @@ job.Zip = zip;
                 }
 
                 // Step: Fetch Plaintiff Name from serveedetails if pliannum is available
-                string pliannum = null;
+                string? pliannum = null;
                 await using var conn28 = new NpgsqlConnection(_connectionString);
                 await conn28.OpenAsync();
                 await using (var cmd28 = new NpgsqlCommand("SELECT serialnum FROM papers WHERE serialnum = @jobId", conn28))
@@ -746,10 +776,10 @@ job.Zip = zip;
                         {
                             Id = reader31["attachment_id"] != DBNull.Value ? (Guid)reader31["attachment_id"] : Guid.Empty,
                             BlobId = reader31["blobid"] != DBNull.Value ? (Guid)reader31["blobid"] : Guid.Empty,
-                            Purpose = reader31["purpose"]?.ToString(),
+                            Purpose = reader31["purpose"]?.ToString() ?? string.Empty,
                             Description = reader31["description"]?.ToString() ?? string.Empty,
-                            Format = reader31["fileextension"]?.ToString(),
-                            BlobMetadataId = reader31["blobmetadata_id"]?.ToString()
+                            Format = reader31["fileextension"] != DBNull.Value ? reader31["fileextension"].ToString() ?? string.Empty : string.Empty,
+                            BlobMetadataId = reader31["blobmetadata_id"] != DBNull.Value ? reader31["blobmetadata_id"].ToString() ?? string.Empty : string.Empty
                         });
                     }
                 }
@@ -810,29 +840,60 @@ job.Zip = zip;
                     }
                 }
 
-                return job;
+                Console.WriteLine($"[DEBUG] Searching for jobId: '{jobId}' (Type: {jobId.GetType()})");
+                long parsedJobId;
+                if (!long.TryParse(jobId, out parsedJobId))
+                {
+                    Console.WriteLine($"[DEBUG] Could not parse jobId '{jobId}' to long.");
+                }
+                else
+                {
+                    Console.WriteLine($"[DEBUG] Parsed jobId: {parsedJobId}");
+                }
+
+                Console.WriteLine("[DEBUG] Finished all DB queries in GetJobById");
+           return job;
             }
-        }
-        catch (Exception ex)
+             catch (Exception ex)
         {
-            Console.WriteLine("[ERROR] 🔥 DB Error: " + ex.Message);
+            Console.WriteLine($"[ERROR] Exception in GetJobById: {ex.Message}\n{ex.StackTrace}");
             throw;
         }
         finally
         {
-            //_jobLock.Release(); // Ensure lock is released even if an error occurs
+            Console.WriteLine("[DEBUG] Exiting GetJobById");
         }
+        // Ensure all code paths return a value
+        return null; // <-- Correctly close the try block here
+    }
+     catch (Exception ex)
+        {
+            Console.WriteLine($"[ERROR] Exception in GetJobById: {ex.Message}\n{ex.StackTrace}");
+            throw;
+        }
+        finally
+        {
+            Console.WriteLine("[DEBUG] Exiting GetJobById");
+        }
+        // Ensure all code paths return a value
         return null;
     }
+
     public async Task SaveJob(Job job)
     {
+        if (string.IsNullOrWhiteSpace(job.JobId) || !long.TryParse(job.JobId, out var parsedJobId))
+        {
+            Console.WriteLine($"[ERROR] Invalid or missing JobId: '{job.JobId}'");
+            throw new ArgumentException($"Invalid or missing JobId: '{job.JobId}'");
+        }
+        RemoveDuplicatePayments(job);
+        Console.WriteLine($"[DEBUG] Entered SaveJob for JobID: {job.JobId}");
         await using var conn32 = new NpgsqlConnection(_connectionString);
         await conn32.OpenAsync();
-
         await using var tx = await conn32.BeginTransactionAsync();
-
         try
         {
+            Console.WriteLine("[DEBUG] Starting transaction in SaveJob");
             Console.WriteLine("🔄 Starting SaveJobAsync for JobID: " + job.JobId);
 
             // Try UPDATE
@@ -847,9 +908,9 @@ job.Zip = zip;
             WHERE serialnum = @jobId", conn32, tx))
             {
                 cmd.Parameters.AddWithValue("zone", job.Zone ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("sqlDateCreated", ParseDateTimeOrNull(job.SqlDateTimeCreated));
-                cmd.Parameters.AddWithValue("lastDayToServe", ParseDateTimeOrNull(job.LastDayToServe));
-                cmd.Parameters.AddWithValue("expirationDate", ParseDateTimeOrNull(job.ExpirationDate));
+                cmd.Parameters.AddWithValue("sqlDateCreated", ParseDateTimeOrNull(job.SqlDateTimeCreated?.ToString("yyyy-MM-dd HH:mm:ss") ?? ""));
+                cmd.Parameters.AddWithValue("lastDayToServe", ParseDateTimeOrNull(job.LastDayToServe?.ToString("yyyy-MM-dd HH:mm:ss") ?? ""));
+                cmd.Parameters.AddWithValue("expirationDate", ParseDateTimeOrNull(job.ExpirationDate?.ToString("yyyy-MM-dd HH:mm:ss") ?? ""));
                 cmd.Parameters.AddWithValue("clientRef", job.ClientReference ?? (object)DBNull.Value);
                 cmd.Parameters.AddWithValue("jobId", long.Parse(job.JobId));
 
@@ -887,23 +948,23 @@ job.Zip = zip;
                                 valueList.Add("@zone");
                                 insertCmd.Parameters.AddWithValue("zone", job.Zone);
                             }
-                            if (!string.IsNullOrWhiteSpace(job.SqlDateTimeCreated))
+                            if (!string.IsNullOrWhiteSpace(job.SqlDateTimeCreated?.ToString()))
                             {
                                 fieldList.Add("sqldatetimerecd");
                                 valueList.Add("@sqlDateCreated");
-                                insertCmd.Parameters.AddWithValue("sqlDateCreated", ParseDateTimeOrNull(job.SqlDateTimeCreated));
+                                insertCmd.Parameters.AddWithValue("sqlDateCreated", ParseDateTimeOrNull(job.SqlDateTimeCreated?.ToString("yyyy-MM-dd HH:mm:ss") ?? ""));
                             }
-                            if (!string.IsNullOrWhiteSpace(job.LastDayToServe))
+                            if (!string.IsNullOrWhiteSpace(job.LastDayToServe?.ToString()))
                             {
                                 fieldList.Add("sqldatetimeserved");
                                 valueList.Add("@lastDayToServe");
-                                insertCmd.Parameters.AddWithValue("lastDayToServe", ParseDateTimeOrNull(job.LastDayToServe));
+                                insertCmd.Parameters.AddWithValue("lastDayToServe", ParseDateTimeOrNull(job.LastDayToServe?.ToString("yyyy-MM-dd HH:mm:ss") ?? ""));
                             }
-                            if (!string.IsNullOrWhiteSpace(job.ExpirationDate))
+                            if (!string.IsNullOrWhiteSpace(job.ExpirationDate?.ToString()))
                             {
                                 fieldList.Add("sqlexpiredate");
                                 valueList.Add("@expirationDate");
-                                insertCmd.Parameters.AddWithValue("expirationDate", ParseDateTimeOrNull(job.ExpirationDate));
+                                insertCmd.Parameters.AddWithValue("expirationDate", ParseDateTimeOrNull(job.ExpirationDate?.ToString("yyyy-MM-dd HH:mm:ss") ?? ""));
                             }
                             if (!string.IsNullOrWhiteSpace(job.ClientReference))
                             {
@@ -1675,7 +1736,7 @@ job.Zip = zip;
                 // Step 2: Insert or Update
                 foreach (var c in job.Comments)
                 {
-                    long timestamp = ConvertToUnixTimestamp(c.Date, c.Time);
+                    long timestamp = ConvertToUnixTimestamp(c.DateTime);
 
                     if (existing.ContainsKey(c.Seqnum))
                     {
@@ -1812,7 +1873,7 @@ foreach (var kvp in incomingAttempts)
 {
     var attemptSeq = kvp.Key;
     var a = kvp.Value;
-    long ts = ConvertToUnixTimestamp(a.Date, a.Time);
+    long ts = ConvertToUnixTimestamp(a.DateTime);
 
     if (existingAttempts.ContainsKey(attemptSeq))
     {
@@ -1958,12 +2019,13 @@ foreach (var existingSeq in existingAttempts.Keys)
                 if (job.DeletedPaymentId.HasValue)
                 {
                     using var delete = new NpgsqlCommand("DELETE FROM payment WHERE id = @id", conn32, tx);
-                    delete.Parameters.AddWithValue("id", job.DeletedPaymentId.Value);
+                    var deletedPaymentId = job.DeletedPaymentId.Value;
+                    delete.Parameters.AddWithValue("id", deletedPaymentId);
                     int affectedRows = await delete.ExecuteNonQueryAsync();
                     Console.WriteLine($"[DEBUG] Rows affected: {affectedRows}");
-                    Console.WriteLine($"🗑️ Deleted payment by ID: {job.DeletedPaymentId.Value}");
+                    Console.WriteLine($"🗑️ Deleted payment by ID: {deletedPaymentId}");
                     job.DeletedPaymentId = null; // Clear flag
-                    await LogAuditAsync(conn32, tx, job.JobId, "DELETE", $"Deleted payment by ID: {job.DeletedPaymentId.Value}.");
+                    await LogAuditAsync(conn32, tx, job.JobId, "DELETE", $"Deleted payment by ID: {deletedPaymentId}.");
                 }
 
                 // ✅ Step 2: Load existing payments from DB
@@ -1978,56 +2040,54 @@ foreach (var existingSeq in existingAttempts.Keys)
                     while (await reader.ReadAsync())
                     {
                         var id = reader.GetGuid(0);
-                        existingPayments[id] = new PaymentModel
+                        object dateTimeRawPay = reader["date"];
+                        DateTime? dateTimeParsedPay = dateTimeRawPay != DBNull.Value ? (DateTime?)dateTimeRawPay : null;
+                        if (dateTimeRawPay != DBNull.Value)
+                        {
+                            if (dateTimeRawPay is DateTime dtPay)
+                            {
+                                dateTimeParsedPay = dtPay;
+                            }
+                            else if (long.TryParse(dateTimeRawPay.ToString(), out long legacyTimestampPay) && legacyTimestampPay > 946684800)
+                            {
+                                var correctedTimestampPay = legacyTimestampPay + 1225178692;
+                                dateTimeParsedPay = DateTimeOffset.FromUnixTimeSeconds(correctedTimestampPay).UtcDateTime;
+                            }
+                        }
+                        var payment = new PaymentModel
                         {
                             Id = id,
-                            Date = Convert.ToDateTime(reader["date"]).Date,
-                            TimeOnly = Convert.ToDateTime(reader["date"]).ToString("HH:mm:ss"),
-                            Method = reader["method"]?.ToString(),
+                            DateTime = dateTimeParsedPay,
+                            Method = GetPaymentMethodString(reader["method"]),
                             Description = reader["description"]?.ToString() ?? "",
                             Amount = Convert.ToDecimal(reader["amount"])
                         };
+                        existingPayments[id] = payment;
+                        System.Windows.Application.Current.Dispatcher.Invoke(() => job.Payments.Add(payment));
                     }
                 }
 
-                // ✅ Step 3: Insert or Update each payment entry
-                foreach (var pay in job.Payments)
+                // Step 3: Insert or Update only as needed
+                foreach (var pay in job.Payments.ToList())
                 {
+                    // Only skip if payment is invalid
+                    if (pay.Amount <= 0 || string.IsNullOrWhiteSpace(pay.Description))
+                        continue;
                     if (job.DeletedPaymentId.HasValue && pay.Id == job.DeletedPaymentId.Value)
                         continue; // Skip deleted item
 
-                    DateTime fullDateTime = DateTime.ParseExact($"{pay.Date:yyyy-MM-dd} {pay.TimeOnly}", "yyyy-MM-dd HH:mm:ss", null);
-
-                    if (pay.Id != Guid.Empty && existingPayments.ContainsKey(pay.Id))
+                    if (pay.Id == Guid.Empty)
                     {
-                        using var update = new NpgsqlCommand(@"
-            UPDATE payment
-            SET date = @dt, method = @method, description = @desc, amount = @amt
-            WHERE id = @id;", conn32, tx);
-
-                        update.Parameters.AddWithValue("id", pay.Id);
-                        update.Parameters.AddWithValue("dt", fullDateTime);
-                        update.Parameters.AddWithValue("method", Convert.ToInt16(pay.Method ?? "0"));
-                        update.Parameters.AddWithValue("desc", pay.Description ?? "");
-                        update.Parameters.AddWithValue("amt", pay.Amount);
-
-                        int affectedRows = await update.ExecuteNonQueryAsync();
-                        Console.WriteLine($"[DEBUG] Rows affected: {affectedRows}");
-                        Console.WriteLine($"🔄 Updated payment: {pay.Description}");
-                        await LogAuditAsync(conn32, tx, job.JobId, "UPDATE", $"Updated payment: {pay.Description}.");
-                    }
-                    else
-                    {
-                        var newId = pay.Id != Guid.Empty ? pay.Id : Guid.NewGuid();
-
+                        // New payment: assign new Guid and insert
+                        pay.Id = Guid.NewGuid();
                         using var insert = new NpgsqlCommand(@"
-            INSERT INTO payment (id, jobnumber, date, method, description, amount, changenum)
-            VALUES (@id, @jobId, @dt, @method, @desc, @amt, 0);", conn32, tx);
+    INSERT INTO payment (id, jobnumber, date, method, description, amount, changenum)
+    VALUES (@id, @jobId, @dt, @method, @desc, @amt, 0);", conn32, tx);
 
-                        insert.Parameters.AddWithValue("id", newId);
+                        insert.Parameters.AddWithValue("id", pay.Id);
                         insert.Parameters.AddWithValue("jobId", long.Parse(job.JobId));
-                        insert.Parameters.AddWithValue("dt", fullDateTime);
-                        insert.Parameters.AddWithValue("method", Convert.ToInt16(pay.Method ?? "0"));
+                        insert.Parameters.AddWithValue("dt", pay.DateTime ?? DateTime.Now);
+                        insert.Parameters.AddWithValue("method", GetPaymentMethodCode(pay.Method));
                         insert.Parameters.AddWithValue("desc", pay.Description ?? "");
                         insert.Parameters.AddWithValue("amt", pay.Amount);
 
@@ -2035,8 +2095,43 @@ foreach (var existingSeq in existingAttempts.Keys)
                         Console.WriteLine($"[DEBUG] Rows affected: {affectedRows}");
                         Console.WriteLine($"➕ Inserted payment: {pay.Description}");
                         await LogAuditAsync(conn32, tx, job.JobId, "INSERT", $"Inserted payment: {pay.Description}.");
+                        continue;
+                    }
+
+                    if (existingPayments.TryGetValue(pay.Id, out var existingPayment))
+                    {
+                        // Only update if something changed
+                        if (pay.DateTime != existingPayment.DateTime || pay.Method != existingPayment.Method || pay.Description != existingPayment.Description || pay.Amount != existingPayment.Amount)
+                        {
+                            using var update = new NpgsqlCommand(@"
+    UPDATE payment
+    SET date = @dt, method = @method, description = @desc, amount = @amt
+    WHERE id = @id;", conn32, tx);
+
+                            update.Parameters.AddWithValue("id", pay.Id);
+                            update.Parameters.AddWithValue("dt", pay.DateTime ?? DateTime.Now);
+                            update.Parameters.AddWithValue("method", GetPaymentMethodCode(pay.Method));
+                            update.Parameters.AddWithValue("desc", pay.Description ?? "");
+                            update.Parameters.AddWithValue("amt", pay.Amount);
+
+                            int affectedRows = await update.ExecuteNonQueryAsync();
+                            if (affectedRows == 0)
+                                Console.WriteLine($"[WARN] Update for payment {pay.Id} affected 0 rows. This may indicate a mismatch or bug.");
+                            Console.WriteLine($"[DEBUG] Rows affected: {affectedRows}");
+                            Console.WriteLine($"🔄 Updated payment: {pay.Description}");
+                            await LogAuditAsync(conn32, tx, job.JobId, "UPDATE", $"Updated payment: {pay.Description}.");
+                        }
+                        // else: no change, do nothing
+                    }
+                    else if (pay.Id != Guid.Empty && !existingPayments.ContainsKey(pay.Id))
+                    {
+                        // Do not insert if the payment Id is not empty but not found in DB (prevents accidental re-inserts)
+                        Console.WriteLine($"[WARN] Payment with Id {pay.Id} not found in DB, skipping insert to avoid duplicate.");
+                        continue;
                     }
                 }
+                // Remove duplicates after all modifications
+                RemoveDuplicatePayments(job);
 
                 // Step 1: DELETE (one at a time)
                 // ✅ Step 4: Delete attachment if flagged
@@ -2049,8 +2144,9 @@ foreach (var existingSeq in existingAttempts.Keys)
                     int affectedRows = await delete.ExecuteNonQueryAsync();
                     Console.WriteLine($"[DEBUG] Rows affected: {affectedRows}");
                     Console.WriteLine($"🗑️ Deleted attachment ID: {job.DeletedAttachmentId.Value}");
+                    var deletedAttachmentId = job.DeletedAttachmentId.Value;
                     job.DeletedAttachmentId = null;
-                    await LogAuditAsync(conn32, tx, job.JobId, "DELETE", $"Deleted attachment ID: {job.DeletedAttachmentId.Value}.");
+                    await LogAuditAsync(conn32, tx, job.JobId, "DELETE", $"Deleted attachment ID: {deletedAttachmentId}.");
                 }
 
                 // Step // Step 2: INSERT or UPDATE attachments
@@ -2141,7 +2237,7 @@ foreach (var existingSeq in existingAttempts.Keys)
                 if (!string.IsNullOrWhiteSpace(job.Plaintiff))
                 {
                     // ✅ Update Plaintiff in entity table using caseserialnum from papers
-                    string caseSerialNum = null;
+                    string? caseSerialNum = null;
                     await using (var connCase = new NpgsqlConnection(_connectionString))
                     {
                         await connCase.OpenAsync();
@@ -2180,6 +2276,7 @@ foreach (var existingSeq in existingAttempts.Keys)
                 Console.WriteLine("🟢 Committing transaction...");
                 Console.WriteLine("✅ Job successfully saved.");
                 await tx.CommitAsync();
+                Console.WriteLine("[DEBUG] Transaction committed in SaveJob");
                 await LogAuditAsync(conn32, tx, job.JobId, "COMMIT", "Committed transaction for SaveJob.");
 
                 // Upsert workflow status
@@ -2199,34 +2296,51 @@ foreach (var existingSeq in existingAttempts.Keys)
                     await cmdWF.ExecuteNonQueryAsync();
                 }
 
+                // Debug: Log all payment Ids and details before saving
+                Console.WriteLine("[DEBUG] Payments to be saved:");
+                foreach (var pay in job.Payments)
+                {
+                    Console.WriteLine($"  Id: {pay.Id}, Amount: {pay.Amount}, Desc: {pay.Description}, Method: {pay.Method}, Date: {pay.DateTime}");
+                }
+                var idGroups = job.Payments.GroupBy(p => p.Id).Where(g => g.Count() > 1).ToList();
+                if (idGroups.Any())
+                {
+                    Console.WriteLine("[WARN] Duplicate payment Ids detected in Job.Payments:");
+                    foreach (var group in idGroups)
+                    {
+                        Console.WriteLine($"  Id: {group.Key}, Count: {group.Count()}");
+                    }
+                }
+
+                // --- Invoice Deletion Logic ---
+                var memoryInvoiceIds = new HashSet<Guid>(job.InvoiceEntries.Select(inv => inv.Id));
+                foreach (var dbInvoiceId in existingInvoices.Keys)
+                {
+                    if (!memoryInvoiceIds.Contains(dbInvoiceId))
+                    {
+                        Console.WriteLine($"[DEBUG] Deleting invoice from DB: {dbInvoiceId}");
+                        using var delete = new NpgsqlCommand("DELETE FROM joblineitem WHERE id = @id", conn32, tx);
+                        delete.Parameters.AddWithValue("id", dbInvoiceId);
+                        int affectedRows = await delete.ExecuteNonQueryAsync();
+                        Console.WriteLine($"[DEBUG] Rows affected: {affectedRows}");
+                        Console.WriteLine($"🗑️ Deleted invoice by ID: {dbInvoiceId}");
+                        await LogAuditAsync(conn32, tx, job.JobId, "DELETE", $"Deleted invoice by ID: {dbInvoiceId}.");
+                        
+                    }
+                }
+
             }
         }
         catch (Exception ex)
         {
-            try
-            {
-                // Log the error to audit
-                using var conn = new NpgsqlConnection(_connectionString);
-                await conn.OpenAsync();
-                using var auditCmd = new NpgsqlCommand(@"
-            INSERT INTO changehistory (jobid, action, username, details)
-            VALUES (@jobid, @action, @username, @details);", conn);
-
-                auditCmd.Parameters.AddWithValue("jobid", long.Parse(job.JobId ?? "0"));
-                auditCmd.Parameters.AddWithValue("action", "ERROR");
-                auditCmd.Parameters.AddWithValue("username", SessionManager.CurrentUser?.LoginName ?? "Unknown");
-                auditCmd.Parameters.AddWithValue("details", $"Exception: {ex.Message}\n{ex.StackTrace}");
-
-                await auditCmd.ExecuteNonQueryAsync();
-            }
-            catch { /* Swallow to avoid masking the original error */ }
-
+            Console.WriteLine($"[ERROR] Exception in SaveJob: {ex.Message}\n{ex.StackTrace}");
             tx.Rollback();
-            Console.WriteLine($"🔥 ERROR in SaveJob(): {ex.Message}");
             throw;
         }
-        // await using var conn84 = new NpgsqlConnection(_connectionString);
-        //         await conn84.OpenAsync();
+        finally
+        {
+            Console.WriteLine("[DEBUG] Exiting SaveJob");
+        }
     }
 
 
@@ -2247,11 +2361,11 @@ foreach (var existingSeq in existingAttempts.Keys)
     }
 
     // ✅ Convert string date + time to Unix timestamp (long)
-    private static long ConvertToUnixTimestamp(string date, string time)
+    private static long ConvertToUnixTimestamp(DateTime? dateTime)
     {
-        if (DateTime.TryParse($"{date} {time}", out var dt))
+        if (dateTime.HasValue)
         {
-            var offset = new DateTimeOffset(dt);
+            var offset = new DateTimeOffset(dateTime.Value);
             return offset.ToUnixTimeSeconds(); // safe conversion
         }
         return 0;
@@ -2324,5 +2438,52 @@ foreach (var existingSeq in existingAttempts.Keys)
             Console.WriteLine($"[ERROR] Failed to get job count for case number {caseNumber}: {ex.Message}");
             return 0;
         }
+    }
+
+    private void RemoveDuplicatePayments(Job job)
+    {
+        if (job?.Payments == null) return;
+        var uniquePayments = job.Payments
+            .GroupBy(p => p.Id)
+            .Select(g => g.First())
+            .ToList();
+        System.Windows.Application.Current.Dispatcher.Invoke(() => {
+            job.Payments.Clear();
+            foreach (var pay in uniquePayments)
+                job.Payments.Add(pay);
+        });
+    }
+
+    // Helper to map payment method string to int code for DB
+    private int GetPaymentMethodCode(string? method)
+    {
+        return method?.ToLower() switch
+        {
+            "cash" => 0,
+            "check" => 1,
+            "credit" => 2,
+            "card" => 2, // Treat 'Card' as 'Credit'
+            "debit" => 3,
+            // Add more mappings as needed
+            _ => 0 // Default to Cash
+        };
+    }
+
+    // Add this helper to map int code to payment method string
+    private string GetPaymentMethodString(object? dbValue)
+    {
+        if (dbValue == null || dbValue == DBNull.Value) return "Cash";
+        int code = 0;
+        if (dbValue is int i) code = i;
+        else if (dbValue is short s) code = s;
+        else int.TryParse(dbValue.ToString(), out code);
+        return code switch
+        {
+            0 => "Cash",
+            1 => "Check",
+            2 => "Card", // Prefer 'Card' for UI consistency
+            3 => "Debit",
+            _ => "Cash"
+        };
     }
 }

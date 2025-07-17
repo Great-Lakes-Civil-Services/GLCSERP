@@ -53,9 +53,9 @@ namespace CivilProcessERP.Views
                 await using var getCmd = new NpgsqlCommand("SELECT enabled FROM users WHERE loginname = @login", conn);
                 getCmd.Parameters.AddWithValue("@login", username);
 
-                object result = await getCmd.ExecuteScalarAsync().ConfigureAwait(false);
+                object? result = await getCmd.ExecuteScalarAsync().ConfigureAwait(false);
 
-                if (result == null)
+                if (result == null || result == DBNull.Value)
                 {
                     Dispatcher.Invoke(() =>
                         System.Windows.MessageBox.Show($"No user found with username: {username}", "Error", MessageBoxButton.OK, MessageBoxImage.Error));
@@ -78,7 +78,7 @@ namespace CivilProcessERP.Views
 
                 int affected = await updateCmd.ExecuteNonQueryAsync().ConfigureAwait(false);
 
-                Dispatcher.Invoke(() =>
+                await Dispatcher.InvokeAsync(async () =>
                 {
                     if (affected > 0)
                     {
@@ -86,11 +86,19 @@ namespace CivilProcessERP.Views
                             $"User '{username}' is now {(newStatus ? "enabled" : "disabled")}.",
                             "Success", MessageBoxButton.OK, MessageBoxImage.Information);
 
-                        new AuditLogService(connString).LogActionAsync(
-                            "ToggleUserStatus",
-                            username,
-                            $"User status toggled to {(newStatus ? "enabled" : "disabled")}",
-                            SessionManager.CurrentUser.LoginName);
+                        var currentUser = SessionManager.CurrentUser;
+                        if (currentUser != null)
+                        {
+                            await new AuditLogService(connString).LogActionAsync(
+                                "ToggleUserStatus",
+                                username,
+                                $"User status toggled to {(newStatus ? "enabled" : "disabled")}",
+                                currentUser.LoginName);
+                        }
+                        else
+                        {
+                            System.Windows.MessageBox.Show("Current user session is not available for audit logging.", "Audit Log Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
+                        }
                     }
                     else
                     {

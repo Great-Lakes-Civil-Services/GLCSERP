@@ -9,8 +9,8 @@ namespace CivilProcessERP.Views
         public EditPaymentWindow(PaymentModel payment)
         {
             InitializeComponent();
-            txtDate.Text = payment.Date.ToString("yyyy-MM-dd");
-            txtTime.Text = payment.TimeOnly;
+            txtDate.Text = payment.DateTime?.ToString("yyyy-MM-dd") ?? string.Empty;
+            txtTime.Text = payment.DateTime?.ToString("HH:mm:ss") ?? string.Empty;
             txtMethod.Text = payment.Method;
             txtDescription.Text = payment.Description;
             txtAmount.Text = payment.Amount.ToString();

@@ -54,8 +54,8 @@ namespace CivilProcessERP.Views
                 await using var reader = await cmd.ExecuteReaderAsync();
                 while (await reader.ReadAsync())
                 {
-                    string first = reader["FirstName"]?.ToString();
-                    string last = reader["LastName"]?.ToString();
+                    string first = reader["FirstName"]?.ToString() ?? string.Empty;
+                    string last = reader["LastName"]?.ToString() ?? string.Empty;
                     if (!string.IsNullOrWhiteSpace(first))
                         lstPlaintiffss.Items.Add($"{first} {last}".Trim());
                 }

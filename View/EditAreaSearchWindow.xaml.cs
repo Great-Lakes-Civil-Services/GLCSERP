@@ -58,12 +58,12 @@ namespace CivilProcessERP.Views
                 while (await reader.ReadAsync())
                 {
                     var zone = reader["zone"]?.ToString();
-                    if (!string.IsNullOrWhiteSpace(zone))
+                    if (lstAreas != null && !string.IsNullOrWhiteSpace(zone))
                         lstAreas.Items.Add(zone);
                 }
 
                 // Automatically reselect previous value if it exists
-                if (!string.IsNullOrWhiteSpace(txtSearch.Text))
+                if (lstAreas != null && !string.IsNullOrWhiteSpace(txtSearch.Text))
                 {
                     foreach (var item in lstAreas.Items)
                     {

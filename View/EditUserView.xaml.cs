@@ -38,7 +38,7 @@ namespace CivilProcessERP.Views
         {
             foreach (System.Windows.Controls.ComboBoxItem item in comboBox.Items)
             {
-                if (item.Content.ToString().Equals(content, StringComparison.OrdinalIgnoreCase))
+                if (item.Content != null && item.Content.ToString().Equals(content, StringComparison.OrdinalIgnoreCase))
                     return item;
             }
             return null;
@@ -100,12 +100,19 @@ namespace CivilProcessERP.Views
 
                 int rows = await cmd.ExecuteNonQueryAsync().ConfigureAwait(false);
 
-                Dispatcher.Invoke(() =>
+                await Dispatcher.InvokeAsync(async () =>
                 {
                     if (rows > 0)
                     {
                         System.Windows.MessageBox.Show("✅ User updated successfully.");
-                        new AuditLogService(connString).LogActionAsync("EditUser", selectedUser.LoginName, "User info updated", SessionManager.CurrentUser.LoginName);
+                        if (SessionManager.CurrentUser != null)
+                        {
+                            await new AuditLogService(connString).LogActionAsync("EditUser", selectedUser.LoginName, "User info updated", SessionManager.CurrentUser.LoginName);
+                        }
+                        else
+                        {
+                            System.Windows.MessageBox.Show("⚠️ Unable to log audit action: current user is null.");
+                        }
                     }
                     else
                     {

@@ -23,7 +23,7 @@ namespace CivilProcessERP
     {
         private readonly Stack<System.Windows.Controls.UserControl> _navigationHistory = new Stack<System.Windows.Controls.UserControl>();
         private readonly Stack<System.Windows.Controls.UserControl> _forwardHistory = new Stack<System.Windows.Controls.UserControl>();
-        private readonly NavigationService _navigationService;
+        private NavigationService? _navigationService;
 
         private bool isDraggingTab = false;
 
@@ -36,7 +36,7 @@ namespace CivilProcessERP
 
         public bool CanGoBack => _navigationHistory.Count > 0;
         public bool CanGoForward => _forwardHistory.Count > 0;
-        private readonly DispatcherTimer _idleTimer;
+        private DispatcherTimer? _idleTimer;
         private const int IdleTimeoutMinutes = 5;
         private DateTime _lastActivityTime;
 
@@ -59,6 +59,9 @@ namespace CivilProcessERP
                 // FIX: Initialize the navigation service!
                 _navigationService = new NavigationService();
 
+                // Set DataContext to MainDashboardViewModel instead of 'this'
+                DataContext = new MainDashboardViewModel(_navigationService!);
+
                 if (DashboardLayoutGrid == null)
                 {
                     Console.WriteLine("[ERROR] DashboardLayoutGrid is null after InitializeComponent");
@@ -80,8 +83,6 @@ namespace CivilProcessERP
                     System.Windows.MessageBox.Show("_navigationService is null in MainWindow constructor");
                 }
                 // Add more checks for other fields if needed
-
-                DataContext = this;
 
                 // Defensive null checks for critical controls
                 if (DashboardLayoutGrid == null || LoginContent == null || MainContentControl == null)
@@ -116,6 +117,7 @@ namespace CivilProcessERP
                 InputManager.Current.PreProcessInput += OnActivityDetected;
                 OpenWindows.Add(this);
                 this.Closed += (s, e) => OpenWindows.Remove(this);
+                this.Closing += (s, e) => { if (_idleTimer != null) _idleTimer.Stop(); };
                 this.WindowState = WindowState.Maximized; // Always open maximized
                 Console.WriteLine("[DEBUG] MainWindow constructor finished");
             }
@@ -134,7 +136,7 @@ namespace CivilProcessERP
         {
             if (sender is System.Windows.Controls.Button button && button.Tag is string pageName)
             {
-                System.Windows.Controls.UserControl newPage = _navigationService.GetView(pageName);
+                System.Windows.Controls.UserControl? newPage = _navigationService?.GetView(pageName);
                 if (newPage != null)
                 {
                     NavigateTo(newPage);
@@ -160,8 +162,10 @@ namespace CivilProcessERP
 
        public void AddNewTab(System.Windows.Controls.UserControl content, string title)
 {
+    Console.WriteLine($"[DEBUG] AddNewTab() called. DataContext type: {DataContext?.GetType().FullName}");
     if (DataContext is MainDashboardViewModel viewModel)
     {
+        Console.WriteLine($"[DEBUG] AddNewTab() DataContext is MainDashboardViewModel, proceeding...");
         Console.WriteLine($"[DEBUG] AddNewTab() called with title: {title}");
 
         if (viewModel.OpenTabs.Count >= 6)
@@ -185,6 +189,10 @@ namespace CivilProcessERP
 
         viewModel.OpenTabs.Add(newTab);
         viewModel.SelectedTab = newTab;
+    }
+    else
+    {
+        Console.WriteLine("[ERROR] DataContext is not MainDashboardViewModel in AddNewTab!");
     }
 }
 
@@ -290,12 +298,12 @@ namespace CivilProcessERP
         }
 
         // Helper to find ancestor of a type
-        private static T FindAncestor<T>(DependencyObject current) where T : DependencyObject
+        private static T? FindAncestor<T>(DependencyObject current) where T : DependencyObject
         {
             while (current != null)
             {
-                if (current is T)
-                    return (T)current;
+                if (current is T t)
+                    return t;
                 current = VisualTreeHelper.GetParent(current);
             }
             return null;
@@ -313,7 +321,7 @@ namespace CivilProcessERP
                 var targetScreen = Screen.FromPoint(mousePos);
                 // Create new window
                 var newWindow = new MainWindow();
-                var newVm = new MainDashboardViewModel(newWindow._navigationService);
+                var newVm = new MainDashboardViewModel(newWindow._navigationService!);
                 newVm.OpenTabs.Add(tabVM);
                 tabVM.ParentWindow = newWindow;
                 newWindow.DataContext = newVm;
@@ -367,7 +375,7 @@ namespace CivilProcessERP
             DashboardLayoutGrid.Visibility = Visibility.Visible;
             LoginContent.Visibility = Visibility.Collapsed;
 
-            var dashboard = _navigationService.GetView("Dashboard");
+            var dashboard = _navigationService?.GetView("Dashboard");
              
             if (MainContentControl == null)
             {
@@ -433,9 +441,14 @@ namespace CivilProcessERP
 
         private void IdleTimer_Tick(object? sender, EventArgs e)
         {
+            if (!this.IsVisible || !this.IsLoaded)
+            {
+                _idleTimer?.Stop();
+                return;
+            }
             if ((DateTime.Now - _lastActivityTime).TotalMinutes >= IdleTimeoutMinutes)
             {
-                _idleTimer.Stop();
+                _idleTimer?.Stop();
                 System.Windows.MessageBox.Show("Session expired due to inactivity.", "Auto Logout", MessageBoxButton.OK, MessageBoxImage.Warning);
                 Logout();
             }
@@ -478,7 +491,8 @@ namespace CivilProcessERP
             SessionManager.CurrentUser = null;
             LoginContent.Content = new LoginView();
 
-            _idleTimer.Stop(); // Pause idle timer until next loginßß
+            if (_idleTimer != null)
+                _idleTimer.Stop(); // Pause idle timer until next loginßß
         }
 
         private void AdministrationButton_Click(object sender, RoutedEventArgs e)
@@ -535,7 +549,7 @@ namespace CivilProcessERP
             if (Keyboard.Modifiers == ModifierKeys.Control && e.Key == Key.T)
             {
                 // Ctrl+T: Open a new ERP window (not a tab)
-                AddNewMainWindow_Click(this, null);
+                AddNewMainWindow_Click(this, new RoutedEventArgs());
                 e.Handled = true;
             }
             else if (Keyboard.Modifiers == ModifierKeys.Control && e.Key == Key.W)
@@ -548,7 +562,7 @@ namespace CivilProcessERP
             else if (Keyboard.Modifiers == ModifierKeys.Control && e.Key == Key.Tab)
             {
                 // Ctrl+Tab: Next tab
-                int idx = vm.OpenTabs.IndexOf(vm.SelectedTab);
+                int idx = vm.OpenTabs.IndexOf(vm.SelectedTab!);
                 if (idx >= 0 && vm.OpenTabs.Count > 1)
                 {
                     int next = (idx + 1) % vm.OpenTabs.Count;
@@ -570,7 +584,7 @@ namespace CivilProcessERP
             var vm = this.DataContext as MainDashboardViewModel;
             if (vm != null)
             {
-                var dashboard = new MainDashboard(_navigationService);
+                var dashboard = new MainDashboard(_navigationService!);
                 var tab = new TabItemViewModel("Dashboard", dashboard) { ParentWindow = this };
                 vm.OpenTabs.Add(tab);
                 vm.SelectedTab = tab;

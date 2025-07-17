@@ -4,15 +4,20 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using CivilProcessERP.ViewModels;
 using CivilProcessERP.Services;
+using System.Runtime.InteropServices;
 
 namespace CivilProcessERP
 {
     public partial class App : System.Windows.Application
     {
-        private IHost _host;
+        private IHost? _host;
+
+        [DllImport("kernel32.dll")]
+        private static extern bool AllocConsole();
 
         protected override async void OnStartup(StartupEventArgs e)
         {
+            AllocConsole(); // Attach a console window
             base.OnStartup(e);
 
             _host = Host.CreateDefaultBuilder()

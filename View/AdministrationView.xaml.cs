@@ -2,11 +2,9 @@ using System;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input; // Added for KeyEventArgs
-using System.Windows.Controls; // Added for Selector
 using System.Windows.Controls.Primitives; // Added for Selector.SelectionChangedEvent
 using CivilProcessERP.Services;
 using CivilProcessERP.Models; // Added for UserModel
-using CivilProcessERP.Services;
 using System.Threading.Tasks;
 
 namespace CivilProcessERP.Views
@@ -54,7 +52,7 @@ namespace CivilProcessERP.Views
 }
 
         // ✅ Navigate to CreateUserView as a new full tab/page
-        private async void CreateUserButton_Click(object sender, RoutedEventArgs e)
+        private void CreateUserButton_Click(object sender, RoutedEventArgs e)
         {
             Console.WriteLine("[DEBUG] Create User button clicked — navigating to new page...");
             var mainWindow = Window.GetWindow(this) as MainWindow;
@@ -71,7 +69,7 @@ namespace CivilProcessERP.Views
         }
 
         // ✅ Navigate to EditUserView as a new full tab/page
-       private async void EditUserButton_Click(object sender, RoutedEventArgs e)
+       private void EditUserButton_Click(object sender, RoutedEventArgs e)
 {
     Console.WriteLine("[DEBUG] Edit User button clicked — navigating via MainContentArea...");
     var mainWindow = Window.GetWindow(this) as MainWindow;
@@ -117,6 +115,7 @@ namespace CivilProcessERP.Views
             {
                 System.Windows.MessageBox.Show("Main window is not available.", "Error", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
             }
+            await Task.CompletedTask;
         }
 
         private async void ToggleUserStatusButton_Click(object sender, RoutedEventArgs e)
@@ -132,6 +131,7 @@ namespace CivilProcessERP.Views
             {
                 System.Windows.MessageBox.Show("Main window not found.", "Error", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
             }
+            await Task.CompletedTask;
         }
         private async void AssignPermissionsButton_Click(object sender, RoutedEventArgs e)
         {
@@ -145,6 +145,7 @@ namespace CivilProcessERP.Views
             {
                 System.Windows.MessageBox.Show("Main window not found.", "Error", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
             }
+            await Task.CompletedTask;
         }
 
         private async void FreezeOrgButton_Click(object sender, RoutedEventArgs e)
@@ -158,6 +159,7 @@ namespace CivilProcessERP.Views
             {
                 System.Windows.MessageBox.Show("Main window not found.", "Error", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
             }
+            await Task.CompletedTask;
         }
 
         private readonly AuditLogService _auditLogService;
@@ -254,6 +256,7 @@ private async void DeleteGroupButton_Click(object sender, RoutedEventArgs e)
     var mainWindow = Window.GetWindow(this) as MainWindow;
     if (mainWindow != null)
         mainWindow.MainContentControl.Content = new DeleteGroupView();
+    await Task.CompletedTask;
 }
 
         private async void ManagePermissionsButton_Click(object sender, RoutedEventArgs e)
@@ -261,6 +264,7 @@ private async void DeleteGroupButton_Click(object sender, RoutedEventArgs e)
             var mainWindow = Window.GetWindow(this) as MainWindow;
             if (mainWindow != null)
                 mainWindow.MainContentControl.Content = new ManagePermissionsView();
+            await Task.CompletedTask;
         }
 
 private async void ManageRolePermissionsButton_Click(object sender, RoutedEventArgs e)
@@ -275,6 +279,7 @@ private async void ManageRolePermissionsButton_Click(object sender, RoutedEventA
     {
         System.Windows.MessageBox.Show("Main window not found.", "Error", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
     }
+    await Task.CompletedTask;
 }
 
 
@@ -297,7 +302,7 @@ private async void ManageRolePermissionsButton_Click(object sender, RoutedEventA
     SelectedUserPermissionsGrid.ItemsSource = _loggedInUserPermissions
         .Select(p => new PermissionModel { Permission = p, IsGranted = true })
         .ToList();
-    Dispatcher.BeginInvoke(new Action(async () =>
+    _ = Dispatcher.BeginInvoke(new Action(async () =>
     {
         await RefreshGroupListsAsync();
         if (GroupListBox.Items.Count > 0)

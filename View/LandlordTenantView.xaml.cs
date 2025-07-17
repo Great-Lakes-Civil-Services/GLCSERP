@@ -136,11 +136,19 @@ namespace CivilProcessERP.Views
 
         private void AddJobButton_Click(object sender, RoutedEventArgs e)
         {
+            Console.WriteLine("[DEBUG] AddJobButton_Click called");
             var mainWindow = Window.GetWindow(this) as MainWindow;
             if (mainWindow != null)
             {
+                Console.WriteLine("[DEBUG] MainWindow found, creating new Job and AddJobView");
                 var newJob = new Job();
-                mainWindow.OpenJob(newJob);
+                var addJobView = new AddJobView(newJob);
+                mainWindow.MainContentControl.Content = addJobView; // Show in main content area
+                Console.WriteLine("[DEBUG] AddJobView set as MainContentControl.Content");
+            }
+            else
+            {
+                Console.WriteLine("[ERROR] MainWindow not found in AddJobButton_Click");
             }
         }
 

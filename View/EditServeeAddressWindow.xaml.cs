@@ -4,11 +4,12 @@ namespace CivilProcessERP.Views
 {
     public partial class EditServeeAddressWindow : Window
     {
-        public string Address1 => txtAddress1.Text;
-        public string Address2 => txtAddress2.Text;
-        public string City => txtCity.Text;
-        public string State => txtState.Text;
-        public string Zip => txtZip.Text;
+        public string Address1 => txtAddress1.Text.Trim();
+        public string Address2 => txtAddress2.Text.Trim();
+        public string City => txtCity.Text.Trim();
+        public string State => txtState.Text.Trim();
+        public string Zip => txtZip.Text.Trim();
+        public string FullAddress => $"{Address1},{Address2},{City},{State},{Zip}".Trim(',');
 
         
 

@@ -20,9 +20,9 @@
 
         <!-- Header -->
         <StackPanel Orientation="Horizontal" Grid.Row="0" Background="White" Margin="10">
-            <TextBlock Text="Great Lakes Civil Services" FontSize="22" FontWeight="Bold" Foreground="Blue"/>
-            <TextBlock Text=" > Job #" FontSize="16" Margin="10,0"/>
-            <TextBlock Text="{Binding Job.JobId}" FontSize="16" FontWeight="Bold"/>
+            <TextBlock Text="Great Lakes Civil Services" FontSize="24" FontWeight="Bold" Foreground="Blue"/>
+            <TextBlock Text="  >  Job # " FontSize="18" FontWeight="Bold" Margin="10,0,0,0"/>
+            <TextBlock Text="{Binding Job.JobId, Mode=OneWay}" FontSize="18" FontWeight="Bold" Margin="2,0,0,0"/>
         </StackPanel>
 
         <!-- Main Content -->
@@ -162,27 +162,18 @@
         <TextBlock Text="Court Date and Time" FontWeight="Bold" Margin="5"/>
         <StackPanel Orientation="Horizontal" Margin="5">
             <TextBlock Text="Date:" Margin="5"/>
-            <TextBox Text="{Binding Job.Date}" Width="120" PreviewMouseDoubleClick="EditJobDate_MouseDoubleClick" Margin="5"/>
+            <DatePicker SelectedDate="{Binding Job.CourtDateTime, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Width="120" Margin="5" SelectedDateChanged="CourtDatePicker_SelectedDateChanged"/>
             <TextBlock Text="Time:" Margin="5"/>
-            <TextBox Text="{Binding Job.Time}" PreviewMouseDoubleClick="EditTime_MouseDoubleClick" Width="120" Margin="5"/>
+            <TextBox Text="{Binding CourtTimeString, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Width="120" Margin="5" LostFocus="CourtTimeTextBox_LostFocus" PreviewMouseDoubleClick="EditTime_MouseDoubleClick" IsReadOnly="False" IsEnabled="True"/>
         </StackPanel>
-
         <TextBlock Text="Service Information" FontWeight="Bold" Margin="5"/>
-
-<StackPanel Orientation="Horizontal" Margin="5">
-    <!-- Service Type -->
-    <TextBox Text="{Binding Job.ServiceType}" PreviewMouseDoubleClick="EditServiceType_MouseDoubleClick" Width="180" Margin="0,0,10,0"/>
-
-    <!-- Date -->
-    <TextBlock Text="Date:" VerticalAlignment="Center" Margin="0,0,5,0"/>
-    <TextBox Text="{Binding Job.ServiceDate}" PreviewMouseDoubleClick="EditServiceDate_MouseDoubleClick" Width="120" Margin="0,0,10,0"/>
-
-    <!-- Time -->
-    <TextBlock Text="Time:" VerticalAlignment="Center" Margin="0,0,5,0"/>
-    <TextBox Text="{Binding Job.ServiceTime}" PreviewMouseDoubleClick="EditServiceTime_MouseDoubleClick" Width="120"/>
-
-
-</StackPanel>
+        <StackPanel Orientation="Horizontal" Margin="5">
+            <TextBox Text="{Binding Job.ServiceType}" PreviewMouseDoubleClick="EditServiceType_MouseDoubleClick" Width="180" Margin="0,0,10,0"/>
+            <TextBlock Text="Date:" VerticalAlignment="Center" Margin="0,0,5,0"/>
+            <DatePicker SelectedDate="{Binding Job.ServiceDateTime, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Width="120" Margin="0,0,10,0" SelectedDateChanged="ServiceDatePicker_SelectedDateChanged"/>
+            <TextBlock Text="Time:" VerticalAlignment="Center" Margin="0,0,5,0"/>
+            <TextBox Text="{Binding ServiceTimeString, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Width="120" LostFocus="ServiceTimeTextBox_LostFocus" PreviewMouseDoubleClick="EditServiceTime_MouseDoubleClick" IsReadOnly="False" IsEnabled="True"/>
+        </StackPanel>
     </StackPanel>
     <StackPanel Grid.Row="1">
     <TextBlock Text="Comments" FontWeight="Bold" Margin="5"/>
@@ -193,7 +184,7 @@
                 <GridViewColumn Header="DATE" Width="100">
                     <GridViewColumn.CellTemplate>
                         <DataTemplate>
-                            <TextBlock Text="{Binding Date, StringFormat={}{0:MM/dd/yyyy}}"/>
+                            <TextBlock Text="{Binding DateDisplay}" />
                         </DataTemplate>
                     </GridViewColumn.CellTemplate>
                 </GridViewColumn>
@@ -202,7 +193,7 @@
                 <GridViewColumn Header="TIME" Width="80">
                     <GridViewColumn.CellTemplate>
                         <DataTemplate>
-                            <TextBlock Text="{Binding Time, StringFormat={}{0:h:mm tt}}"/>
+                            <TextBlock Text="{Binding TimeDisplay}" />
                         </DataTemplate>
                     </GridViewColumn.CellTemplate>
                 </GridViewColumn>
@@ -264,7 +255,7 @@
                 <GridViewColumn Header="DATE" Width="100">
                     <GridViewColumn.CellTemplate>
                         <DataTemplate>
-                            <TextBlock Text="{Binding Date, StringFormat={}{0:MM/dd/yyyy}}"/>
+                            <TextBlock Text="{Binding DateDisplay}" />
                         </DataTemplate>
                     </GridViewColumn.CellTemplate>
                 </GridViewColumn>
@@ -273,7 +264,7 @@
                 <GridViewColumn Header="TIME" Width="80">
                     <GridViewColumn.CellTemplate>
                         <DataTemplate>
-                            <TextBlock Text="{Binding Time, StringFormat={}{0:h:mm tt}}"/>
+                            <TextBlock Text="{Binding TimeDisplay}" />
                         </DataTemplate>
                     </GridViewColumn.CellTemplate>
                 </GridViewColumn>
@@ -460,8 +451,8 @@
             <ListView x:Name="PaymentsListView" ItemsSource="{Binding Job.Payments}" Height="100">
                 <ListView.View>
                     <GridView>
-                        <GridViewColumn Header="Date" DisplayMemberBinding="{Binding Date}" Width="150"/>
-                        <GridViewColumn Header="Time" DisplayMemberBinding="{Binding TimeOnly}" Width="100"/>
+                        <GridViewColumn Header="Date" DisplayMemberBinding="{Binding DateDisplay}" Width="150"/>
+                        <GridViewColumn Header="Time" DisplayMemberBinding="{Binding TimeDisplay}" Width="100"/>
                         <GridViewColumn Header="Method" DisplayMemberBinding="{Binding Method}" Width="100"/>
                         <GridViewColumn Header="Description" DisplayMemberBinding="{Binding Description}" Width="200"/>
                         <GridViewColumn Header="Amount" DisplayMemberBinding="{Binding Amount, StringFormat={}{0:C}}" Width="100"/>

@@ -25,8 +25,8 @@ namespace CivilProcessERP.Views
           private readonly SemaphoreSlim _blobLock = new SemaphoreSlim(1, 1); // 🔒 Thread-safe guard for blob preview
         private readonly SemaphoreSlim _fileAccessLock = new SemaphoreSlim(1, 1); // 🔒 Thread-safe guard for file access
 
-        private string _loggedInRoleName;
-        private Job _originalJob;
+        private string? _loggedInRoleName = null;
+        private Job? _originalJob = null;
 
         private int _jobCountForCaseNumber;
         public int JobCountForCaseNumber
@@ -43,6 +43,11 @@ namespace CivilProcessERP.Views
         {
             try
             {
+                if (SessionManager.CurrentUser == null)
+                {
+                    System.Windows.MessageBox.Show("No user session found.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    return;
+                }
                 var roleService = new RolePermissionService();
                 _loggedInRoleName = await roleService.GetRoleNameByIdAsync(SessionManager.CurrentUser.RoleNumber);
 
@@ -95,24 +100,24 @@ namespace CivilProcessERP.Views
             // if (job.ChangeHistory == null || !job.ChangeHistory.Any())
             // {
             //     job.ChangeHistory = new List<ChangeEntryModel>
-            // {
-            //     new ChangeEntryModel
             //     {
-            //         Date = DateTime.Now.AddDays(-3),
-            //         FieldName = "Client",
-            //         OldValue = "ABC Corp",
-            //         NewValue = "XYZ LLC",
-            //         ChangedBy = "Admin"
-            //     },
-            //     new ChangeEntryModel
-            //     {
-            //         Date = DateTime.Now.AddDays(-1),
-            //         FieldName = "Zone",
-            //         OldValue = "North",
-            //         NewValue = "West",
-            //         ChangedBy = "System"
-            //     }
-            // };
+            //         new ChangeEntryModel
+            //         {
+            //             Date = DateTime.Now.AddDays(-3),
+            //             FieldName = "Client",
+            //             OldValue = "ABC Corp",
+            //             NewValue = "XYZ LLC",
+            //             ChangedBy = "Admin"
+            //         },
+            //         new ChangeEntryModel
+            //         {
+            //             Date = DateTime.Now.AddDays(-1),
+            //             FieldName = "Zone",
+            //             OldValue = "North",
+            //             NewValue = "West",
+            //             ChangedBy = "System"
+            //         }
+            //     };
             // }
         }
 
@@ -181,8 +186,8 @@ private async void AttachmentsListView_MouseDoubleClick(object sender, MouseButt
         return;
     }
 
-    string blobmetadataId = selectedAttachment.BlobMetadataId;
-    string fileExtension = selectedAttachment.FileExtension?.Trim().ToLower();
+    string blobmetadataId = selectedAttachment.BlobMetadataId ?? string.Empty;
+    string fileExtension = selectedAttachment.FileExtension?.Trim().ToLower() ?? string.Empty;
 
     Console.WriteLine($"🔍 [DEBUG] BlobMetadataId: {blobmetadataId}");
     Console.WriteLine($"🔍 [DEBUG] FileExtension: {fileExtension}");
@@ -252,7 +257,7 @@ private async Task<byte[]> FetchBlobDataAsync(string blobmetadataId)
         cmd.Parameters.AddWithValue("blobmetadataId", Guid.Parse(blobmetadataId));
 
         var result = await cmd.ExecuteScalarAsync();
-        fileData = result as byte[];
+        fileData = result as byte[] ?? Array.Empty<byte>();
     }
     catch (Exception ex)
     {
@@ -383,19 +388,23 @@ private async void AddComment_Click(object sender, RoutedEventArgs e)
     await _commentLock.WaitAsync();
     try
     {
+        int maxSeq = Job.Comments.Any() ? Job.Comments.Max(c => c.Seqnum) : 0;
         var newEntry = new CommentModel
         {
-            Date = DateTime.Now.ToString("yyyy-MM-dd"),
-            Time = DateTime.Now.ToString("HH:mm:ss"),
+            Seqnum = maxSeq + 1,
+            DateTime = DateTime.Now,
             Body = "New Comment",
             Source = "User",
             Aff = false,
             FS = false,
             Att = false
         };
-
+        // Optionally, prompt for comment body or validate
+        if (string.IsNullOrWhiteSpace(newEntry.Body))
+            return;
         Job.Comments.Add(newEntry);
-        CommentsListView.Items.Refresh();
+        OnPropertyChanged(nameof(Job.Comments));
+        CommentsListView.Items.Refresh(); // Refresh the ListView to show the new comment
         Console.WriteLine("➕ New comment added.");
     }
     finally
@@ -417,7 +426,7 @@ private async void EditComment_Click(object sender, RoutedEventArgs e)
     {
         var temp = new LogEntryModel
         {
-            Date = DateTime.Parse($"{selected.Date} {selected.Time}"),
+            Date = DateTime.Parse($"{selected.DateTime:yyyy-MM-dd HH:mm:ss}"),
             Body = selected.Body,
             Aff = selected.Aff,
             FS = selected.FS,
@@ -429,8 +438,7 @@ private async void EditComment_Click(object sender, RoutedEventArgs e)
 
         if (win.ShowDialog() == true)
         {
-            selected.Date = win.SelectedDate.ToString("yyyy-MM-dd");
-            selected.Time = win.SelectedDate.ToString("HH:mm:ss");
+            selected.DateTime = win.SelectedDate.Date + win.SelectedTime;
             selected.Body = win.Body;
             selected.Aff = win.Aff;
             selected.FS = win.DS;
@@ -460,8 +468,7 @@ private void AddAttempt_Click(object sender, RoutedEventArgs e)
 {
     var newAttempt = new AttemptsModel
     {
-        Date = DateTime.Now.ToString("yyyy-MM-dd"),
-        Time = DateTime.Now.ToString("HH:mm:ss"),
+        DateTime = DateTime.Now,
         Body = "New attempt",
         Source = "UI",
         Aff = false,
@@ -480,7 +487,7 @@ private void AddAttempt_Click(object sender, RoutedEventArgs e)
     {
         var temp = new LogEntryModel
         {
-            Date = DateTime.Parse($"{selectedAttempt.Date} {selectedAttempt.Time}"),
+            Date = DateTime.Parse($"{selectedAttempt.DateTime:yyyy-MM-dd HH:mm:ss}"),
             Body = selectedAttempt.Body,
             Aff = selectedAttempt.Aff,
             FS = selectedAttempt.FS,
@@ -492,8 +499,7 @@ private void AddAttempt_Click(object sender, RoutedEventArgs e)
 
         if (editWindow.ShowDialog() == true)
         {
-            selectedAttempt.Date = editWindow.SelectedDate.ToString("yyyy-MM-dd");
-            selectedAttempt.Time = editWindow.SelectedDate.ToString("HH:mm:ss");
+            selectedAttempt.DateTime = editWindow.SelectedDate.Date + editWindow.SelectedTime;
             selectedAttempt.Body = editWindow.Body;
             selectedAttempt.Aff = editWindow.Aff;
             selectedAttempt.FS = editWindow.DS;
@@ -582,6 +588,7 @@ private async void EditInvoice_Click(object sender, RoutedEventArgs e)
 
             InvoiceListView.Items.Refresh();
             OnPropertyChanged(nameof(Job.TotalInvoiceAmount));
+            OnPropertyChanged(nameof(Job.InvoiceEntries)); // Ensure UI updates
             Console.WriteLine("✏️ Invoice edited.");
         }
     }
@@ -625,17 +632,14 @@ private async void AddPayment_Click(object sender, RoutedEventArgs e)
     {
         var entry = new PaymentModel
         {
-            Id = Guid.NewGuid(),
-            Date = DateTime.Now,
-            TimeOnly = DateTime.Now.ToString("HH:mm:ss"),
+            Id = Guid.Empty, // Use Guid.Empty for new payments
+            DateTime = DateTime.Now,
             Method = "Cash",
             Description = "New Payment",
             Amount = 0m
         };
         Job.Payments.Add(entry);
         OnPropertyChanged(nameof(Job.TotalPaymentsAmount));
-        Console.WriteLine("➕ Dummy payment row added.");
-        // Optionally select the new row in the UI:
         PaymentsListView.SelectedItem = entry;
     }
     finally
@@ -665,15 +669,15 @@ private readonly SemaphoreSlim _paymentLock = new SemaphoreSlim(1, 1);
 
                 if (editWindow.ShowDialog() == true)
                 {
+                    DateTime parsedDateTime;
                     if (DateTime.TryParseExact(
                             editWindow.Date + " " + editWindow.Time,
                             "yyyy-MM-dd HH:mm:ss",
                             null,
                             System.Globalization.DateTimeStyles.None,
-                            out var parsedDateTime))
+                            out parsedDateTime))
                     {
-                        selected.Date = parsedDateTime;
-                        selected.TimeOnly = editWindow.Time;
+                        selected.DateTime = parsedDateTime;
                     }
                     else
                     {
@@ -687,6 +691,7 @@ private readonly SemaphoreSlim _paymentLock = new SemaphoreSlim(1, 1);
 
                     PaymentsListView.Items.Refresh();
                     OnPropertyChanged(nameof(Job.TotalPaymentsAmount));
+                    OnPropertyChanged(nameof(Job.Payments)); // Ensure UI updates
                     Console.WriteLine("✏️ Payment updated.");
                 }
             }
@@ -750,6 +755,7 @@ private async void DeletePayment_Click(object sender, RoutedEventArgs e)
 
                 Job.InvoiceEntries.Remove(selected);
                 OnPropertyChanged(nameof(Job.TotalInvoiceAmount));
+                OnPropertyChanged(nameof(Job.InvoiceEntries)); // Ensure UI updates
                 Console.WriteLine("🗑️ Invoice removed from list.");
             }
             finally
@@ -769,7 +775,7 @@ public void RecalculateTotals()
 
 
 
-public event PropertyChangedEventHandler PropertyChanged;
+public event PropertyChangedEventHandler? PropertyChanged;
         protected void OnPropertyChanged(string name)
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
@@ -1070,7 +1076,7 @@ private async void EditArea_MouseDoubleClick(object sender, MouseButtonEventArgs
 
         if (dialog5.ShowDialog() == true)
         {
-            Job.Zone = dialog5.txtSearch.Text.Trim();
+            Job.Zone = dialog5.SelectedArea;
             OnPropertyChanged(nameof(Job.Zone));
             Console.WriteLine($"✏️ Zone updated: {Job.Zone}");
         }
@@ -1096,7 +1102,7 @@ private async void EditTypeOfWrit_MouseDoubleClick(object sender, MouseButtonEve
 
         if (dialog6.ShowDialog() == true)
         {
-            Job.TypeOfWrit = dialog6.txtSearch.Text.Trim();
+            Job.TypeOfWrit = dialog6.SelectedTypeOfWrit;
             OnPropertyChanged(nameof(Job.TypeOfWrit));
             Console.WriteLine($"✏️ Type of Writ updated: {Job.TypeOfWrit}");
         }
@@ -1148,11 +1154,10 @@ private async void EditSQLDateTimeCreated_MouseDoubleClick(object sender, MouseB
     await _editLock.WaitAsync();
     try
     {
-        var sqlDateTimeCreated = DateTime.TryParse(Job.SqlDateTimeCreated, out var parsedDate) ? (DateTime?)parsedDate : null;
-        var dialog = new EditDateDialog("SQL DateTime Created", sqlDateTimeCreated);
-        if (dialog.ShowDialog() == true && dialog.SelectedDate != null)
+        var dialog = new EditDateDialog("SQL DateTime Created", Job.SqlDateTimeCreated);
+        if (dialog.ShowDialog() == true && dialog.SelectedDate.HasValue)
         {
-            Job.SqlDateTimeCreated = dialog.SelectedDate.Value.ToString("yyyy-MM-dd HH:mm:ss");
+            Job.SqlDateTimeCreated = dialog.SelectedDate.Value;
             OnPropertyChanged(nameof(Job.SqlDateTimeCreated));
         }
     }
@@ -1174,7 +1179,7 @@ private async void EditServiceType_MouseDoubleClick(object sender, MouseButtonEv
 
         if (dialog9.ShowDialog() == true)
         {
-            Job.ServiceType = dialog9.txtSearch.Text.Trim();
+            Job.ServiceType = dialog9.SelectedServiceType;
             OnPropertyChanged(nameof(Job.ServiceType));
         }
     }
@@ -1189,11 +1194,11 @@ private async void EditTime_MouseDoubleClick(object sender, MouseButtonEventArgs
     await _editLock.WaitAsync();
     try
     {
-        var dialog11 = new EditTimeDialog("Court Time", TimeSpan.TryParse(Job.Time, out var timeVal) ? timeVal : (TimeSpan?)null);
-        if (dialog11.ShowDialog() == true && dialog11.SelectedTime.HasValue)
+        var dialog = new EditTimeDialog("Court Time", Job.CourtDateTime?.TimeOfDay);
+        if (dialog.ShowDialog() == true && dialog.SelectedTime.HasValue && Job.CourtDateTime.HasValue)
         {
-            Job.Time = dialog11.SelectedTime.Value.ToString(@"hh\:mm");
-            OnPropertyChanged(nameof(Job.Time));
+            Job.CourtDateTime = Job.CourtDateTime.Value.Date + dialog.SelectedTime.Value;
+            OnPropertyChanged(nameof(Job.CourtDateTime));
         }
     }
     finally
@@ -1207,11 +1212,11 @@ private async void EditServiceTime_MouseDoubleClick(object sender, MouseButtonEv
     await _editLock.WaitAsync();
     try
     {
-        var dialog12 = new EditTimeDialog("Service Time", TimeSpan.TryParse(Job.ServiceTime, out var timeVal) ? timeVal : (TimeSpan?)null);
-        if (dialog12.ShowDialog() == true && dialog12.SelectedTime.HasValue)
+        var dialog = new EditTimeDialog("Service Time", Job.ServiceDateTime?.TimeOfDay);
+        if (dialog.ShowDialog() == true && dialog.SelectedTime.HasValue && Job.ServiceDateTime.HasValue)
         {
-            Job.ServiceTime = dialog12.SelectedTime.Value.ToString(@"hh\:mm");
-            OnPropertyChanged(nameof(Job.ServiceTime));
+            Job.ServiceDateTime = Job.ServiceDateTime.Value.Date + dialog.SelectedTime.Value;
+            OnPropertyChanged(nameof(Job.ServiceDateTime));
         }
     }
     finally
@@ -1225,11 +1230,11 @@ private async void EditJobDate_MouseDoubleClick(object sender, MouseButtonEventA
     await _editLock.WaitAsync();
     try
     {
-        var dialog13 = new EditDateDialog("Court Date", DateTime.TryParse(Job.Date, out var dateVal) ? dateVal : (DateTime?)null);
-        if (dialog13.ShowDialog() == true && dialog13.SelectedDate.HasValue)
+        var dialog = new EditDateDialog("Court Date", Job.CourtDateTime);
+        if (dialog.ShowDialog() == true && dialog.SelectedDate.HasValue)
         {
-            Job.Date = dialog13.SelectedDate.Value.ToString("MM/dd/yyyy");
-            OnPropertyChanged(nameof(Job.Date));
+            Job.CourtDateTime = dialog.SelectedDate.Value;
+            OnPropertyChanged(nameof(Job.CourtDateTime));
         }
     }
     finally
@@ -1243,11 +1248,11 @@ private async void EditServiceDate_MouseDoubleClick(object sender, MouseButtonEv
     await _editLock.WaitAsync();
     try
     {
-        var dialog14 = new EditDateDialog("Service Date", DateTime.TryParse(Job.ServiceDate, out var dateVal) ? dateVal : (DateTime?)null);
-        if (dialog14.ShowDialog() == true && dialog14.SelectedDate.HasValue)
+        var dialog = new EditDateDialog("Service Date", Job.ServiceDateTime);
+        if (dialog.ShowDialog() == true && dialog.SelectedDate.HasValue)
         {
-            Job.ServiceDate = dialog14.SelectedDate.Value.ToString("MM/dd/yyyy");
-            OnPropertyChanged(nameof(Job.ServiceDate));
+            Job.ServiceDateTime = dialog.SelectedDate.Value.Date + (Job.ServiceDateTime?.TimeOfDay ?? TimeSpan.Zero);
+            OnPropertyChanged(nameof(Job.ServiceDateTime));
         }
     }
     finally
@@ -1263,11 +1268,10 @@ private async void EditExpirationDate_MouseDoubleClick(object sender, MouseButto
     await _editLock.WaitAsync();
     try
     {
-        var existing = DateTime.TryParse(Job.ExpirationDate, out var parsed) ? parsed : (DateTime?)null;
-        var dialog15 = new EditDateTimeDialog("Expiration Date", existing);
+        var dialog15 = new EditDateTimeDialog("Expiration Date", Job.ExpirationDate);
         if (dialog15.ShowDialog() == true && dialog15.SelectedDateTime.HasValue)
         {
-            Job.ExpirationDate = dialog15.SelectedDateTime.Value.ToString("MM/dd/yyyy HH:mm");
+            Job.ExpirationDate = dialog15.SelectedDateTime.Value;
             OnPropertyChanged(nameof(Job.ExpirationDate));
         }
     }
@@ -1282,11 +1286,10 @@ private async void EditLastDayToServe_MouseDoubleClick(object sender, MouseButto
     await _editLock.WaitAsync();
     try
     {
-        var existing = DateTime.TryParse(Job.LastDayToServe, out var parsed) ? parsed : (DateTime?)null;
-        var dialog16 = new EditDateTimeDialog("Last Day to Serve Date", existing);
+        var dialog16 = new EditDateTimeDialog("Last Day to Serve Date", Job.LastDayToServe);
         if (dialog16.ShowDialog() == true && dialog16.SelectedDateTime.HasValue)
         {
-            Job.LastDayToServe = dialog16.SelectedDateTime.Value.ToString("MM/dd/yyyy HH:mm");
+            Job.LastDayToServe = dialog16.SelectedDateTime.Value;
             OnPropertyChanged(nameof(Job.LastDayToServe));
         }
     }
@@ -1302,10 +1305,10 @@ private async void EditServeeAddress_MouseDoubleClick(object sender, MouseButton
     try
     {
         string address1 = Job.AddressLine1 ?? "";
-string address2 = Job.AddressLine2 ?? "";
-string city     = Job.City ?? "";
-string state    = Job.State ?? "";
-string zip      = Job.Zip ?? "";
+        string address2 = Job.AddressLine2 ?? "";
+        string city     = Job.City ?? "";
+        string state    = Job.State ?? "";
+        string zip      = Job.Zip ?? "";
 
         var dialog = new EditServeeAddressWindow(address1, address2, city, state, zip)
         {
@@ -1314,9 +1317,18 @@ string zip      = Job.Zip ?? "";
 
         if (dialog.ShowDialog() == true)
         {
-            Job.Address = $"{dialog.Address1},{dialog.Address2},{dialog.City},{dialog.State},{dialog.Zip}";
+            Job.AddressLine1 = dialog.Address1;
+            Job.AddressLine2 = dialog.Address2;
+            Job.City = dialog.City;
+            Job.State = dialog.State;
+            Job.Zip = dialog.Zip;
+            Job.Address = dialog.FullAddress;
             OnPropertyChanged(nameof(Job.Address));
-            OnPropertyChanged(nameof(Job)); // Force UI refresh
+            OnPropertyChanged(nameof(Job.AddressLine1));
+            OnPropertyChanged(nameof(Job.AddressLine2));
+            OnPropertyChanged(nameof(Job.City));
+            OnPropertyChanged(nameof(Job.State));
+            OnPropertyChanged(nameof(Job.Zip));
             Console.WriteLine($"✏️ Servee Address updated: {Job.Address}");
         }
     }
@@ -1340,8 +1352,7 @@ private async void EditCourt_MouseDoubleClick(object sender, MouseButtonEventArg
 
         if (dialog17.ShowDialog() == true)
         {
-            // Always use the value from the dialog's textbox
-            Job.Court = dialog17.txtSearch.Text.Trim();
+            Job.Court = dialog17.SelectedCourt;
             OnPropertyChanged(nameof(Job.Court));
         }
     }
@@ -1357,8 +1368,19 @@ private async void EditCourt_MouseDoubleClick(object sender, MouseButtonEventArg
         //     PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
         // }
 
+        private void RemoveInvalidPayments()
+        {
+            if (Job?.Payments == null) return;
+            // Only remove payments that are truly invalid, but keep new ones (Id == Guid.Empty) if valid
+            var validPayments = Job.Payments.Where(pay => pay.Amount > 0 && !string.IsNullOrWhiteSpace(pay.Description)).ToList();
+            Job.Payments.Clear();
+            foreach (var pay in validPayments)
+                Job.Payments.Add(pay);
+        }
         private async void SaveButton_Click(object sender, RoutedEventArgs e)
         {
+            RemoveInvalidPayments();
+            //RemoveDuplicatePayments();
             if (string.IsNullOrWhiteSpace(Job.CaseNumber))
             {
                 System.Windows.MessageBox.Show("Case Number is required.", "Validation Error", MessageBoxButton.OK, MessageBoxImage.Warning);
@@ -1367,8 +1389,9 @@ private async void EditCourt_MouseDoubleClick(object sender, MouseButtonEventArg
             try
             {
                 var service = new AddJobService();
-                await service.AddJob(Job);
-                System.Windows.MessageBox.Show("Job added successfully!", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+                int jobNumber = await service.AddJob(Job);
+                Job.JobId = jobNumber.ToString();
+                System.Windows.MessageBox.Show($"Job successfully created! Job Number: {jobNumber}", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
                 var mainWindow = Window.GetWindow(this) as MainWindow;
                 if (mainWindow != null)
                     mainWindow.RemoveTab(this);
@@ -1406,6 +1429,92 @@ private void EditAttachmentPurpose_Click(object sender, RoutedEventArgs e)
         System.Windows.MessageBox.Show("Please select an attachment to edit.", "No Selection", MessageBoxButton.OK, MessageBoxImage.Warning);
     }
 }
+
+        // Add these event handlers for Court Date/Time
+        private void CourtDatePicker_SelectedDateChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+        {
+            if (Job == null) return;
+            var datePicker = sender as System.Windows.Controls.DatePicker;
+            if (datePicker?.SelectedDate is DateTime date)
+            {
+                var time = Job.CourtDateTime?.TimeOfDay ?? TimeSpan.Zero;
+                Job.CourtDateTime = date.Date + time;
+                OnPropertyChanged(nameof(Job.CourtDateTime));
+                OnPropertyChanged(nameof(CourtTimeString));
+            }
+        }
+        private void CourtTimeTextBox_LostFocus(object sender, System.Windows.RoutedEventArgs e)
+        {
+            if (Job == null) return;
+            var textBox = sender as System.Windows.Controls.TextBox;
+            if (textBox != null && !string.IsNullOrWhiteSpace(textBox.Text))
+            {
+                if (TimeSpan.TryParse(textBox.Text, out var time))
+                {
+                    var date = Job.CourtDateTime?.Date ?? DateTime.Today;
+                    Job.CourtDateTime = date + time;
+                    OnPropertyChanged(nameof(Job.CourtDateTime));
+                    OnPropertyChanged(nameof(CourtTimeString));
+                }
+            }
+        }
+        // Add these event handlers for Service Date/Time
+        private void ServiceDatePicker_SelectedDateChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+        {
+            if (Job == null) return;
+            var datePicker = sender as System.Windows.Controls.DatePicker;
+            if (datePicker?.SelectedDate is DateTime date)
+            {
+                var time = Job.ServiceDateTime?.TimeOfDay ?? TimeSpan.Zero;
+                Job.ServiceDateTime = date.Date + time;
+                OnPropertyChanged(nameof(Job.ServiceDateTime));
+                OnPropertyChanged(nameof(ServiceTimeString));
+            }
+        }
+        private void ServiceTimeTextBox_LostFocus(object sender, System.Windows.RoutedEventArgs e)
+        {
+            if (Job == null) return;
+            var textBox = sender as System.Windows.Controls.TextBox;
+            if (textBox != null && !string.IsNullOrWhiteSpace(textBox.Text))
+            {
+                if (TimeSpan.TryParse(textBox.Text, out var time))
+                {
+                    var date = Job.ServiceDateTime?.Date ?? DateTime.Today;
+                    Job.ServiceDateTime = date + time;
+                    OnPropertyChanged(nameof(Job.ServiceDateTime));
+                    OnPropertyChanged(nameof(ServiceTimeString));
+                }
+            }
+        }
+
+        public string CourtTimeString
+        {
+            get => Job.CourtDateTime?.ToString("HH:mm") ?? "";
+            set
+            {
+                if (TimeSpan.TryParse(value, out var time))
+                {
+                    var date = Job.CourtDateTime?.Date ?? DateTime.Today;
+                    Job.CourtDateTime = date + time;
+                    OnPropertyChanged(nameof(Job.CourtDateTime));
+                }
+                OnPropertyChanged(nameof(CourtTimeString));
+            }
+        }
+        public string ServiceTimeString
+        {
+            get => Job.ServiceDateTime?.ToString("HH:mm") ?? "";
+            set
+            {
+                if (TimeSpan.TryParse(value, out var time))
+                {
+                    var date = Job.ServiceDateTime?.Date ?? DateTime.Today;
+                    Job.ServiceDateTime = date + time;
+                    OnPropertyChanged(nameof(Job.ServiceDateTime));
+                }
+                OnPropertyChanged(nameof(ServiceTimeString));
+            }
+        }
 
     }
 }

@@ -11,15 +11,16 @@ public class AddJobService
 {
     private readonly string _connectionString = "Host=localhost;Port=5432;Database=mypg_database;Username=postgres;Password=7866";
 
-    public async Task AddJob(Job job)
+    public async Task<int> AddJob(Job job)
     {
-        // 1. Default SQLDATETIMECREATED to now if empty
-        if (string.IsNullOrWhiteSpace(job.SqlDateTimeCreated))
-            job.SqlDateTimeCreated = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+        // Ensure SqlDateTimeCreated is always a DateTime?
+        if (!job.SqlDateTimeCreated.HasValue)
+            job.SqlDateTimeCreated = DateTime.Now;
         if (string.IsNullOrWhiteSpace(job.CaseNumber))
             throw new ArgumentException("Case Number is required.");
-
-        int caseSerial, paperSerial;
+        Console.WriteLine("[DEBUG] Entering AddJob");
+        int paperSerial = 0;
+        int caseSerial = 0;
         // --- FIRST TRANSACTION: Insert into cases and papers ---
         await using (var conn = new NpgsqlConnection(_connectionString))
         {
@@ -27,38 +28,94 @@ public class AddJobService
             await using var tx = await conn.BeginTransactionAsync();
             try
             {
+                // Insert into cases
+                Console.WriteLine("[DEBUG] Generating new case serial...");
                 caseSerial = await GenerateNewSerialAsync("cases", conn, tx);
+                Console.WriteLine($"[DEBUG] caseSerial generated: {caseSerial}");
+                Console.WriteLine("[DEBUG] Inserting into cases...");
                 await using (var cmd = new NpgsqlCommand(@"INSERT INTO cases (serialnum, casenum) VALUES (@serialnum, @casenum);", conn, tx))
                 {
                     cmd.Parameters.AddWithValue("serialnum", caseSerial);
                     cmd.Parameters.AddWithValue("casenum", job.CaseNumber);
-                    await cmd.ExecuteNonQueryAsync();
+                    int rows = await cmd.ExecuteNonQueryAsync();
+                    Console.WriteLine($"[DEBUG] Inserted into cases, affected rows: {rows}");
+                }
+                Console.WriteLine("[DEBUG] Inserted into cases");
+                // --- Insert or link court ---
+                int? courtSerial = null;
+                if (!string.IsNullOrWhiteSpace(job.Court))
+                {
+                    // Check if court exists
+                    await using (var cmdCheckCourt = new NpgsqlCommand("SELECT serialnum FROM courts WHERE name = @name", conn, tx))
+                    {
+                        cmdCheckCourt.Parameters.AddWithValue("name", job.Court);
+                        var result = await cmdCheckCourt.ExecuteScalarAsync();
+                        if (result != null && result != DBNull.Value)
+                        {
+                            courtSerial = Convert.ToInt32(result);
+                        }
+                    }
+                    if (!courtSerial.HasValue)
+                    {
+                        // Insert new court
+                        courtSerial = await GenerateNewSerialAsync("courts", conn, tx);
+                        await using (var cmdInsertCourt = new NpgsqlCommand("INSERT INTO courts (serialnum, name) VALUES (@serialnum, @name);", conn, tx))
+                        {
+                            cmdInsertCourt.Parameters.AddWithValue("serialnum", courtSerial.Value);
+                            cmdInsertCourt.Parameters.AddWithValue("name", job.Court);
+                            await cmdInsertCourt.ExecuteNonQueryAsync();
+                        }
+                    }
+                    // Update cases.courtnum
+                    await using (var cmdUpdateCase = new NpgsqlCommand("UPDATE cases SET courtnum = @courtnum WHERE serialnum = @caseSerial;", conn, tx))
+                    {
+                        cmdUpdateCase.Parameters.AddWithValue("courtnum", courtSerial.Value);
+                        cmdUpdateCase.Parameters.AddWithValue("caseSerial", caseSerial);
+                        await cmdUpdateCase.ExecuteNonQueryAsync();
+                    }
                 }
 
-                paperSerial = await GenerateNewJobSerialAsync(conn, tx);
-                // 5. Set datetimeserved if ServiceDate/ServiceTime provided
-                object datetimeserved = DBNull.Value;
-                if (!string.IsNullOrWhiteSpace(job.ServiceDate) && !string.IsNullOrWhiteSpace(job.ServiceTime))
-                {
-                    if (DateTime.TryParse($"{job.ServiceDate} {job.ServiceTime}", out var dtServed))
-                        datetimeserved = dtServed;
-                }
+                // Insert into papers
+                Console.WriteLine("[DEBUG] Generating new paper serial...");
+                paperSerial = await GenerateNewSerialAsync("papers", conn, tx);
+                Console.WriteLine($"[DEBUG] paperSerial generated: {paperSerial}");
+                Console.WriteLine("[DEBUG] Inserting into papers...");
+                object datetimeserved = job.ServiceDateTime.HasValue ? (object)job.ServiceDateTime.Value : DBNull.Value;
+                object courtdatecode = job.CourtDateTime.HasValue ? (object)job.CourtDateTime.Value : DBNull.Value;
                 Console.WriteLine($"[LOG] About to insert into papers: serialnum={paperSerial}, caseserialnum={caseSerial}, clientrefnum={job.ClientReference}, zone={job.Zone}, sqldatetimerecd={job.SqlDateTimeCreated}, sqldatetimeserved={job.LastDayToServe}, sqlexpiredate={job.ExpirationDate}, datetimeserved={datetimeserved}");
-                await using (var cmdPapers = new NpgsqlCommand(@"INSERT INTO papers (serialnum, caseserialnum, clientrefnum, zone, sqldatetimerecd, sqldatetimeserved, sqlexpiredate, datetimeserved) VALUES (@serialnum, @caseserialnum, @clientrefnum, @zone, @sqlDateCreated, @lastDayToServe, @expirationDate, @datetimeserved);", conn, tx))
+                await using (var cmdPapers = new NpgsqlCommand(@"INSERT INTO papers (serialnum, caseserialnum, clientrefnum, zone, sqldatetimerecd, sqldatetimeserved, sqlexpiredate, datetimeserved, courtdatecode) VALUES (@serialnum, @caseserialnum, @clientrefnum, @zone, @sqlDateCreated, @lastDayToServe, @expirationDate, @datetimeserved, @courtdatecode);", conn, tx))
                 {
                     cmdPapers.Parameters.AddWithValue("serialnum", paperSerial);
                     cmdPapers.Parameters.AddWithValue("caseserialnum", caseSerial);
                     cmdPapers.Parameters.AddWithValue("clientrefnum", job.ClientReference ?? (object)DBNull.Value);
                     cmdPapers.Parameters.AddWithValue("zone", job.Zone ?? (object)DBNull.Value);
-                    cmdPapers.Parameters.AddWithValue("sqlDateCreated", ParseDateTimeOrNull(job.SqlDateTimeCreated));
-                    cmdPapers.Parameters.AddWithValue("lastDayToServe", ParseDateTimeOrNull(job.LastDayToServe));
-                    cmdPapers.Parameters.AddWithValue("expirationDate", ParseDateTimeOrNull(job.ExpirationDate));
+                    object sqlDateCreated = ParseDateTimeOrNull(job.SqlDateTimeCreated?.ToString("yyyy-MM-dd HH:mm:ss") ?? "");
+                    object lastDayToServe = ParseDateTimeOrNull(job.LastDayToServe?.ToString("yyyy-MM-dd HH:mm:ss") ?? "");
+                    object expirationDate = ParseDateTimeOrNull(job.ExpirationDate?.ToString("yyyy-MM-dd HH:mm:ss") ?? "");
+                    cmdPapers.Parameters.AddWithValue("sqlDateCreated", sqlDateCreated);
+                    cmdPapers.Parameters.AddWithValue("lastDayToServe", lastDayToServe);
+                    cmdPapers.Parameters.AddWithValue("expirationDate", expirationDate);
                     cmdPapers.Parameters.AddWithValue("datetimeserved", datetimeserved);
+                    cmdPapers.Parameters.AddWithValue("courtdatecode", courtdatecode);
                     Console.WriteLine("[LOG] Executing papers insert...");
                     int insertedRows = await cmdPapers.ExecuteNonQueryAsync();
                     Console.WriteLine($"[DEBUG] papers insert affected rows: {insertedRows}");
                     if (insertedRows == 0)
+                    {
+                        Console.WriteLine("[ERROR] No rows inserted into papers!");
                         throw new Exception("Failed to insert into papers.");
+                    }
+                    Console.WriteLine("[DEBUG] Inserted into papers");
+                }
+                // --- Insert into plongs for Type of Writ ---
+                await using (var cmdPlongs = new NpgsqlCommand(
+                    "INSERT INTO plongs (serialnum, typewrit, changenum) VALUES (@serialnum, @typewrit, @changenum);", conn, tx))
+                {
+                    cmdPlongs.Parameters.AddWithValue("serialnum", paperSerial);
+                    cmdPlongs.Parameters.AddWithValue("typewrit", job.TypeOfWrit ?? "");
+                    cmdPlongs.Parameters.AddWithValue("changenum", 0);
+                    int plongsRows = await cmdPlongs.ExecuteNonQueryAsync();
+                    Console.WriteLine($"[DEBUG] Inserted into plongs, affected rows: {plongsRows}");
                 }
                 Console.WriteLine("[LOG] Committing first transaction...");
                 await tx.CommitAsync();
@@ -83,135 +140,6 @@ public class AddJobService
             await using var tx = await conn.BeginTransactionAsync();
             try
             {
-                // ✅ Update typewrit in plongs
-                if (!string.IsNullOrWhiteSpace(job.TypeOfWrit))
-                {
-                    Console.WriteLine("➡ Ensuring plongs row exists for typewrit...");
-                    // Check if row exists
-                    bool exists = false;
-                    await using (var checkCmd = new NpgsqlCommand("SELECT 1 FROM plongs WHERE serialnum = @jobId", conn, tx))
-                    {
-                        checkCmd.Parameters.AddWithValue("jobId", long.Parse(job.JobId));
-                        using var reader = await checkCmd.ExecuteReaderAsync();
-                        exists = await reader.ReadAsync();
-                    }
-                    if (exists)
-                    {
-                        // Update
-                        await using (var cmd1 = new NpgsqlCommand(@"
-                            UPDATE plongs SET
-                                typewrit = @typeOfWrit
-                            WHERE serialnum = @jobId", conn, tx))
-                        {
-                            cmd1.Parameters.AddWithValue("typeOfWrit", job.TypeOfWrit);
-                            cmd1.Parameters.AddWithValue("jobId", long.Parse(job.JobId));
-                            await cmd1.ExecuteNonQueryAsync();
-                            Console.WriteLine("✅ plongs.typewrit updated.");
-                            await LogAuditAsync(conn, tx, job.JobId, "UPDATE", "Updated plongs.typewrit.");
-                        }
-                    }
-                    else
-                    {
-                        // Insert
-                        await using (var cmdInsert = new NpgsqlCommand(@"
-                            INSERT INTO plongs (serialnum, typewrit, changenum)
-                            VALUES (@jobId, @typeOfWrit, @changenum);", conn, tx))
-                        {
-                            cmdInsert.Parameters.AddWithValue("jobId", long.Parse(job.JobId));
-                            cmdInsert.Parameters.AddWithValue("typeOfWrit", job.TypeOfWrit);
-                            cmdInsert.Parameters.AddWithValue("changenum", 0); // or your versioning logic
-                            await cmdInsert.ExecuteNonQueryAsync();
-                            Console.WriteLine("✅ plongs row inserted for typewrit.");
-                            await LogAuditAsync(conn, tx, job.JobId, "INSERT", "Inserted plongs row for typewrit.");
-                        }
-                    }
-                }
-                else
-                {
-                    Console.WriteLine("ℹ️ Skipping plongs update — job.TypeOfWrit is empty.");
-                }
-
-
-                // ✅ Update or insert court name
-                if (!string.IsNullOrWhiteSpace(job.Court))
-                {
-                    Console.WriteLine("➡ Attempting to update court name...");
-
-                    int? courtNum = null;
-
-                    // Step 1: Get courtnum from nested tables
-                    await using (var cmdGetCourt = new NpgsqlCommand(@"
-        SELECT courtnum
-        FROM cases
-        WHERE serialnum = (
-            SELECT caseserialnum
-            FROM papers
-            WHERE serialnum = @jobId
-        );", conn, tx))
-                    {
-                        cmdGetCourt.Parameters.AddWithValue("jobId", long.Parse(job.JobId));
-                        await using var reader = await cmdGetCourt.ExecuteReaderAsync();
-                        if (await reader.ReadAsync() && reader["courtnum"] != DBNull.Value)
-                        {
-                            courtNum = Convert.ToInt32(reader["courtnum"]);
-                        }
-                        await reader.CloseAsync();
-                    }
-
-                    if (courtNum.HasValue)
-                    {
-                        Console.WriteLine($"✅ courtNum resolved: {courtNum.Value}");
-                        await using (var cmdUpdateCourt = new NpgsqlCommand(@"
-            UPDATE courts
-            SET name = @courtName
-            WHERE serialnum = @courtNum;", conn, tx))
-                        {
-                            cmdUpdateCourt.Parameters.AddWithValue("courtName", job.Court);
-                            cmdUpdateCourt.Parameters.AddWithValue("courtNum", courtNum.Value);
-                            int affectedRows = await cmdUpdateCourt.ExecuteNonQueryAsync();
-                            Console.WriteLine($"[DEBUG] Rows affected: {affectedRows}");
-                            Console.WriteLine("✅ courts.name updated.");
-                            await LogAuditAsync(conn, tx, job.JobId, "UPDATE", "Updated courts.name.");
-                        }
-                    }
-                    else
-                    {
-                        Console.WriteLine("⚠️ No courtnum found — inserting new court and linking to cases...");
-
-                        // Step 2: Insert new court
-                        int newCourtSerial = await GenerateNewSerialAsync("courts", conn, tx); // You must ensure this is async
-                        await using (var cmdInsertCourt = new NpgsqlCommand(@"
-            INSERT INTO courts (serialnum, name)
-            VALUES (@serial, @name);", conn, tx))
-                        {
-                            cmdInsertCourt.Parameters.AddWithValue("serial", newCourtSerial);
-                            cmdInsertCourt.Parameters.AddWithValue("name", job.Court);
-                            int affectedRows = await cmdInsertCourt.ExecuteNonQueryAsync();
-                            Console.WriteLine($"[DEBUG] Rows affected: {affectedRows}");
-                            Console.WriteLine($"✅ Inserted new court with serialnum = {newCourtSerial}");
-                            await LogAuditAsync(conn, tx, job.JobId, "INSERT", $"Inserted new court with serialnum = {newCourtSerial}.");
-                        }
-
-                        // Step 3: Link court to case
-                        await using (var cmdUpdateCase = new NpgsqlCommand(@"
-            UPDATE cases
-            SET courtnum = @courtSerial
-            WHERE serialnum = (
-                SELECT caseserialnum
-                FROM papers
-                WHERE serialnum = @jobId
-            );", conn, tx))
-                        {
-                            cmdUpdateCase.Parameters.AddWithValue("courtSerial", newCourtSerial);
-                            cmdUpdateCase.Parameters.AddWithValue("jobId", long.Parse(job.JobId));
-                            int affectedRows = await cmdUpdateCase.ExecuteNonQueryAsync();
-                            Console.WriteLine($"[DEBUG] Rows affected: {affectedRows}");
-                            Console.WriteLine("✅ cases.courtnum linked to new court.");
-                            await LogAuditAsync(conn, tx, job.JobId, "UPDATE", "Linked court to case.");
-                        }
-                    }
-                }
-
                 // ✅ DEFENDANT - Update or Insert into CASES
                 if (!string.IsNullOrWhiteSpace(job.Defendant))
                 {
@@ -463,12 +391,14 @@ public class AddJobService
                         // Always insert new entity for new client
                         int newSerial = await GenerateNewSerialAsync("entity", conn, tx);
                         await using (var cmdInsert = new NpgsqlCommand(@"
-                            INSERT INTO entity (""SerialNum"", ""FirstName"", ""LastName"", ""ChangeNum"")
-                            VALUES (@serial, @firstName, @lastName, 0);", conn, tx))
+                            INSERT INTO entity (""SerialNum"", ""FirstName"", ""LastName"", ""ChangeNum"", ""status"")
+                            VALUES (@serial, @firstName, @lastName, 0, @status);", conn, tx))
                         {
                             cmdInsert.Parameters.AddWithValue("serial", newSerial);
                             cmdInsert.Parameters.AddWithValue("firstName", firstName);
                             cmdInsert.Parameters.AddWithValue("lastName", lastName);
+                            cmdInsert.Parameters.AddWithValue("changenum", 0); // or your versioning logic
+                            cmdInsert.Parameters.AddWithValue("status", job.ClientStatus ?? (object)DBNull.Value);
                             await cmdInsert.ExecuteNonQueryAsync();
                         }
                         await using (var cmdLink = new NpgsqlCommand(@"
@@ -496,11 +426,12 @@ public class AddJobService
                         {
                             Console.WriteLine($"✅ clientnum resolved: {clientSerial.Value}");
                             await using (var cmdUpdate = new NpgsqlCommand(@"
-            UPDATE entity SET ""FirstName"" = @firstName, ""LastName"" = @lastName
+            UPDATE entity SET ""FirstName"" = @firstName, ""LastName"" = @lastName, ""status"" = @status
             WHERE ""SerialNum"" = @serial;", conn, tx))
                             {
                                 cmdUpdate.Parameters.AddWithValue("firstName", firstName);
                                 cmdUpdate.Parameters.AddWithValue("lastName", lastName);
+                                cmdUpdate.Parameters.AddWithValue("status", job.ClientStatus ?? (object)DBNull.Value);
                                 cmdUpdate.Parameters.AddWithValue("serial", clientSerial.Value);
                                 int affectedRows = await cmdUpdate.ExecuteNonQueryAsync();
                                 Console.WriteLine($"[DEBUG] Rows affected: {affectedRows}");
@@ -768,7 +699,8 @@ public class AddJobService
                 // Step 2: Insert or Update
                 foreach (var c in job.Comments)
                 {
-                    long timestamp = ConvertToUnixTimestamp(c.Date, c.Time);
+                    Console.WriteLine($"[DEBUG] About to write comment.DateTime: '{c.DateTime}'");
+                    long timestamp = ConvertToUnixTimestamp(c.DateTime);
 
                     if (existing.ContainsKey(c.Seqnum))
                     {
@@ -872,6 +804,7 @@ public class AddJobService
 
                 foreach (var a in job.Attempts)
                 {
+                    Console.WriteLine($"[DEBUG] About to write attempt.DateTime: '{a.DateTime}'");
                     if (a.Seqnum > 0)
                     {
                         incomingAttempts[a.Seqnum] = a;
@@ -905,7 +838,8 @@ public class AddJobService
                 {
                     var attemptSeq = kvp.Key;
                     var a = kvp.Value;
-                    long ts = ConvertToUnixTimestamp(a.Date, a.Time);
+                    Console.WriteLine($"[DEBUG] About to write attempt.DateTime: '{a.DateTime}'");
+                    long ts = ConvertToUnixTimestamp(a.DateTime);
 
                     if (existingAttempts.ContainsKey(attemptSeq))
                     {
@@ -1055,8 +989,9 @@ public class AddJobService
                     int affectedRows = await delete.ExecuteNonQueryAsync();
                     Console.WriteLine($"[DEBUG] Rows affected: {affectedRows}");
                     Console.WriteLine($"🗑️ Deleted payment by ID: {job.DeletedPaymentId.Value}");
+                    var deletedPaymentId = job.DeletedPaymentId.Value;
                     job.DeletedPaymentId = null; // Clear flag
-                    await LogAuditAsync(conn, tx, job.JobId, "DELETE", $"Deleted payment by ID: {job.DeletedPaymentId.Value}.");
+                    await LogAuditAsync(conn, tx, job.JobId, "DELETE", $"Deleted payment by ID: {deletedPaymentId}.");
                 }
 
                 // ✅ Step 2: Load existing payments from DB
@@ -1071,12 +1006,13 @@ public class AddJobService
                     while (await reader.ReadAsync())
                     {
                         var id = reader.GetGuid(0);
+                        DateTime? payDate = reader["date"] != DBNull.Value ? (DateTime?)reader["date"] : null;
+                        Console.WriteLine($"[DEBUG] About to write payment.DateTime: '{payDate}'");
                         existingPayments[id] = new PaymentModel
                         {
                             Id = id,
-                            Date = Convert.ToDateTime(reader["date"]).Date,
-                            TimeOnly = Convert.ToDateTime(reader["date"]).ToString("HH:mm:ss"),
-                            Method = reader["method"]?.ToString(),
+                            DateTime = payDate,
+                            Method = reader["method"]?.ToString() ?? "",
                             Description = reader["description"]?.ToString() ?? "",
                             Amount = Convert.ToDecimal(reader["amount"])
                         };
@@ -1084,50 +1020,47 @@ public class AddJobService
                 }
 
                 // ✅ Step 3: Insert or Update each payment entry
-                foreach (var pay in job.Payments)
+                foreach (var pay in job.Payments.ToList())
                 {
+                    if (pay.Amount <= 0 || string.IsNullOrWhiteSpace(pay.Description))
+                        continue;
                     if (job.DeletedPaymentId.HasValue && pay.Id == job.DeletedPaymentId.Value)
                         continue; // Skip deleted item
 
-                    DateTime fullDateTime = DateTime.ParseExact($"{pay.Date:yyyy-MM-dd} {pay.TimeOnly}", "yyyy-MM-dd HH:mm:ss", null);
-
-                    if (pay.Id != Guid.Empty && existingPayments.ContainsKey(pay.Id))
+                    if (pay.Id == Guid.Empty)
                     {
-                        using var update = new NpgsqlCommand(@"
-            UPDATE payment
-            SET date = @dt, method = @method, description = @desc, amount = @amt
-            WHERE id = @id;", conn, tx);
-
-                        update.Parameters.AddWithValue("id", pay.Id);
-                        update.Parameters.AddWithValue("dt", fullDateTime);
-                        update.Parameters.AddWithValue("method", Convert.ToInt16(pay.Method ?? "0"));
-                        update.Parameters.AddWithValue("desc", pay.Description ?? "");
-                        update.Parameters.AddWithValue("amt", pay.Amount);
-
-                        int affectedRows = await update.ExecuteNonQueryAsync();
-                        Console.WriteLine($"[DEBUG] Rows affected: {affectedRows}");
-                        Console.WriteLine($"🔄 Updated payment: {pay.Description}");
-                        await LogAuditAsync(conn, tx, job.JobId, "UPDATE", $"Updated payment: {pay.Description}.");
-                    }
-                    else
-                    {
-                        var newId = pay.Id != Guid.Empty ? pay.Id : Guid.NewGuid();
-
+                        // New payment: assign new Guid and insert
+                        pay.Id = Guid.NewGuid();
                         using var insert = new NpgsqlCommand(@"
             INSERT INTO payment (id, jobnumber, date, method, description, amount, changenum)
             VALUES (@id, @jobId, @dt, @method, @desc, @amt, 0);", conn, tx);
-
-                        insert.Parameters.AddWithValue("id", newId);
+                        insert.Parameters.AddWithValue("id", pay.Id);
                         insert.Parameters.AddWithValue("jobId", long.Parse(job.JobId));
-                        insert.Parameters.AddWithValue("dt", fullDateTime);
-                        insert.Parameters.AddWithValue("method", Convert.ToInt16(pay.Method ?? "0"));
+                        insert.Parameters.AddWithValue("dt", pay.DateTime ?? DateTime.Now);
+                        insert.Parameters.AddWithValue("method", GetPaymentMethodCode(pay.Method));
                         insert.Parameters.AddWithValue("desc", pay.Description ?? "");
                         insert.Parameters.AddWithValue("amt", pay.Amount);
-
                         int affectedRows = await insert.ExecuteNonQueryAsync();
                         Console.WriteLine($"[DEBUG] Rows affected: {affectedRows}");
                         Console.WriteLine($"➕ Inserted payment: {pay.Description}");
                         await LogAuditAsync(conn, tx, job.JobId, "INSERT", $"Inserted payment: {pay.Description}.");
+                    }
+                    else if (existingPayments.TryGetValue(pay.Id, out var existingPayment))
+                    {
+                        // Update existing payment
+                        using var update = new NpgsqlCommand(@"
+            UPDATE payment
+            SET date = @dt, method = @method, description = @desc, amount = @amt
+            WHERE id = @id;", conn, tx);
+                        update.Parameters.AddWithValue("id", pay.Id);
+                        update.Parameters.AddWithValue("dt", pay.DateTime ?? DateTime.Now);
+                        update.Parameters.AddWithValue("method", GetPaymentMethodCode(pay.Method));
+                        update.Parameters.AddWithValue("desc", pay.Description ?? "");
+                        update.Parameters.AddWithValue("amt", pay.Amount);
+                        int affectedRows = await update.ExecuteNonQueryAsync();
+                        Console.WriteLine($"[DEBUG] Rows affected: {affectedRows}");
+                        Console.WriteLine($"🔄 Updated payment: {pay.Description}");
+                        await LogAuditAsync(conn, tx, job.JobId, "UPDATE", $"Updated payment: {pay.Description}.");
                     }
                 }
 
@@ -1142,8 +1075,9 @@ public class AddJobService
                     int affectedRows = await delete.ExecuteNonQueryAsync();
                     Console.WriteLine($"[DEBUG] Rows affected: {affectedRows}");
                     Console.WriteLine($"🗑️ Deleted attachment ID: {job.DeletedAttachmentId.Value}");
+                    var deletedAttachmentId = job.DeletedAttachmentId.Value;
                     job.DeletedAttachmentId = null;
-                    await LogAuditAsync(conn, tx, job.JobId, "DELETE", $"Deleted attachment ID: {job.DeletedAttachmentId.Value}.");
+                    await LogAuditAsync(conn, tx, job.JobId, "DELETE", $"Deleted attachment ID: {deletedAttachmentId}.");
                 }
 
                 // Step // Step 2: INSERT or UPDATE attachments
@@ -1170,6 +1104,14 @@ public class AddJobService
 
                         // Optionally insert into blobmetadata, blobs, and papersattachmentscross as needed
                         att.Status = "Synced";
+
+                        using var insertBlob = new NpgsqlCommand(@"
+    INSERT INTO blobs (id, blob)
+    VALUES (@id, @blob)
+    ON CONFLICT (id) DO NOTHING;", conn, tx);
+                        insertBlob.Parameters.AddWithValue("id", att.BlobId);
+                        insertBlob.Parameters.AddWithValue("blob", att.FileData ?? Array.Empty<byte>());
+                        await insertBlob.ExecuteNonQueryAsync();
 
                         using var insertCross = new NpgsqlCommand(@"
     INSERT INTO papersattachmentscross (id, paperserialnum, attachmentid, changenum)
@@ -1235,7 +1177,7 @@ public class AddJobService
                 if (!string.IsNullOrWhiteSpace(job.Plaintiff))
                 {
                     // Step 1: Get pliannum from papers
-                    string plianNum = null;
+                    string? plianNum = null;
                     await using (var cmdGetPlian = new NpgsqlCommand("SELECT pliannum FROM papers WHERE serialnum = @jobId;", conn, tx))
                     {
                         cmdGetPlian.Parameters.AddWithValue("jobId", long.Parse(job.JobId));
@@ -1309,14 +1251,14 @@ public class AddJobService
                     await cmdWF.ExecuteNonQueryAsync();
                 }
 
-                Console.WriteLine("🟢 Committing transaction...");
+                Console.WriteLine("🟢 Committing second transaction...");
                 Console.WriteLine("✅ Job successfully saved.");
                 Console.WriteLine("[LOG] Committing second transaction...");
                 await tx.CommitAsync();
                 Console.WriteLine("[LOG] Second transaction committed. Job successfully saved.");
                 await LogAuditAsync(conn, tx, job.JobId, "COMMIT", "Committed transaction for SaveJob.");
-
-            } // <-- End of try block for the second transaction
+                return paperSerial;
+            }
             catch (Exception ex)
             {
                 Console.WriteLine($"[ERROR] Exception in second transaction: {ex}");
@@ -1324,65 +1266,98 @@ public class AddJobService
                 Console.WriteLine("[LOG] Second transaction rolled back.");
                 throw;
             }
-        } // <-- End of using (var conn = new NpgsqlConnection(_connectionString))
-    }
-    // Generates a new serial number for the specified table
-    private static async Task<int> GenerateNewSerialAsync(string tableName, NpgsqlConnection conn, NpgsqlTransaction tx)
-    {
-        string serialCol = tableName switch
-        {
-            "entity" => "\"SerialNum\"",
-            "typeservice" => "serialnumber",
-            _ => "serialnum"
-        };
-        using var cmd = new NpgsqlCommand($"SELECT COALESCE(MAX({serialCol}), 1000000) + 1 FROM {tableName};", conn, tx);
-        var result = await cmd.ExecuteScalarAsync();
-        return Convert.ToInt32(result);
-    }
-
-    // Helper to generate new serial number for jobs (papers.serialnum), starting at 2025500000
-    private static async Task<int> GenerateNewJobSerialAsync(NpgsqlConnection conn, NpgsqlTransaction tx)
-    {
-        int minSerial = 2025500000;
-        using var cmd = new NpgsqlCommand($@"
-        SELECT GREATEST(COALESCE(MAX(serialnum), {minSerial - 1}) + 1, {minSerial}) FROM papers;", conn, tx);
-        var result = await cmd.ExecuteScalarAsync();
-        return Convert.ToInt32(result);
-    }
-
-    // Helper to parse a string to DateTime or return DBNull.Value if null/empty
-    private static object ParseDateTimeOrNull(string dateTimeString)
-    {
-        if (string.IsNullOrWhiteSpace(dateTimeString))
-            return DBNull.Value;
-        if (DateTime.TryParse(dateTimeString, out var dt))
-            return dt;
-        return DBNull.Value;
-    }
-    
-    
-    private static long ConvertToUnixTimestamp(string date, string time)
-    {
-        if (DateTime.TryParse($"{date} {time}", out var dt))
-        {
-            var offset = new DateTimeOffset(dt);
-            return offset.ToUnixTimeSeconds(); // safe conversion
         }
-        return 0;
-    }
+        }
+        // Generates a new serial number for the specified table
+        private static async Task<int> GenerateNewSerialAsync(string tableName, NpgsqlConnection conn, NpgsqlTransaction tx)
+        {
+            string serialCol = tableName switch
+            {
+                "entity" => "\"SerialNum\"",
+                "typeservice" => "serialnumber",
+                _ => "serialnum"
+            };
+            using var cmd = new NpgsqlCommand($"SELECT COALESCE(MAX({serialCol}), 1000000) + 1 FROM {tableName};", conn, tx);
+            var result = await cmd.ExecuteScalarAsync();
+            return Convert.ToInt32(result);
+        }
 
-     async Task LogAuditAsync(NpgsqlConnection conn, NpgsqlTransaction tx, string jobId, string action, string details)
-    {
-        using var auditCmd = new NpgsqlCommand(@"
+        // Helper to generate new serial number for jobs (papers.serialnum), starting at 2025500000
+        private static async Task<int> GenerateNewJobSerialAsync(NpgsqlConnection conn, NpgsqlTransaction tx)
+        {
+            int minSerial = 2025500000;
+            using var cmd = new NpgsqlCommand($@"
+        SELECT GREATEST(COALESCE(MAX(serialnum), {minSerial - 1}) + 1, {minSerial}) FROM papers;", conn, tx);
+            var result = await cmd.ExecuteScalarAsync();
+            return Convert.ToInt32(result);
+        }
+
+        // Helper to parse a string to DateTime or return DBNull.Value if null/empty
+        private static object ParseDateTimeOrNull(string dateTimeString)
+        {
+            if (string.IsNullOrWhiteSpace(dateTimeString))
+                return DBNull.Value;
+            if (DateTime.TryParse(dateTimeString, out var dt))
+                return dt;
+            return DBNull.Value;
+        }
+        
+        
+        private static long ConvertToUnixTimestamp(DateTime? dateTime)
+        {
+            if (dateTime.HasValue)
+            {
+                var offset = new DateTimeOffset(dateTime.Value);
+                return offset.ToUnixTimeSeconds(); // safe conversion
+            }
+            return 0;
+        }
+
+         async Task LogAuditAsync(NpgsqlConnection conn, NpgsqlTransaction tx, string jobId, string action, string details)
+        {
+            using var auditCmd = new NpgsqlCommand(@"
         INSERT INTO changehistory (jobid, action, username, details)
         VALUES (@jobid, @action, @username, @details);", conn, tx);
 
-        auditCmd.Parameters.AddWithValue("jobid", long.Parse(jobId));
-        auditCmd.Parameters.AddWithValue("action", action);
-        auditCmd.Parameters.AddWithValue("username", SessionManager.CurrentUser?.LoginName ?? "Unknown");
-        auditCmd.Parameters.AddWithValue("details", details);
+            auditCmd.Parameters.AddWithValue("jobid", long.Parse(jobId));
+            auditCmd.Parameters.AddWithValue("action", action);
+            auditCmd.Parameters.AddWithValue("username", SessionManager.CurrentUser?.LoginName ?? "Unknown");
+            auditCmd.Parameters.AddWithValue("details", details);
 
-        await auditCmd.ExecuteNonQueryAsync();
+            await auditCmd.ExecuteNonQueryAsync();
+        }
+
+        private int GetPaymentMethodCode(string? method)
+        {
+            if (string.IsNullOrWhiteSpace(method)) return 0; // Default to Cash
+            var normalized = method.Trim().ToLowerInvariant();
+            switch (normalized)
+            {
+                case "cash":
+                case "cash payment":
+                    return 0;
+                case "check":
+                case "cheque":
+                case "check payment":
+                    return 1;
+                case "card":
+                case "credit":
+                case "credit card":
+                case "creditcard":
+                    return 2;
+                case "debit":
+                case "debit card":
+                case "debitcard":
+                    return 3;
+                default:
+                    // Try to match partials
+                    if (normalized.Contains("credit")) return 2;
+                    if (normalized.Contains("debit")) return 3;
+                    if (normalized.Contains("check") || normalized.Contains("cheque")) return 1;
+                    return 0; // Default to Cash
+            }
+        }
+
+      
+
     }
-
-}

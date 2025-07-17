@@ -14,19 +14,19 @@ namespace CivilProcessERP.ViewModels
     {
         public bool UseDatabase { get; set; } = true;
 
-        private string _doNotFlyClients;
-        private string _pastDueInvoices;
-        private string _casesNeedAttention;
-        private string _searchJobNumber;
-        private string _searchResult;
-        private Job _currentJob;
+        private string? _doNotFlyClients = null;
+        private string? _pastDueInvoices = null;
+        private string? _casesNeedAttention = null;
+        private string? _searchJobNumber = null;
+        private string? _searchResult = null;
+        private Job? _currentJob = null;
 
-        private CancellationTokenSource _cts;
+        private CancellationTokenSource? _cts = null;
 
-        private Job _selectedJob;
+        private Job? _selectedJob = null;
         public Job SelectedJob
         {
-            get => _selectedJob;
+            get => _selectedJob ?? new Job(); // Return a default Job if null
             set 
             { 
                 _selectedJob = value; 
@@ -37,25 +37,25 @@ namespace CivilProcessERP.ViewModels
 
         public string DoNotFlyClients
         {
-            get => _doNotFlyClients;
+            get => _doNotFlyClients ?? string.Empty;
             set { _doNotFlyClients = value; OnPropertyChanged(); }
         }
 
         public string PastDueInvoices
         {
-            get => _pastDueInvoices;
+            get => _pastDueInvoices ?? string.Empty;
             set { _pastDueInvoices = value; OnPropertyChanged(); }
         }
 
         public string CasesNeedAttention
         {
-            get => _casesNeedAttention;
+            get => _casesNeedAttention ?? string.Empty;
             set { _casesNeedAttention = value; OnPropertyChanged(); }
         }
 
         public string SearchJobNumber
         {
-            get => _searchJobNumber;
+            get => _searchJobNumber ?? string.Empty;
             set
             {
                 _searchJobNumber = value;
@@ -66,13 +66,13 @@ namespace CivilProcessERP.ViewModels
 
         public string SearchResult
         {
-            get => _searchResult;
+            get => _searchResult ?? string.Empty;
             set { _searchResult = value; OnPropertyChanged(); }
         }
 
         public Job CurrentJob
         {
-            get => _currentJob;
+            get => _currentJob ?? new Job(); // Return a default Job if null
             set { _currentJob = value; OnPropertyChanged(); }
         }
 
@@ -113,15 +113,14 @@ namespace CivilProcessERP.ViewModels
                 ClientReference = "CL-56789",
                 TypeOfWrit = "SUMMONS LANDLORD TENANT",
                 ServiceType = "Standard",
-                Date = "04/10/2025",
-                Time = "10:00 AM",
+                CourtDateTime = new DateTime(2025, 4, 10, 10, 0, 0),
+                ServiceDateTime = new DateTime(2025, 4, 15, 14, 0, 0),
                 ClientStatus = "Active",
-                Zone = "West",
-                LastServiceDate = "04/15/2025"
+                Zone = "West"
             };
         }
 
-        public async Task<Job> LoadDataAsync(string jobId, CancellationToken token = default)
+        public async Task<Job?> LoadDataAsync(string jobId, CancellationToken token = default)
         {
             var jobService = new JobService();
             return await jobService.GetJobById(jobId);
@@ -186,9 +185,9 @@ namespace CivilProcessERP.ViewModels
             Console.WriteLine($"[INFO] Job Added: {newJob}");
         }
 
-        public event PropertyChangedEventHandler PropertyChanged;
-        protected void OnPropertyChanged([CallerMemberName] string propertyName = null) =>
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        public event PropertyChangedEventHandler? PropertyChanged;
+        protected void OnPropertyChanged([CallerMemberName] string? propertyName = null) =>
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName ?? string.Empty));
 
         private void AddDummy_Click(object sender, RoutedEventArgs e)
         {

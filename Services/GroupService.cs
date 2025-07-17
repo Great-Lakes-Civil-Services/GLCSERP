@@ -59,7 +59,7 @@ namespace CivilProcessERP.Services
                     groupIdCmd.Parameters.AddWithValue("@name", name);
                     var groupIdObj = await groupIdCmd.ExecuteScalarAsync();
 
-                    if (groupIdObj is Guid groupId)
+                    if (groupIdObj != null && groupIdObj is Guid groupId)
                     {
                         var insertCmd = new NpgsqlCommand(@"
                             INSERT INTO usergroupmember (id, usernumber, groupid, ts)
@@ -87,7 +87,8 @@ namespace CivilProcessERP.Services
 
             var checkCmd = new NpgsqlCommand("SELECT COUNT(*) FROM usergroupheader WHERE name = @n", conn);
             checkCmd.Parameters.AddWithValue("@n", name);
-            var exists = (long)await checkCmd.ExecuteScalarAsync();
+            var result = await checkCmd.ExecuteScalarAsync();
+            var exists = (result != null && result != DBNull.Value) ? Convert.ToInt64(result) : 0;
 
             if (exists > 0) return false;
 

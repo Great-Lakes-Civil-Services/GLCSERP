@@ -85,12 +85,12 @@ namespace CivilProcessERP.ViewModels
 });
 
     
-       public async Task OpenNewTabAsync(object? param)
+       public Task OpenNewTabAsync(object? param)
         {
             if (param == null)
             {
                 Console.WriteLine("[ERROR] OpenNewTabAsync() called with null param.");
-                return;
+                return Task.CompletedTask;
             }
 
             // ✅ Add 6-tab limit check
@@ -98,7 +98,7 @@ namespace CivilProcessERP.ViewModels
             {
                 System.Windows.MessageBox.Show("You can only have 6 tabs open at a time. Please close one before opening a new tab.",
                     "Tab Limit Reached", MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
+                return Task.CompletedTask;
             }
 
             string tabTitle = param is Job job ? $"Job #{job.JobId}" : param.ToString() ?? "New Tab";
@@ -110,7 +110,7 @@ namespace CivilProcessERP.ViewModels
             {
                 Console.WriteLine($"[DEBUG] Tab '{tabTitle}' already open. Focusing it.");
                 SelectedTab = existingTab;
-                return;
+                return Task.CompletedTask;
             }
 
             System.Windows.Controls.UserControl? view = null;
@@ -132,7 +132,7 @@ if (param is Job jobData)
     SelectedTab = newTab;
 
     Console.WriteLine($"[DEBUG] ✅ New tab added: Job #{jobData.JobId}. Total open tabs: {OpenTabs.Count}");
-    return;
+    return Task.CompletedTask;
 }
             else
             {
@@ -161,9 +161,11 @@ if (param is Job jobData)
             {
                 Console.WriteLine($"[ERROR] View for '{tabTitle}' is null. Could not open tab.");
             }
+
+            return Task.CompletedTask;
         }
 
-        private void CloseTab(object? tab)
+        private async Task CloseTab(object? tab)
         {
             Console.WriteLine($"[DEBUG] CloseTab called with parameter: {tab?.GetType().Name}");
             
@@ -180,6 +182,7 @@ if (param is Job jobData)
             {
                 Console.WriteLine($"[DEBUG] CloseTab called with invalid parameter type: {tab?.GetType().Name}");
             }
+            await Task.CompletedTask;
         }
     }
 
@@ -191,7 +194,7 @@ if (param is Job jobData)
         public event EventHandler? TabCloseRequested;
 
         // Track parent window for drag/drop and close logic
-        public MainWindow ParentWindow { get; set; }
+        public MainWindow? ParentWindow { get; set; }
 
         public TabItemViewModel(string title, System.Windows.Controls.UserControl content)
         {

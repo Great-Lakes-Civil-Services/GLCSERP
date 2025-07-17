@@ -7,19 +7,19 @@ namespace CivilProcessERP.Models
     public DateTime Date { get; set; }
     public string Time => Date.ToShortTimeString();
 
-    public string Body { get; set; }
+    public string Body { get; set; } = string.Empty;
 
     public bool Aff { get; set; }
     public bool FS { get; set; }  // ✅ This must be writable
 
     public bool Att { get; set; }
 
-    public string Source { get; set; }
+    public string Source { get; set; } = string.Empty;
 }
 
 public class InvoiceEntryModel
 {
-    public string Description { get; set; }
+    public string Description { get; set; } = string.Empty;
     public int Quantity { get; set; }
     public decimal Rate { get; set; }
     private decimal _amount;
@@ -35,8 +35,8 @@ public decimal Amount
 public class PaymentEntryModel
 {
    public decimal Amount { get; set; }
-public string Description { get; set; }
-public string Method { get; set; }
+public string Description { get; set; } = string.Empty;
+public string Method { get; set; } = string.Empty;
 public DateTime Date { get; set; }
 
 public DateTime DateOnly

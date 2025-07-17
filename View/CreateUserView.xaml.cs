@@ -21,11 +21,11 @@ namespace CivilProcessERP.Views
         {
             string fullName = FullNameTextBox.Text.Trim();
             string[] nameParts = fullName.Split(' ', 2);
-            string firstName = nameParts[0];
-            string lastName = nameParts.Length > 1 ? nameParts[1] : "";
+            string firstName = nameParts.Length > 0 ? nameParts[0] : string.Empty;
+            string lastName = nameParts.Length > 1 ? nameParts[1] : string.Empty;
 
-            string role = (RoleComboBox.SelectedItem as ComboBoxItem)?.Content.ToString();
-            string entity = (EntityComboBox.SelectedItem as ComboBoxItem)?.Content.ToString();
+            string role = (RoleComboBox.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? string.Empty;
+            string entity = (EntityComboBox.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? string.Empty;
             string loginName = UsernameTextBox.Text.Trim();
             string password = PasswordBox.Password;
             string confirmPassword = ConfirmPasswordBox.Password;
@@ -36,8 +36,8 @@ namespace CivilProcessERP.Views
                 return;
             }
 
-            int roleNumber = await GetRoleNumberByNameAsync(role);
-            int entityNumber = GetEntityNumber(entity);
+            int roleNumber = await GetRoleNumberByNameAsync(role ?? string.Empty);
+            int entityNumber = GetEntityNumber(entity ?? string.Empty);
             int changeNumber = await GetLatestChangeNumberAsync() + 1;
 
             var user = new UserModel
@@ -60,7 +60,7 @@ namespace CivilProcessERP.Views
             {
                 System.Windows.MessageBox.Show("User created successfully!");
                 var auditLogService = new AuditLogService(connString);
-                auditLogService.LogActionAsync("CreateUser", loginName, "New user created", SessionManager.CurrentUser.LoginName);
+                await auditLogService.LogActionAsync("CreateUser", loginName, "New user created", SessionManager.CurrentUser?.LoginName ?? "");
             }
             else
             {
@@ -137,7 +137,8 @@ namespace CivilProcessERP.Views
                     using (var checkCmd = new NpgsqlCommand("SELECT COUNT(*) FROM users WHERE loginname = @loginname", conn))
                     {
                         checkCmd.Parameters.AddWithValue("@loginname", user.LoginName);
-                        var exists = (long)(await checkCmd.ExecuteScalarAsync());
+                        var result = await checkCmd.ExecuteScalarAsync();
+                        long exists = (result != null && result != DBNull.Value) ? Convert.ToInt64(result) : 0;
                         if (exists > 0)
                         {
                             System.Windows.MessageBox.Show("A user with this login name already exists.");
