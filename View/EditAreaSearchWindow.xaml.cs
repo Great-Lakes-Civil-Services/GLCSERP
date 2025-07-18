@@ -12,6 +12,8 @@ namespace CivilProcessERP.Views
         private readonly string _connectionString;
 
         public string SelectedArea => lstAreas.SelectedItem?.ToString() ?? "";
+        public bool IsNewArea { get; set; } = false;
+        public string NewAreaFullName { get; set; } = string.Empty;
 
         public EditAreaSearchWindow(string connectionString, string initialValue = "")
         {
@@ -107,19 +109,12 @@ namespace CivilProcessERP.Views
         // Add this method for the Other button
         private void Other_Click(object sender, RoutedEventArgs e)
         {
-            var dialog = new CivilProcessERP.Views.SingleFieldDialog("Area", txtSearch.Text);
-            if (dialog.ShowDialog() == true)
+            var inputDialog = new SingleFieldDialog("Enter Area Name", "");
+            if (inputDialog.ShowDialog() == true)
             {
-                string newArea = dialog.Value;
-                if (!string.IsNullOrWhiteSpace(newArea))
-                {
-                    lstAreas.SelectedItem = null;
-                    txtSearch.Text = newArea;
-                    if (!lstAreas.Items.Contains(newArea))
-                        lstAreas.Items.Insert(0, newArea);
-                    DialogResult = true;
-                    Close();
-                }
+                IsNewArea = true;
+                NewAreaFullName = inputDialog.Value;
+                DialogResult = true;
             }
         }
     }

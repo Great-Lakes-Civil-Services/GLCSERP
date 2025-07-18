@@ -189,6 +189,9 @@ protected void OnPropertyChanged(string propertyName)
         public bool WorkflowFCM { get; set; }
         public bool WorkflowSOPS { get; set; }
         public bool WorkflowIIA { get; set; }
+        public bool IsAreaNew { get; set; }
+        public bool IsTypeOfWritNew { get; set; }
+        public bool IsServiceTypeNew { get; set; }
     }
 
     public class InvoiceModel

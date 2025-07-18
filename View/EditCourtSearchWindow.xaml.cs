@@ -12,6 +12,8 @@ namespace CivilProcessERP.Views
         private readonly string _connectionString;
 
         public string SelectedCourt => lstCourts.SelectedItem?.ToString() ?? "";
+        public bool IsNewCourt { get; set; } = false;
+        public string NewCourtFullName { get; set; } = string.Empty;
 
         public EditCourtSearchWindow(string connectionString, string initialValue = "")
         {
@@ -109,19 +111,12 @@ namespace CivilProcessERP.Views
         // Add this method for the Other button
         private void Other_Click(object sender, RoutedEventArgs e)
         {
-            var dialog = new CivilProcessERP.Views.SingleFieldDialog("Court", txtSearch.Text);
-            if (dialog.ShowDialog() == true)
+            var inputDialog = new SingleFieldDialog("Enter Court Name", "");
+            if (inputDialog.ShowDialog() == true)
             {
-                string newCourt = dialog.Value;
-                if (!string.IsNullOrWhiteSpace(newCourt))
-                {
-                    lstCourts.SelectedItem = null;
-                    txtSearch.Text = newCourt;
-                    if (!lstCourts.Items.Contains(newCourt))
-                        lstCourts.Items.Insert(0, newCourt);
-                    DialogResult = true;
-                    Close();
-                }
+                IsNewCourt = true;
+                NewCourtFullName = inputDialog.Value;
+                DialogResult = true;
             }
         }
     }

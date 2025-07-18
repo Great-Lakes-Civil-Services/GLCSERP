@@ -897,14 +897,11 @@ private async void EditPlaintiffs_MouseDoubleClick(object sender, MouseButtonEve
         if (dialog.ShowDialog() == true)
         {
             if (dialog.IsNewPlaintiffs)
-                Job.Plaintiffs = dialog.NewPlaintiffsFullName.Trim();
+                Job.Plaintiffs = dialog.NewPlaintiffsFullName;
             else
-                Job.Plaintiffs = dialog.SelectedPlaintiffsFullName.Trim();
-
+                Job.Plaintiffs = dialog.SelectedPlaintiffsFullName;
             Job.IsPlaintiffsEdited = true;
             OnPropertyChanged(nameof(Job.Plaintiffs));
-            OnPropertyChanged(nameof(Job)); // Force UI refresh
-            Console.WriteLine($"✏️ Plaintiffs updated: {Job.Plaintiffs}");
         }
     }
     catch (Exception ex)
@@ -977,12 +974,12 @@ private async void EditProcessServer_MouseDoubleClick(object sender, MouseButton
         {
             if (dialog2.IsNewProcessServer)
             {
-                Job.ProcessServer = dialog2.NewProcessServer;
+                Job.ProcessServer = dialog2.NewProcessServerFullName;
                 Job.IsProcessServerNew = true;
             }
             else
             {
-                Job.ProcessServer = dialog2.SelectedProcessServer;
+                Job.ProcessServer = dialog2.SelectedProcessServerFullName;
                 Job.IsProcessServerNew = false;
             }
             Job.IsProcessServerEdited = true;
@@ -1080,7 +1077,10 @@ private async void EditArea_MouseDoubleClick(object sender, MouseButtonEventArgs
 
         if (dialog5.ShowDialog() == true)
         {
-            Job.Zone = dialog5.SelectedArea;
+            if (dialog5.IsNewArea)
+                Job.Zone = dialog5.NewAreaFullName;
+            else
+                Job.Zone = dialog5.SelectedArea;
             OnPropertyChanged(nameof(Job.Zone));
             Console.WriteLine($"✏️ Zone updated: {Job.Zone}");
         }
@@ -1099,14 +1099,35 @@ private async void EditTypeOfWrit_MouseDoubleClick(object sender, MouseButtonEve
     await _typeOfWritLock.WaitAsync();
     try
     {
-        var dialog6 = new EditTypeOfWritSearchWindow(Job.TypeOfWrit)
+        if (Job == null)
         {
-            Owner = Window.GetWindow(this)
-        };
-
-        if (dialog6.ShowDialog() == true)
+            System.Windows.MessageBox.Show("Job is not loaded.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            return;
+        }
+        var ownerWindow = Window.GetWindow(this);
+        var dialog6 = new EditTypeOfWritSearchWindow(
+            "Host=localhost;Port=5432;Database=mypg_database;Username=postgres;Password=7866",
+            Job.TypeOfWrit ?? ""
+        );
+        if (ownerWindow != null)
         {
-            Job.TypeOfWrit = dialog6.SelectedTypeOfWrit;
+            dialog6.Owner = ownerWindow;
+            dialog6.WindowStartupLocation = WindowStartupLocation.CenterOwner;
+        }
+        dialog6.Topmost = true;
+        var result = dialog6.ShowDialog();
+        if (result == true)
+        {
+            if (dialog6.IsNewTypeOfWrit)
+            {
+                Job.TypeOfWrit = dialog6.NewTypeOfWritFullName;
+                Job.IsTypeOfWritNew = true;
+            }
+            else
+            {
+                Job.TypeOfWrit = dialog6.SelectedTypeOfWrit;
+                Job.IsTypeOfWritNew = false;
+            }
             OnPropertyChanged(nameof(Job.TypeOfWrit));
             Console.WriteLine($"✏️ Type of Writ updated: {Job.TypeOfWrit}");
         }
@@ -1183,7 +1204,10 @@ private async void EditServiceType_MouseDoubleClick(object sender, MouseButtonEv
 
         if (dialog9.ShowDialog() == true)
         {
-            Job.ServiceType = dialog9.SelectedServiceType;
+            if (dialog9.IsNewServiceType)
+                Job.ServiceType = dialog9.NewServiceTypeFullName;
+            else
+                Job.ServiceType = dialog9.SelectedServiceType;
             OnPropertyChanged(nameof(Job.ServiceType));
         }
     }
@@ -1356,7 +1380,10 @@ private async void EditCourt_MouseDoubleClick(object sender, MouseButtonEventArg
 
         if (dialog.ShowDialog() == true)
         {
-            Job.Court = dialog.SelectedCourt;
+            if (dialog.IsNewCourt)
+                Job.Court = dialog.NewCourtFullName;
+            else
+                Job.Court = dialog.SelectedCourt;
             OnPropertyChanged(nameof(Job.Court));
         }
     }

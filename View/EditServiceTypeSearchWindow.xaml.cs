@@ -11,6 +11,8 @@ namespace CivilProcessERP.Views
         private readonly string _connectionString;
 
         public string SelectedServiceType => lstServiceTypes.SelectedItem?.ToString() ?? "";
+        public bool IsNewServiceType { get; set; } = false;
+        public string NewServiceTypeFullName { get; set; } = string.Empty;
 
         public EditServiceTypeSearchWindow(string connectionString, string initialValue = "")
         {
@@ -87,19 +89,12 @@ namespace CivilProcessERP.Views
         // Add this method for the Other button
         private void Other_Click(object sender, RoutedEventArgs e)
         {
-            var dialog = new CivilProcessERP.Views.SingleFieldDialog("Service Type", txtSearch.Text);
-            if (dialog.ShowDialog() == true)
+            var inputDialog = new SingleFieldDialog("Enter Service Type", "");
+            if (inputDialog.ShowDialog() == true)
             {
-                string newServiceType = dialog.Value;
-                if (!string.IsNullOrWhiteSpace(newServiceType))
-                {
-                    lstServiceTypes.SelectedItem = null;
-                    txtSearch.Text = newServiceType;
-                    if (!lstServiceTypes.Items.Contains(newServiceType))
-                        lstServiceTypes.Items.Insert(0, newServiceType);
-                    DialogResult = true;
-                    Close();
-                }
+                IsNewServiceType = true;
+                NewServiceTypeFullName = inputDialog.Value;
+                DialogResult = true;
             }
         }
     }

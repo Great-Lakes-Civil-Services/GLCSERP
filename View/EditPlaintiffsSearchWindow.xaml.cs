@@ -109,19 +109,12 @@ namespace CivilProcessERP.Views
 
         private void Other_Click(object sender, RoutedEventArgs e)
         {
-            var dialog = new CivilProcessERP.Views.SingleFieldDialog("Plaintiffs", txtSearchs.Text);
-            if (dialog.ShowDialog() == true)
+            var inputDialog = new EditFieldDialog("Edit Plaintiffs", "");
+            if (inputDialog.ShowDialog() == true)
             {
-                string newPlaintiffs = dialog.Value;
-                if (!string.IsNullOrWhiteSpace(newPlaintiffs))
-                {
-                    lstPlaintiffss.SelectedItem = null;
-                    txtSearchs.Text = newPlaintiffs;
-                    if (!lstPlaintiffss.Items.Contains(newPlaintiffs))
-                        lstPlaintiffss.Items.Insert(0, newPlaintiffs);
-                    DialogResult = true;
-                    Close();
-                }
+                IsNewPlaintiffs = true;
+                NewPlaintiffsFullName = inputDialog.EditedFullName;
+                DialogResult = true;
             }
         }
     }

@@ -871,8 +871,16 @@ private async void EditDefendant_MouseDoubleClick(object sender, MouseButtonEven
 
                 if (dialog.ShowDialog() == true)
                 {
-                    Job.Plaintiff = dialog.SelectedPlaintiffFullName;
-                    Job.IsPlaintiffEdited = true;
+                    if (dialog.IsNewPlaintiff)
+                    {
+                        Job.Plaintiff = dialog.NewPlaintiffFullName;
+                        Job.IsPlaintiffNew = true;
+                    }
+                    else
+                    {
+                        Job.Plaintiff = dialog.SelectedPlaintiffFullName;
+                        Job.IsPlaintiffNew = false;
+                    }
                     OnPropertyChanged(nameof(Job.Plaintiff));
                     Console.WriteLine($"✏️ Plaintiff updated: {Job.Plaintiff}");
                 }
@@ -901,15 +909,17 @@ private async void EditPlaintiffs_MouseDoubleClick(object sender, MouseButtonEve
 
         if (dialog.ShowDialog() == true)
         {
-            Job.Plaintiffs = dialog.SelectedPlaintiffsFullName;
+            if (dialog.IsNewPlaintiffs)
+                Job.Plaintiffs = dialog.NewPlaintiffsFullName;
+            else
+                Job.Plaintiffs = dialog.SelectedPlaintiffsFullName;
             Job.IsPlaintiffsEdited = true;
             OnPropertyChanged(nameof(Job.Plaintiffs));
-            Console.WriteLine($"✏️ Plaintiff updated: {Job.Plaintiffs}");
         }
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"🔥 Error editing plaintiff: {ex.Message}");
+        Console.WriteLine($"🔥 Error editing plaintiffs: {ex.Message}");
     }
     finally
     {
@@ -1074,7 +1084,16 @@ private async void EditArea_MouseDoubleClick(object sender, MouseButtonEventArgs
 
         if (dialog5.ShowDialog() == true)
         {
-            Job.Zone = dialog5.SelectedArea;
+            if (dialog5.IsNewArea)
+            {
+                Job.Zone = dialog5.NewAreaFullName;
+                Job.IsAreaNew = true;
+            }
+            else
+            {
+                Job.Zone = dialog5.SelectedArea;
+                Job.IsAreaNew = false;
+            }
             OnPropertyChanged(nameof(Job.Zone));
             Console.WriteLine($"✏️ Zone updated: {Job.Zone}");
         }
@@ -1087,33 +1106,63 @@ private async void EditArea_MouseDoubleClick(object sender, MouseButtonEventArgs
     {
         _areaLock.Release();
     }
-}private async void EditTypeOfWrit_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+}
+
+private async void EditTypeOfWrit_MouseDoubleClick(object sender, MouseButtonEventArgs e)
 {
     await _typeOfWritLock.WaitAsync();
     try
     {
-        var dialog6 = new EditTypeOfWritSearchWindow(Job.TypeOfWrit)
+        if (Job == null)
         {
-            Owner = Window.GetWindow(this)
-        };
-
-        if (dialog6.ShowDialog() == true)
-        {
-            Job.TypeOfWrit = dialog6.SelectedTypeOfWrit;
-            OnPropertyChanged(nameof(Job.TypeOfWrit));
-            Console.WriteLine($"✏️ Type of Writ updated: {Job.TypeOfWrit}");
+            System.Windows.MessageBox.Show("Job is not loaded.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            return;
         }
-    }
-    catch (Exception ex)
-    {
-        Console.WriteLine($"🔥 Error editing type of writ: {ex.Message}");
+        try
+        {
+            System.Diagnostics.Debug.WriteLine("[DEBUG] Creating EditTypeOfWritSearchWindow dialog");
+            var ownerWindow = Window.GetWindow(this);
+            System.Diagnostics.Debug.WriteLine($"[DEBUG] Window.GetWindow(this) is {(ownerWindow == null ? "null" : ownerWindow.ToString())}");
+            var dialog6 = new EditTypeOfWritSearchWindow(
+                "Host=localhost;Port=5432;Database=mypg_database;Username=postgres;Password=7866",
+                Job.TypeOfWrit ?? ""
+            );
+            if (ownerWindow != null)
+            {
+                dialog6.Owner = ownerWindow;
+                dialog6.WindowStartupLocation = WindowStartupLocation.CenterOwner;
+            }
+            dialog6.Topmost = true;
+            System.Diagnostics.Debug.WriteLine("[DEBUG] Showing EditTypeOfWritSearchWindow dialog");
+            var result = dialog6.ShowDialog();
+            System.Diagnostics.Debug.WriteLine($"[DEBUG] ShowDialog returned: {result}");
+            if (result == true)
+            {
+                if (dialog6.IsNewTypeOfWrit)
+                {
+                    Job.TypeOfWrit = dialog6.NewTypeOfWritFullName;
+                    Job.IsTypeOfWritNew = true;
+                }
+                else
+                {
+                    Job.TypeOfWrit = dialog6.SelectedTypeOfWrit;
+                    Job.IsTypeOfWritNew = false;
+                }
+                OnPropertyChanged(nameof(Job.TypeOfWrit));
+                Console.WriteLine($"✏️ Type of Writ updated: {Job.TypeOfWrit}");
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[ERROR] Exception during dialog creation/show: {ex}");
+            System.Windows.MessageBox.Show($"Error opening Type of Writ dialog: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
     }
     finally
     {
         _typeOfWritLock.Release();
     }
 }
-
 
 private readonly SemaphoreSlim _clientStatusLock = new SemaphoreSlim(1, 1);
 private readonly SemaphoreSlim _areaLock = new SemaphoreSlim(1, 1);
@@ -1163,6 +1212,38 @@ private async void EditSQLDateTimeCreated_MouseDoubleClick(object sender, MouseB
     }
 }
 
+// private async void EditServiceType_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+// {
+//     await _editLock.WaitAsync();
+//     try
+//     {
+//         var dialog9 = new EditServiceTypeSearchWindow("Host=localhost;Port=5432;Database=mypg_database;Username=postgres;Password=7866", Job.ServiceType)
+//         {
+//             Owner = Window.GetWindow(this)
+//         };
+
+//         if (dialog9.ShowDialog() == true)
+//         {
+//             if (dialog9.IsNewServiceType)
+//             {
+//                 Job.ServiceType = dialog9.NewServiceTypeFullName;
+//                 Job.IsServiceTypeNew = true;
+//             }
+//             else
+//             {
+//                 Job.ServiceType = dialog9.SelectedServiceType;
+//                 Job.IsServiceTypeNew = false;
+//             }
+//             OnPropertyChanged(nameof(Job.ServiceType));
+//         }
+//     }
+//     finally
+//     {
+//         _editLock.Release();
+//     }
+// }
+
+
 private async void EditServiceType_MouseDoubleClick(object sender, MouseButtonEventArgs e)
 {
     await _editLock.WaitAsync();
@@ -1175,7 +1256,10 @@ private async void EditServiceType_MouseDoubleClick(object sender, MouseButtonEv
 
         if (dialog9.ShowDialog() == true)
         {
-            Job.ServiceType = dialog9.SelectedServiceType;
+            if (dialog9.IsNewServiceType)
+                Job.ServiceType = dialog9.NewServiceTypeFullName;
+            else
+                Job.ServiceType = dialog9.SelectedServiceType;
             OnPropertyChanged(nameof(Job.ServiceType));
         }
     }
@@ -1341,7 +1425,10 @@ private async void EditCourt_MouseDoubleClick(object sender, MouseButtonEventArg
 
         if (dialog17.ShowDialog() == true)
         {
-            Job.Court = dialog17.SelectedCourt;
+            if (dialog17.IsNewCourt)
+                Job.Court = dialog17.NewCourtFullName;
+            else
+                Job.Court = dialog17.SelectedCourt;
             OnPropertyChanged(nameof(Job.Court));
         }
     }
@@ -1361,14 +1448,58 @@ private async void SaveButton_Click(object sender, RoutedEventArgs e)
         await Task.Run(() => service.SaveJob(Job)); // Save in background thread
         System.Windows.MessageBox.Show("Job saved successfully!", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
 
-        // Reload the job/payments from the database to refresh the UI
+        // Reload the job from the database to refresh the UI (not just payments)
         var updatedJob = await service.GetJobById(Job.JobId);
         if (updatedJob != null)
         {
-            Job.Payments.Clear();
+            // Update all properties of the Job object
+            this.Job.JobId = updatedJob.JobId;
+            this.Job.Court = updatedJob.Court;
+            this.Job.Defendant = updatedJob.Defendant;
+            this.Job.Plaintiff = updatedJob.Plaintiff;
+            this.Job.Plaintiffs = updatedJob.Plaintiffs;
+            this.Job.Address = updatedJob.Address;
+            this.Job.AddressLine1 = updatedJob.AddressLine1;
+            this.Job.AddressLine2 = updatedJob.AddressLine2;
+            this.Job.City = updatedJob.City;
+            this.Job.State = updatedJob.State;
+            this.Job.Zip = updatedJob.Zip;
+            this.Job.Zone = updatedJob.Zone;
+            this.Job.SqlDateTimeCreated = updatedJob.SqlDateTimeCreated;
+            this.Job.LastDayToServe = updatedJob.LastDayToServe;
+            this.Job.ExpirationDate = updatedJob.ExpirationDate;
+            this.Job.CourtDateTime = updatedJob.CourtDateTime;
+            this.Job.ServiceDateTime = updatedJob.ServiceDateTime;
+            this.Job.TypeOfWrit = updatedJob.TypeOfWrit;
+            this.Job.ServiceType = updatedJob.ServiceType;
+            this.Job.ClientReference = updatedJob.ClientReference;
+            this.Job.CaseNumber = updatedJob.CaseNumber;
+            this.Job.Attorney = updatedJob.Attorney;
+            this.Job.Client = updatedJob.Client;
+            this.Job.ProcessServer = updatedJob.ProcessServer;
+            this.Job.ClientStatus = updatedJob.ClientStatus;
+            this.Job.InvoiceEntries.Clear();
+            foreach (var inv in updatedJob.InvoiceEntries)
+                this.Job.InvoiceEntries.Add(inv);
+            this.Job.Payments.Clear();
             foreach (var pay in updatedJob.Payments)
-                Job.Payments.Add(pay);
-            OnPropertyChanged(nameof(Job.TotalPaymentsAmount));
+                this.Job.Payments.Add(pay);
+            this.Job.Attachments.Clear();
+            foreach (var att in updatedJob.Attachments)
+                this.Job.Attachments.Add(att);
+            this.Job.Comments.Clear();
+            foreach (var c in updatedJob.Comments)
+                this.Job.Comments.Add(c);
+            this.Job.Attempts.Clear();
+            foreach (var a in updatedJob.Attempts)
+                this.Job.Attempts.Add(a);
+            this.Job.ChangeHistory = updatedJob.ChangeHistory;
+            this.Job.WorkflowFCM = updatedJob.WorkflowFCM;
+            this.Job.WorkflowSOPS = updatedJob.WorkflowSOPS;
+            this.Job.WorkflowIIA = updatedJob.WorkflowIIA;
+            // Notify UI
+            OnPropertyChanged(nameof(Job.TypeOfWrit));
+            OnPropertyChanged(nameof(Job));
         }
     }
     catch (Exception ex)
