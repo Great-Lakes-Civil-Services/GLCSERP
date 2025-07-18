@@ -2,6 +2,8 @@ using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System;
+using Npgsql;
 
 namespace CivilProcessERP.Views
 {
@@ -9,24 +11,53 @@ namespace CivilProcessERP.Views
     {
         public string SelectedTypeOfWrit => lstTypes.SelectedItem?.ToString() ?? "";
 
-        private readonly List<string> _availableTypes = new()
-        {
-            "SUMMONS AND COMPLAINT",
-            "WARRANT OF EVICTION",
-            "WRIT OF RESTITUTION",
-            "NOTICE TO QUIT",
-            "NOTICE TO VACATE",
-            "COURT SUMMONS",
-            "MOTION FOR CONTEMPT",
-            "SHOW CAUSE ORDER"
-            // ✅ Add more types if needed
-        };
+        private List<string> _availableTypes;
 
         public EditTypeOfWritSearchWindow(string initialValue = "")
         {
             InitializeComponent();
             txtSearch.Text = initialValue;
+            _availableTypes = FetchWritTypesFromDb();
+            if (_availableTypes.Count == 0)
+            {
+                // Fallback to old hardcoded list if DB is empty
+                _availableTypes = new List<string>
+                {
+                    "SUMMONS AND COMPLAINT",
+                    "WARRANT OF EVICTION",
+                    "WRIT OF RESTITUTION",
+                    "NOTICE TO QUIT",
+                    "NOTICE TO VACATE",
+                    "COURT SUMMONS",
+                    "MOTION FOR CONTEMPT",
+                    "SHOW CAUSE ORDER"
+                };
+            }
             LoadTypes(initialValue);
+        }
+
+        private List<string> FetchWritTypesFromDb()
+        {
+            var types = new List<string>();
+            string connStr = "Host=localhost;Port=5432;Database=mypg_database;Username=postgres;Password=7866";
+            try
+            {
+                using var conn = new Npgsql.NpgsqlConnection(connStr);
+                conn.Open();
+                using var cmd = new Npgsql.NpgsqlCommand("SELECT DISTINCT typewrit FROM plongs WHERE typewrit IS NOT NULL AND typewrit <> '' ORDER BY typewrit", conn);
+                using var reader = cmd.ExecuteReader();
+                while (reader.Read())
+                {
+                    var type = reader["typewrit"]?.ToString();
+                    if (!string.IsNullOrWhiteSpace(type))
+                        types.Add(type);
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[ERROR] Failed to load writ types from DB: {ex.Message}");
+            }
+            return types;
         }
 
         private void txtSearch_TextChanged(object sender, TextChangedEventArgs e)

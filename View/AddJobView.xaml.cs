@@ -858,18 +858,18 @@ private async void EditDefendant_MouseDoubleClick(object sender, MouseButtonEven
 
                 if (dialog.ShowDialog() == true)
                 {
-                    if (dialog.IsNewPlaintiff) // <-- Add this property to your dialog
+                    if (dialog.IsNewPlaintiff)
                     {
                         Job.Plaintiff = dialog.NewPlaintiffFullName;
-                        Job.IsPlaintiffNew = true; // <-- Add this property to your Job model
+                        Job.IsPlaintiffNew = true;
                     }
                     else
                     {
-                        Job.Plaintiff = dialog.SelectedPlaintiffFullName;
+                        Job.Plaintiff = dialog.SelectedPlaintiffFullName; // <-- Always use the selected item!
                         Job.IsPlaintiffNew = false;
                     }
                     OnPropertyChanged(nameof(Job.Plaintiff));
-                    OnPropertyChanged(nameof(Job)); // <-- Add this line
+                    OnPropertyChanged(nameof(Job)); // Force UI refresh
                 }
             }
             catch (Exception ex)
@@ -896,7 +896,11 @@ private async void EditPlaintiffs_MouseDoubleClick(object sender, MouseButtonEve
 
         if (dialog.ShowDialog() == true)
         {
-            Job.Plaintiffs = dialog.txtSearchs.Text.Trim();
+            if (dialog.IsNewPlaintiffs)
+                Job.Plaintiffs = dialog.NewPlaintiffsFullName.Trim();
+            else
+                Job.Plaintiffs = dialog.SelectedPlaintiffsFullName.Trim();
+
             Job.IsPlaintiffsEdited = true;
             OnPropertyChanged(nameof(Job.Plaintiffs));
             OnPropertyChanged(nameof(Job)); // Force UI refresh
@@ -1343,16 +1347,16 @@ private async void EditCourt_MouseDoubleClick(object sender, MouseButtonEventArg
     await _editLock.WaitAsync();
     try
     {
-        var dialog17 = new EditCourtSearchWindow(
+        var dialog = new EditCourtSearchWindow(
             "Host=localhost;Port=5432;Database=mypg_database;Username=postgres;Password=7866",
             Job.Court)
         {
             Owner = Window.GetWindow(this)
         };
 
-        if (dialog17.ShowDialog() == true)
+        if (dialog.ShowDialog() == true)
         {
-            Job.Court = dialog17.SelectedCourt;
+            Job.Court = dialog.SelectedCourt;
             OnPropertyChanged(nameof(Job.Court));
         }
     }

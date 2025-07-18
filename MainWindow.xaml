@@ -5,7 +5,9 @@
         Title="Civil Process ERP" Height="900" Width="1600"
         WindowStartupLocation="CenterScreen"
         WindowState="Maximized"
-        KeyDown="Window_KeyDown">
+        KeyDown="Window_KeyDown"
+        MinWidth="900"
+        MinHeight="600">
 
     <Grid>
         <!-- 🔐 Login View -->

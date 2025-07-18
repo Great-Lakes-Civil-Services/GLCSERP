@@ -71,10 +71,15 @@ namespace CivilProcessERP.Views
 public JobDetailsView(Job job)
 {
              InitializeComponent();
-            DataContext = new LandlordTenantViewModel(job);
-
-    // Initialize job object
             Job = job ?? new Job();
+            // Defensive initialization for all collections
+            Job.InvoiceEntries ??= new ObservableCollection<InvoiceModel>();
+            Job.Payments ??= new ObservableCollection<PaymentModel>();
+            Job.Attachments ??= new ObservableCollection<AttachmentModel>();
+            Job.Comments ??= new ObservableCollection<CommentModel>();
+            Job.Attempts ??= new ObservableCollection<AttemptsModel>();
+            if (Job.ChangeHistory == null)
+                Job.ChangeHistory = new List<CivilProcessERP.Models.Job.ChangeEntryModel>();
     _originalJob = Job.Clone();
     DataContext = this;
 
@@ -1294,30 +1299,31 @@ private async void EditLastDayToServe_MouseDoubleClick(object sender, MouseButto
 
 private async void EditServeeAddress_MouseDoubleClick(object sender, MouseButtonEventArgs e)
 {
-    await _editLock.WaitAsync();
-    try
+    var dialog = new EditServeeAddressWindow(
+        Job.AddressLine1,
+        Job.AddressLine2,
+        Job.City,
+        Job.State,
+        Job.Zip
+    )
     {
-        string address1 = Job.AddressLine1 ?? "";
-string address2 = Job.AddressLine2 ?? "";
-string city     = Job.City ?? "";
-string state    = Job.State ?? "";
-string zip      = Job.Zip ?? "";
+        Owner = Window.GetWindow(this)
+    };
 
-        var dialog = new EditServeeAddressWindow(address1, address2, city, state, zip)
-        {
-            Owner = Window.GetWindow(this)
-        };
-
-        if (dialog.ShowDialog() == true)
-        {
-            Job.Address = $"{dialog.Address1},{dialog.Address2},{dialog.City},{dialog.State},{dialog.Zip}";
-            OnPropertyChanged(nameof(Job.Address));
-            Console.WriteLine($"✏️ Servee Address updated: {Job.Address}");
-        }
-    }
-    finally
+    if (dialog.ShowDialog() == true)
     {
-        _editLock.Release();
+        Job.AddressLine1 = dialog.Address1;
+        Job.AddressLine2 = dialog.Address2;
+        Job.City = dialog.City;
+        Job.State = dialog.State;
+        Job.Zip = dialog.Zip;
+        Job.Address = $"{Job.AddressLine1} {Job.AddressLine2} {Job.City} {Job.State} {Job.Zip}".Trim();
+        OnPropertyChanged(nameof(Job.AddressLine1));
+        OnPropertyChanged(nameof(Job.AddressLine2));
+        OnPropertyChanged(nameof(Job.City));
+        OnPropertyChanged(nameof(Job.State));
+        OnPropertyChanged(nameof(Job.Zip));
+        OnPropertyChanged(nameof(Job.Address));
     }
 }
 

@@ -34,6 +34,13 @@ public class JobService : INotifyPropertyChanged
     public async Task<Job?> GetJobById(string jobId)
     {
         Job job = new();
+        // Defensive initialization for all collections
+        job.InvoiceEntries = job.InvoiceEntries ?? new System.Collections.ObjectModel.ObservableCollection<InvoiceModel>();
+        job.Payments = job.Payments ?? new System.Collections.ObjectModel.ObservableCollection<PaymentModel>();
+        job.Attachments = job.Attachments ?? new System.Collections.ObjectModel.ObservableCollection<AttachmentModel>();
+        job.Comments = job.Comments ?? new System.Collections.ObjectModel.ObservableCollection<CommentModel>();
+        job.Attempts = job.Attempts ?? new System.Collections.ObjectModel.ObservableCollection<AttemptsModel>();
+        job.ChangeHistory = job.ChangeHistory ?? new System.Collections.Generic.List<ChangeEntryModel>();
         try
         {
             await using var conn = new NpgsqlConnection(_connectionString);
@@ -904,7 +911,9 @@ job.Zip = zip;
                 sqldatetimerecd = @sqlDateCreated,
                 sqldatetimeserved = @lastDayToServe,
                 sqlexpiredate = @expirationDate,
-                clientrefnum = @clientRef
+                clientrefnum = @clientRef,
+                courtdatecode = @courtDateCode,
+                datetimeserved = @dateTimeServed
             WHERE serialnum = @jobId", conn32, tx))
             {
                 cmd.Parameters.AddWithValue("zone", job.Zone ?? (object)DBNull.Value);
@@ -912,6 +921,8 @@ job.Zip = zip;
                 cmd.Parameters.AddWithValue("lastDayToServe", ParseDateTimeOrNull(job.LastDayToServe?.ToString("yyyy-MM-dd HH:mm:ss") ?? ""));
                 cmd.Parameters.AddWithValue("expirationDate", ParseDateTimeOrNull(job.ExpirationDate?.ToString("yyyy-MM-dd HH:mm:ss") ?? ""));
                 cmd.Parameters.AddWithValue("clientRef", job.ClientReference ?? (object)DBNull.Value);
+                cmd.Parameters.AddWithValue("courtDateCode", ParseDateTimeOrNull(job.CourtDateTime?.ToString("yyyy-MM-dd HH:mm:ss") ?? ""));
+                cmd.Parameters.AddWithValue("dateTimeServed", ParseDateTimeOrNull(job.ServiceDateTime?.ToString("yyyy-MM-dd HH:mm:ss") ?? ""));
                 cmd.Parameters.AddWithValue("jobId", long.Parse(job.JobId));
 
                 int affected = await cmd.ExecuteNonQueryAsync();
@@ -971,6 +982,18 @@ job.Zip = zip;
                                 fieldList.Add("clientrefnum");
                                 valueList.Add("@clientRef");
                                 insertCmd.Parameters.AddWithValue("clientRef", job.ClientReference);
+                            }
+                            if (!string.IsNullOrWhiteSpace(job.CourtDateTime?.ToString()))
+                            {
+                                fieldList.Add("courtdatecode");
+                                valueList.Add("@courtDateCode");
+                                insertCmd.Parameters.AddWithValue("courtDateCode", ParseDateTimeOrNull(job.CourtDateTime?.ToString("yyyy-MM-dd HH:mm:ss") ?? ""));
+                            }
+                            if (!string.IsNullOrWhiteSpace(job.ServiceDateTime?.ToString()))
+                            {
+                                fieldList.Add("datetimeserved");
+                                valueList.Add("@dateTimeServed");
+                                insertCmd.Parameters.AddWithValue("dateTimeServed", ParseDateTimeOrNull(job.ServiceDateTime?.ToString("yyyy-MM-dd HH:mm:ss") ?? ""));
                             }
 
                             if (fieldList.Count == 1)

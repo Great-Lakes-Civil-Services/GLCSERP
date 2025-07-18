@@ -16,6 +16,8 @@ using System.Threading.Tasks;
 using System.Windows.Media;
 using System.Windows.Shapes;
 using System.Windows.Forms; // For multi-monitor support
+using System.Runtime.InteropServices;
+using System.Windows.Interop;
 
 namespace CivilProcessERP
 {
@@ -119,6 +121,7 @@ namespace CivilProcessERP
                 this.Closed += (s, e) => OpenWindows.Remove(this);
                 this.Closing += (s, e) => { if (_idleTimer != null) _idleTimer.Stop(); };
                 this.WindowState = WindowState.Maximized; // Always open maximized
+                this.SizeChanged += MainWindow_SizeChanged;
                 Console.WriteLine("[DEBUG] MainWindow constructor finished");
             }
             catch (Exception ex)
@@ -128,6 +131,53 @@ namespace CivilProcessERP
                 System.Windows.MessageBox.Show(msg, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 throw;
             }
+        }
+
+        private void MainWindow_SizeChanged(object sender, SizeChangedEventArgs e)
+        {
+            if (this.Width < this.MinWidth)
+                this.Width = this.MinWidth;
+            if (this.Height < this.MinHeight)
+                this.Height = this.MinHeight;
+        }
+
+        protected override void OnSourceInitialized(EventArgs e)
+        {
+            base.OnSourceInitialized(e);
+            var hwndSource = PresentationSource.FromVisual(this) as HwndSource;
+            if (hwndSource != null)
+                hwndSource.AddHook(WndProc);
+        }
+
+        private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
+        {
+            const int WM_GETMINMAXINFO = 0x0024;
+            if (msg == WM_GETMINMAXINFO)
+            {
+                MINMAXINFO mmi = Marshal.PtrToStructure<MINMAXINFO>(lParam);
+                mmi.ptMinTrackSize.x = (int)this.MinWidth;
+                mmi.ptMinTrackSize.y = (int)this.MinHeight;
+                Marshal.StructureToPtr(mmi, lParam, true);
+                handled = true;
+            }
+            return IntPtr.Zero;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        public struct POINT
+        {
+            public int x;
+            public int y;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        public struct MINMAXINFO
+        {
+            public POINT ptReserved;
+            public POINT ptMaxSize;
+            public POINT ptMaxPosition;
+            public POINT ptMinTrackSize;
+            public POINT ptMaxTrackSize;
         }
 
 
