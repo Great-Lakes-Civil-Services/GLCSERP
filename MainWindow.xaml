@@ -2,7 +2,7 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:local="clr-namespace:CivilProcessERP"
-        Title="Civil Process ERP" Height="900" Width="1600"
+        Title="GLERP" Height="900" Width="1600"
         WindowStartupLocation="CenterScreen"
         WindowState="Maximized"
         KeyDown="Window_KeyDown"
@@ -28,36 +28,42 @@
             </Grid.ColumnDefinitions>
 
             <!-- ✅ Top Navigation Bar -->
-            <DockPanel Grid.Row="0" Grid.ColumnSpan="2" Background="White">
-                <StackPanel Orientation="Horizontal" Background="White" Height="50" Width="1400">
-                    <TextBlock Text="Great Lakes Civil Services" 
-                               FontSize="22" FontWeight="Bold" Foreground="Blue" 
-                               VerticalAlignment="Center" Margin="10"/>
+            <Grid Grid.Row="0" Grid.ColumnSpan="2" Background="White">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/> <!-- Branding -->
+                    <ColumnDefinition Width="*"/>    <!-- Navigation Buttons -->
+                    <ColumnDefinition Width="Auto"/> <!-- Back/Forward -->
+                </Grid.ColumnDefinitions>
 
-                    <!-- Nav Buttons -->
-                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,10,0">
-                        <Button Content="Dashboard" Click="NavigateToPage" Tag="Dashboard"/>
-                        <Button Content="Administration" Click="AdministrationButton_Click"/>
-                        <Button Content="HuronPortal" Click="NavigateToPage" Tag="HuronPortal"/>
-                        <Button Content="Courts" Click="NavigateToPage" Tag="Courts"/>
-                        <Button Content="Clients" Click="NavigateToPage" Tag="Clients"/>
-                        <Button Content="Employee's Corner" Click="NavigateToPage" Tag="EmployeesCorner"/>
-                        <!-- Add the + button for new ERP window -->
-                        <Button Content="+" Width="36" Height="36" Margin="8,0,0,0" VerticalAlignment="Center" Click="AddNewMainWindow_Click" ToolTip="Open new ERP window"/>
-                        <Button Content="Logout" Click="Logout_Click" Background="Red" Foreground="White" Margin="20,0,0,0"/>
-                    </StackPanel>
+                <!-- Branding -->
+                <TextBlock Grid.Column="0" 
+                           Text="Great Lakes Civil Services" 
+                           FontSize="22" FontWeight="Bold" Foreground="Blue" 
+                           VerticalAlignment="Center" Margin="20,0,0,0"/>
+
+                <!-- Navigation Buttons -->
+                <StackPanel Grid.Column="1" Orientation="Horizontal" 
+                            HorizontalAlignment="Left" VerticalAlignment="Center" Margin="300,0,0,0">
+                    <Button Content="Dashboard" Click="NavigateToPage" Tag="Dashboard" Margin="5,0"/>
+                    <Button Content="Administration" Click="AdministrationButton_Click" Margin="5,0"/>
+                    <Button Content="HuronPortal" Click="NavigateToPage" Tag="HuronPortal" Margin="5,0"/>
+                    <Button Content="Courts" Click="NavigateToPage" Tag="Courts" Margin="5,0"/>
+                    <Button Content="Clients" Click="NavigateToPage" Tag="Clients" Margin="5,0"/>
+                    <Button Content="Employee's Corner" Click="NavigateToPage" Tag="EmployeesCorner" Margin="5,0"/>
+                    <Button Content="+" Width="36" Height="36" Margin="15,0,5,0" 
+                            VerticalAlignment="Center" Click="AddNewMainWindow_Click" ToolTip="Open new ERP window"/>
+                    <Button Content="Logout" Click="Logout_Click" Background="Red" Foreground="White" Margin="15,0,0,0"/>
                 </StackPanel>
-            </DockPanel>
 
-            <!-- ✅ Back/Forward Buttons -->
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="10" Grid.Row="0">
-                <Button Content="← BACK" Click="GoBack" Name="GoBackBtn" 
-                        Width="100" Height="30" Background="Blue" Foreground="White"/>
-                <Button Content="FORWARD →" Click="GoForward" Name="GoForwardBtn" 
-                        Width="100" Height="30" Background="Blue" Foreground="White" Margin="10,0,0,0"/>
-                <!-- <Button Content="TEST CLOSE" Click="TestCloseTab_Click" Name="TestCloseBtn" 
-                        Width="100" Height="30" Background="Orange" Foreground="White" Margin="10,0,0,0"/> -->
-            </StackPanel>
+                <!-- Back/Forward Buttons -->
+                <StackPanel Grid.Column="2" Orientation="Horizontal" 
+                            HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,20,0">
+                    <Button Content="← BACK" Click="GoBack" Name="GoBackBtn" 
+                            Width="100" Height="30" Background="Blue" Foreground="White"/>
+                    <Button Content="FORWARD →" Click="GoForward" Name="GoForwardBtn" 
+                            Width="100" Height="30" Background="Blue" Foreground="White" Margin="10,0,0,0"/>
+                </StackPanel>
+            </Grid>
 
             <!-- Main content area (no tabs, just a single content control) -->
             <Grid Grid.Row="1" Grid.Column="0" Background="#F0F0F0">
