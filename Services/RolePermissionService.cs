@@ -8,7 +8,7 @@ namespace CivilProcessERP.Services
 {
     public class RolePermissionService
     {
-        private readonly string _connStr = "Host=localhost;Port=5432;Database=mypg_database;Username=postgres;Password=7866";
+        private readonly string _connStr = "Host=192.168.0.15;Port=5432;Database=mypg_database;Username=postgres;Password=7866";
 
         public async Task<List<PermissionModel>> GetPermissionsForRoleAsync(int roleNumber)
         {

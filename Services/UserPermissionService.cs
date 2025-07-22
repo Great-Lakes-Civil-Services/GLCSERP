@@ -7,7 +7,7 @@ namespace CivilProcessERP.Services
 {
     public class UserPermissionService
     {
-        private readonly string _connStr = "Host=localhost;Port=5432;Username=postgres;Password=7866;Database=mypg_database";
+        private readonly string _connStr = "Host=192.168.0.15;Port=5432;Database=mypg_database;Username=postgres;Password=7866";
 
         // 🔹 Save direct permissions asynchronously
         public async Task SavePermissionsForUserAsync(int userId, List<string> permissionNames)

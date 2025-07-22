@@ -13,7 +13,7 @@ namespace CivilProcessERP.Views
     {
 
 
-    private readonly string _connString = "Host=localhost;Port=5432;Username=postgres;Password=7866;Database=mypg_database";
+    private readonly string _connString = "Host=localhost;Port=5432;Database=mypg_database;Username=postgres;Password=7866";
 
         private readonly UserSearchService _userSearchService = new UserSearchService();
         private readonly GroupService _groupService = new();

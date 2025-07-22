@@ -288,7 +288,7 @@ private async Task<byte[]> FetchBlobDataAsync(string blobmetadataId)
         WHERE bm.id = @blobmetadataId::uuid;
     ";
 
-    string connectionString = "Host=localhost;Port=5432;Database=mypg_database;Username=postgres;Password=7866";
+    string connectionString = "Host=192.168.0.15;Port=5432;Database=mypg_database;Username=postgres;Password=7866";
 
     await _fileAccessLock.WaitAsync();
     try
@@ -863,7 +863,7 @@ private async void EditDefendant_MouseDoubleClick(object sender, MouseButtonEven
             try
             {
                 var dialog = new EditPlaintiffSearchWindow(
-                    "Host=localhost;Port=5432;Database=mypg_database;Username=postgres;Password=7866",
+                    "Host=192.168.0.15;Port=5432;Database=mypg_database;Username=postgres;Password=7866",
                     Job.Plaintiff)
                 {
                     Owner = Window.GetWindow(this)
@@ -901,7 +901,7 @@ private async void EditPlaintiffs_MouseDoubleClick(object sender, MouseButtonEve
     try
     {
         var dialog = new EditPlaintiffsSearchWindow(
-            "Host=localhost;Port=5432;Database=mypg_database;Username=postgres;Password=7866",
+            "Host=192.168.0.15;Port=5432;Database=mypg_database;Username=postgres;Password=7866",
             Job.Plaintiffs)
         {
             Owner = Window.GetWindow(this)
@@ -937,7 +937,7 @@ private async void EditAttorney_MouseDoubleClick(object sender, MouseButtonEvent
     try
     {
         var dialog = new EditAttorneySearchWindow(
-            "Host=localhost;Port=5432;Database=mypg_database;Username=postgres;Password=7866",
+            "Host=192.168.0.15;Port=5432;Database=mypg_database;Username=postgres;Password=7866",
             Job.Attorney)
         {
             Owner = Window.GetWindow(this)
@@ -975,7 +975,7 @@ private async void EditProcessServer_MouseDoubleClick(object sender, MouseButton
     try
     {
         var dialog2 = new EditProcessServerSearchWindow(
-            "Host=localhost;Port=5432;Database=mypg_database;Username=postgres;Password=7866",
+            "Host=192.168.0.15;Port=5432;Database=mypg_database;Username=postgres;Password=7866",
             Job.ProcessServer)
         {
             Owner = Window.GetWindow(this)
@@ -1012,7 +1012,7 @@ private async void EditClient_MouseDoubleClick(object sender, MouseButtonEventAr
     try
     {
         var dialog3 = new EditClientSearchWindow(
-            "Host=localhost;Port=5432;Database=mypg_database;Username=postgres;Password=7866",
+            "Host=192.168.0.15;Port=5432;Database=mypg_database;Username=postgres;Password=7866",
             Job.Client)
         {
             Owner = Window.GetWindow(this)
@@ -1076,7 +1076,7 @@ private async void EditArea_MouseDoubleClick(object sender, MouseButtonEventArgs
     try
     {
         var dialog5 = new EditAreaSearchWindow(
-            "Host=localhost;Port=5432;Database=mypg_database;Username=postgres;Password=7866",
+            "Host=192.168.0.15;Port=5432;Database=mypg_database;Username=postgres;Password=7866",
             Job.Zone)
         {
             Owner = Window.GetWindow(this)
@@ -1124,7 +1124,7 @@ private async void EditTypeOfWrit_MouseDoubleClick(object sender, MouseButtonEve
             var ownerWindow = Window.GetWindow(this);
             System.Diagnostics.Debug.WriteLine($"[DEBUG] Window.GetWindow(this) is {(ownerWindow == null ? "null" : ownerWindow.ToString())}");
             var dialog6 = new EditTypeOfWritSearchWindow(
-                "Host=localhost;Port=5432;Database=mypg_database;Username=postgres;Password=7866",
+                "Host=192.168.0.15;Port=5432;Database=mypg_database;Username=postgres;Password=7866",
                 Job.TypeOfWrit ?? ""
             );
             if (ownerWindow != null)
@@ -1217,7 +1217,7 @@ private async void EditSQLDateTimeCreated_MouseDoubleClick(object sender, MouseB
 //     await _editLock.WaitAsync();
 //     try
 //     {
-//         var dialog9 = new EditServiceTypeSearchWindow("Host=localhost;Port=5432;Database=mypg_database;Username=postgres;Password=7866", Job.ServiceType)
+//         var dialog9 = new EditServiceTypeSearchWindow("Host=192.168.0.15;Port=5432;Database=mypg_database;Username=postgres;Password=7866", Job.ServiceType)
 //         {
 //             Owner = Window.GetWindow(this)
 //         };
@@ -1249,7 +1249,9 @@ private async void EditServiceType_MouseDoubleClick(object sender, MouseButtonEv
     await _editLock.WaitAsync();
     try
     {
-        var dialog9 = new EditServiceTypeSearchWindow("Host=localhost;Port=5432;Database=mypg_database;Username=postgres;Password=7866", Job.ServiceType)
+        var dialog9 = new EditServiceTypeSearchWindow(
+            "Host=192.168.0.15;Port=5432;Database=mypg_database;Username=postgres;Password=7866",
+            Job.ServiceType)
         {
             Owner = Window.GetWindow(this)
         };
@@ -1417,7 +1419,7 @@ private async void EditCourt_MouseDoubleClick(object sender, MouseButtonEventArg
     try
     {
         var dialog17 = new EditCourtSearchWindow(
-            "Host=localhost;Port=5432;Database=mypg_database;Username=postgres;Password=7866",
+            "Host=192.168.0.15;Port=5432;Database=mypg_database;Username=postgres;Password=7866",
             Job.Court)
         {
             Owner = Window.GetWindow(this)

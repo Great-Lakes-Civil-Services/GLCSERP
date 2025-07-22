@@ -6,7 +6,7 @@ using CivilProcessERP.Models;
 
 public class UserSearchService
 {
-    private readonly string _connString = "Host=localhost;Port=5432;Username=postgres;Password=7866;Database=mypg_database";
+    private readonly string _connString = "Host=192.168.0.15;Port=5432;Database=mypg_database;Username=postgres;Password=7866";
 
     public async Task<List<UserModel>> SearchUsersAsync(string prefix)
     {

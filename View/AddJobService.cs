@@ -9,7 +9,7 @@ using System.Collections; // Added for HashSet
 
 public class AddJobService
 {
-    private readonly string _connectionString = "Host=localhost;Port=5432;Database=mypg_database;Username=postgres;Password=7866";
+    private readonly string _connectionString = "Host=192.168.0.15;Port=5432;Database=mypg_database;Username=postgres;Password=7866";
 
     public async Task<int> AddJob(Job job)
     {

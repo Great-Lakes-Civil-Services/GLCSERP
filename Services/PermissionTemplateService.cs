@@ -5,7 +5,7 @@ using Npgsql;
 
 public class PermissionTemplateService
 {
-    private readonly string _connStr = "Host=localhost;Port=5432;Username=postgres;Password=7866;Database=mypg_database";
+    private readonly string _connStr = "Host=192.168.0.15;Port=5432;Database=mypg_database;Username=postgres;Password=7866";
 
     public async Task<List<string>> GetAllTemplateNamesAsync()
     {

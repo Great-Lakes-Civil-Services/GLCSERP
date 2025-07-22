@@ -12,7 +12,7 @@ namespace CivilProcessERP.Services
 
         public GroupService()
         {
-            _connStr = "Host=localhost;Port=5432;Username=postgres;Password=7866;Database=mypg_database";
+            _connStr = "Host=192.168.0.15;Port=5432;Database=mypg_database;Username=postgres;Password=7866";
         }
 
         public async Task<List<string>> GetGroupsForUserAsync(int userId)

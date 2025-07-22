@@ -8,7 +8,7 @@ namespace CivilProcessERP.Services
 {
     public static class RolePermissionMapper
     {
-        private const string ConnectionString = "Host=localhost;Port=5432;Database=mypg_database;Username=postgres;Password=7866";
+        private const string ConnectionString = "Host=192.168.0.15;Port=5432;Database=mypg_database;Username=postgres;Password=7866";
 
         public static async Task<List<PermissionModel>> GetPermissionsForRoleAsync(int roleNumber)
         {

@@ -6,7 +6,7 @@ namespace CivilProcessERP.Data
 {
     public class JobRepository
     {
-        private readonly string connectionString = "Host=localhost;Port=5432;Database=mypg_database;Username=postgres;Password=7866";
+        private readonly string connectionString = "Host=192.168.0.15;Port=5432;Database=mypg_database;Username=postgres;Password=7866";
 
         public Job GetJobDetails(string jobNumber)
         {

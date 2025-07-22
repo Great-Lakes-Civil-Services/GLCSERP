@@ -10,7 +10,7 @@ namespace CivilProcessERP.Views
 {
     public partial class FreezeOrganizationView : System.Windows.Controls.UserControl
     {
-        private static readonly string connString = "Host=localhost;Port=5432;Username=postgres;Password=7866;Database=mypg_database";
+        private static readonly string connString = "Host=192.168.0.15;Port=5432;Database=mypg_database;Username=postgres;Password=7866";
 
         public FreezeOrganizationView()
         {
