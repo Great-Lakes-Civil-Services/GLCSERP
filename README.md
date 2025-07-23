@@ -83,7 +83,7 @@ GLERP (Great Lakes Civil Services ERP) is a comprehensive enterprise resource pl
 - Backup your data before updating
 
 ## License
-© 2024 Great Lakes Civil Services. All rights reserved.
+© 2025 Great Lakes Civil Services. All rights reserved.
 
 ---
 
