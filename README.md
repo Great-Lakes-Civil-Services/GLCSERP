@@ -55,8 +55,8 @@ GLERP (Great Lakes Civil Services ERP) is a comprehensive enterprise resource pl
 ## Support
 
 ### Contact Information
-- **Email**: support@greatlakescivilservices.com
-- **Phone**: (555) 123-4567
+- **Email**: farazg@allenhope.com
+- **Email**: devinh@allenhope.com
 - **Hours**: Monday-Friday, 8:00 AM - 5:00 PM
 
 ### Troubleshooting
