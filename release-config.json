@@ -1,0 +1,37 @@
+{
+  "releaseInfo": {
+    "version": "1.0.0",
+    "releaseDate": "2024-12-19",
+    "applicationName": "GLERP",
+    "fullName": "Great Lakes Civil Services ERP",
+    "description": "Enterprise Resource Planning System for Civil Services Management",
+    "company": "Great Lakes Civil Services",
+    "supportEmail": "support@greatlakescivilservices.com",
+    "supportPhone": "(555) 123-4567"
+  },
+  "buildSettings": {
+    "configuration": "Release",
+    "runtime": "win-x64",
+    "selfContained": true,
+    "singleFile": false,
+    "publishTrimmed": false,
+    "outputDirectory": "./Release"
+  },
+  "packageInfo": {
+    "installerName": "GLERP-Setup-v1.0.0.exe",
+    "zipName": "GLERP-v1.0.0.zip",
+    "fileSize": "~50 MB",
+    "systemRequirements": {
+      "os": "Windows 10/11 (64-bit)",
+      "processor": "Intel Core i3 or equivalent",
+      "memory": "4 GB RAM minimum (8 GB recommended)",
+      "storage": "500 MB available disk space",
+      "network": "Internet connection for database connectivity"
+    }
+  },
+  "distribution": {
+    "downloadUrl": "https://your-company-website.com/glerp/download",
+    "documentationUrl": "https://your-company-website.com/glerp/docs",
+    "supportUrl": "https://your-company-website.com/glerp/support"
+  }
+} 
