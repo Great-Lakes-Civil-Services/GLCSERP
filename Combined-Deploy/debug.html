@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GLERP Debug - Data Storage Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        .btn {
+            background: #007272;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 10px 5px;
+        }
+        .btn-success { background: #28a745; }
+        .btn-warning { background: #ffc107; color: #212529; }
+        .data-display {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 5px;
+            margin: 20px 0;
+            white-space: pre-wrap;
+            font-family: monospace;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .success { color: #28a745; font-weight: bold; }
+        .error { color: #dc3545; font-weight: bold; }
+        .info { color: #007272; font-weight: bold; }
+        .step {
+            background: #e8f5e8;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+            border-left: 4px solid #28a745;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 GLERP Data Storage Debug</h1>
+        <p>This page helps you test and debug the data storage system.</p>
+        
+        <div class="step">
+            <h3>📊 Current Status:</h3>
+            <div id="status" class="data-display">Checking...</div>
+        </div>
+        
+        <div class="step">
+            <h3>🔧 Test Actions:</h3>
+            <button class="btn" onclick="checkData()">🔍 Check Data</button>
+            <button class="btn btn-success" onclick="addTestData()">➕ Add Test Data</button>
+            <button class="btn btn-warning" onclick="clearData()">🗑️ Clear Data</button>
+            <button class="btn" onclick="testRegistration()">📝 Test Registration</button>
+        </div>
+        
+        <div class="step">
+            <h3>📋 Raw Data:</h3>
+            <div id="rawData" class="data-display">No data found</div>
+        </div>
+        
+        <div class="step">
+            <h3>🔗 Quick Links:</h3>
+            <a href="index.html" class="btn">📝 Registration Page</a>
+            <a href="admin.html" class="btn">📊 Admin Dashboard</a>
+            <a href="test.html" class="btn">🧪 Test Page</a>
+        </div>
+    </div>
+
+    <script>
+        function checkData() {
+            try {
+                const downloads = JSON.parse(localStorage.getItem('GLERP_Downloads') || '[]');
+                const statusDiv = document.getElementById('status');
+                const rawDiv = document.getElementById('rawData');
+                
+                if (downloads.length === 0) {
+                    statusDiv.innerHTML = '<span class="error">❌ No download data found in localStorage</span>';
+                    rawDiv.textContent = 'No data found';
+                } else {
+                    statusDiv.innerHTML = `<span class="success">✅ Found ${downloads.length} download(s) in localStorage</span>`;
+                    rawDiv.textContent = JSON.stringify(downloads, null, 2);
+                }
+            } catch (error) {
+                document.getElementById('status').innerHTML = `<span class="error">❌ Error: ${error.message}</span>`;
+            }
+        }
+
+        function addTestData() {
+            const testData = {
+                name: "Test User",
+                email: "test@example.com",
+                company: "Test Company",
+                department: "IT",
+                purpose: "Testing the system",
+                downloadTime: new Date().toISOString(),
+                version: "1.0.0",
+                userAgent: navigator.userAgent
+            };
+            
+            let downloads = JSON.parse(localStorage.getItem('GLERP_Downloads') || '[]');
+            downloads.push(testData);
+            localStorage.setItem('GLERP_Downloads', JSON.stringify(downloads));
+            
+            alert('Test data added! Check the data again.');
+            checkData();
+        }
+
+        function clearData() {
+            if (confirm('Are you sure you want to clear all download data?')) {
+                localStorage.removeItem('GLERP_Downloads');
+                alert('Data cleared!');
+                checkData();
+            }
+        }
+
+        function testRegistration() {
+            // Simulate registration data
+            const testRegistration = {
+                name: "Faraz Gurramkonda",
+                email: "gfaraz@gmail.com",
+                company: "GLCS",
+                department: "Administration",
+                purpose: "Testing the system",
+                downloadTime: new Date().toISOString(),
+                version: "1.0.0",
+                userAgent: navigator.userAgent
+            };
+            
+            let downloads = JSON.parse(localStorage.getItem('GLERP_Downloads') || '[]');
+            downloads.push(testRegistration);
+            localStorage.setItem('GLERP_Downloads', JSON.stringify(downloads));
+            
+            alert('Test registration data added! Now check the admin dashboard.');
+            checkData();
+        }
+
+        // Check data on page load
+        checkData();
+        
+        // Auto-refresh every 5 seconds
+        setInterval(checkData, 5000);
+    </script>
+</body>
+</html> 

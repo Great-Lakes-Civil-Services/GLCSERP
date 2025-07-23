@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GLERP Download - Great Lakes Civil Services</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #007272 0%, #005a5a 100%);
+            color: white;
+            padding: 40px 20px;
+            text-align: center;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 20px rgba(0,114,114,0.3);
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        .download-form {
+            background: white;
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+
+        .form-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #e9ecef;
+            border-radius: 10px;
+        }
+
+        .form-section h3 {
+            color: #007272;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #495057;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #007272;
+        }
+
+        .required {
+            color: #dc3545;
+        }
+
+        .agreement-box {
+            background: #f8f9fa;
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .agreement-box h4 {
+            color: #007272;
+            margin-bottom: 15px;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: flex-start;
+            margin: 20px 0;
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            width: auto;
+            margin-right: 10px;
+            margin-top: 3px;
+        }
+
+        .checkbox-group label {
+            margin-bottom: 0;
+            font-weight: normal;
+        }
+
+        .download-btn {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            padding: 15px 40px;
+            border: none;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            width: 100%;
+            margin-top: 20px;
+        }
+
+        .download-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(40,167,69,0.3);
+        }
+
+        .download-btn:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .info-section {
+            background: #d1ecf1;
+            border: 1px solid #bee5eb;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+
+        .info-section h3 {
+            color: #0c5460;
+            margin-bottom: 10px;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: #e9ecef;
+            border-radius: 3px;
+            margin: 20px 0;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #007272, #28a745);
+            width: 0%;
+            transition: width 0.3s;
+        }
+
+        .step-indicator {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 30px;
+        }
+
+        .step {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            flex: 1;
+        }
+
+        .step-circle {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #e9ecef;
+            color: #6c757d;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin-bottom: 10px;
+            transition: all 0.3s;
+        }
+
+        .step.active .step-circle {
+            background: #007272;
+            color: white;
+        }
+
+        .step.completed .step-circle {
+            background: #28a745;
+            color: white;
+        }
+
+        .step-label {
+            font-size: 12px;
+            text-align: center;
+            color: #6c757d;
+        }
+
+        .step.active .step-label,
+        .step.completed .step-label {
+            color: #007272;
+            font-weight: 600;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .error {
+            color: #dc3545;
+            font-size: 14px;
+            margin-top: 5px;
+        }
+
+        .success {
+            color: #28a745;
+            font-size: 14px;
+            margin-top: 5px;
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 40px;
+            padding: 20px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 GLERP v1.0.0 Download</h1>
+            <p>Great Lakes Civil Services ERP System</p>
+            <p><strong>Professional Release - Registration Required</strong></p>
+        </div>
+
+        <div class="download-form">
+            <!-- Progress Steps -->
+            <div class="step-indicator">
+                <div class="step active" id="step1">
+                    <div class="step-circle">1</div>
+                    <div class="step-label">Registration</div>
+                </div>
+                <div class="step" id="step2">
+                    <div class="step-circle">2</div>
+                    <div class="step-label">Agreement</div>
+                </div>
+                <div class="step" id="step3">
+                    <div class="step-circle">3</div>
+                    <div class="step-label">Download</div>
+                </div>
+            </div>
+
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+
+            <!-- Step 1: Registration Form -->
+            <div id="registrationStep" class="form-section">
+                <h3>📝 User Registration</h3>
+                <p>Please provide your information to download GLERP. All fields marked with <span class="required">*</span> are required.</p>
+                
+                <div class="form-group">
+                    <label for="fullName">Full Name <span class="required">*</span></label>
+                    <input type="text" id="fullName" name="fullName" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="email">Email Address <span class="required">*</span></label>
+                    <input type="email" id="email" name="email" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="company">Company/Organization <span class="required">*</span></label>
+                    <input type="text" id="company" name="company" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="department">Department <span class="required">*</span></label>
+                    <select id="department" name="department" required>
+                        <option value="">Select Department</option>
+                        <option value="administration">Administration</option>
+                        <option value="legal">Legal</option>
+                        <option value="courts">Courts</option>
+                        <option value="clients">Client Services</option>
+                        <option value="it">Information Technology</option>
+                        <option value="operations">Operations</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="phone">Phone Number</label>
+                    <input type="tel" id="phone" name="phone">
+                </div>
+
+                <div class="form-group">
+                    <label for="purpose">Intended Use <span class="required">*</span></label>
+                    <textarea id="purpose" name="purpose" rows="3" placeholder="Please describe how you plan to use GLERP..." required></textarea>
+                </div>
+
+                <button type="button" class="download-btn" onclick="nextStep()">Continue to Agreement</button>
+            </div>
+
+            <!-- Step 2: License Agreement -->
+            <div id="agreementStep" class="form-section hidden">
+                <h3>📄 License Agreement</h3>
+                <p>Please read and accept the GLERP Software License Agreement to continue.</p>
+                
+                <div class="agreement-box">
+                    <h4>GLERP Software License Agreement</h4>
+                    <p><strong>Effective Date:</strong> July 23, 2025</p>
+                    <p><strong>Software:</strong> GLERP (Great Lakes Civil Services ERP) v1.0.0</p>
+                    <p><strong>Company:</strong> Great Lakes Civil Services</p>
+                    
+                    <h5>1. LICENSE GRANT</h5>
+                    <p>Subject to the terms and conditions of this Agreement, Great Lakes Civil Services ("Licensor") hereby grants to the authorized user ("Licensee") a limited, non-exclusive, non-transferable license to use the GLERP software ("Software") solely for internal business purposes within the Licensee's organization.</p>
+                    
+                    <h5>2. RESTRICTIONS</h5>
+                    <p>The Licensee shall not:</p>
+                    <ul>
+                        <li>Copy, modify, or create derivative works of the Software</li>
+                        <li>Reverse engineer, decompile, or disassemble the Software</li>
+                        <li>Remove or alter any proprietary notices or labels on the Software</li>
+                        <li>Transfer, sublicense, or assign the Software to any third party</li>
+                        <li>Use the Software for any illegal or unauthorized purpose</li>
+                    </ul>
+                    
+                    <h5>3. OWNERSHIP</h5>
+                    <p>The Software and all intellectual property rights therein are and shall remain the exclusive property of Great Lakes Civil Services.</p>
+                    
+                    <h5>4. WARRANTY DISCLAIMER</h5>
+                    <p>THE SOFTWARE IS PROVIDED "AS IS" WITHOUT WARRANTY OF ANY KIND. GREAT LAKES CIVIL SERVICES DISCLAIMS ALL WARRANTIES, EXPRESS OR IMPLIED.</p>
+                    
+                    <h5>5. LIMITATION OF LIABILITY</h5>
+                    <p>IN NO EVENT SHALL GREAT LAKES CIVIL SERVICES BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES ARISING OUT OF OR RELATING TO THE USE OF THE SOFTWARE.</p>
+                </div>
+
+                <div class="checkbox-group">
+                    <input type="checkbox" id="agreeLicense" name="agreeLicense" required>
+                    <label for="agreeLicense">I have read, understood, and agree to the GLERP Software License Agreement <span class="required">*</span></label>
+                </div>
+
+                <div class="checkbox-group">
+                    <input type="checkbox" id="agreeTerms" name="agreeTerms" required>
+                    <label for="agreeTerms">I agree to receive updates and communications about GLERP <span class="required">*</span></label>
+                </div>
+
+                <div class="checkbox-group">
+                    <input type="checkbox" id="agreePrivacy" name="agreePrivacy" required>
+                    <label for="agreePrivacy">I agree to the Privacy Policy and data processing terms <span class="required">*</span></label>
+                </div>
+
+                <button type="button" class="download-btn" onclick="nextStep()" id="agreementBtn" disabled>Continue to Download</button>
+                <button type="button" class="download-btn" onclick="previousStep()" style="background: #6c757d; margin-top: 10px;">Back to Registration</button>
+            </div>
+
+            <!-- Step 3: Download -->
+            <div id="downloadStep" class="form-section hidden">
+                <h3>📥 Download GLERP</h3>
+                <p>Thank you for registering! You can now download GLERP v1.0.0.</p>
+                <div class="info-section" style="background: #d4edda; border-color: #c3e6cb; color: #155724;">
+                    <h3>✅ Agreement Finalized</h3>
+                    <p><strong>Your license agreement has been accepted and finalized.</strong> You cannot modify your agreement after downloading the software.</p>
+                </div>
+                
+                <div class="info-section">
+                    <h3>📋 Download Information</h3>
+                    <p><strong>File:</strong> GLERP-v1.0.0.zip</p>
+                    <p><strong>Size:</strong> 80.5 MB</p>
+                    <p><strong>Version:</strong> 1.0.0</p>
+                    <p><strong>Release Date:</strong> July 23, 2025</p>
+                </div>
+
+                <div class="info-section">
+                    <h3>💻 System Requirements</h3>
+                    <ul>
+                        <li>Windows 10/11 (64-bit)</li>
+                        <li>4 GB RAM minimum (8 GB recommended)</li>
+                        <li>500 MB available disk space</li>
+                        <li>Internet connection for database connectivity</li>
+                    </ul>
+                </div>
+
+                <a href="https://github.com/Great-Lakes-Civil-Services/GLCSERP/releases/download/v1.0.0/GLERP-v1.0.0.zip" class="download-btn" id="downloadBtn" onclick="trackDownload()">
+                    🚀 Download GLERP v1.0.0
+                </a>
+
+                <!-- Back button removed for download step - users cannot go back after download -->
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <p>&copy; 2024 Great Lakes Civil Services. All rights reserved.</p>
+        <p>GLERP - Empowering Civil Services Excellence</p>
+    </footer>
+
+    <script>
+        let currentStep = 1;
+        const totalSteps = 3;
+
+        function updateProgress() {
+            const progress = (currentStep / totalSteps) * 100;
+            document.getElementById('progressFill').style.width = progress + '%';
+            
+            // Update step indicators
+            for (let i = 1; i <= totalSteps; i++) {
+                const step = document.getElementById('step' + i);
+                if (i < currentStep) {
+                    step.className = 'step completed';
+                } else if (i === currentStep) {
+                    step.className = 'step active';
+                } else {
+                    step.className = 'step';
+                }
+            }
+        }
+
+        function validateRegistration() {
+            const requiredFields = ['fullName', 'email', 'company', 'department', 'purpose'];
+            let isValid = true;
+
+            requiredFields.forEach(field => {
+                const element = document.getElementById(field);
+                if (!element.value.trim()) {
+                    element.style.borderColor = '#dc3545';
+                    isValid = false;
+                } else {
+                    element.style.borderColor = '#e9ecef';
+                }
+            });
+
+            return isValid;
+        }
+
+        function validateAgreement() {
+            const checkboxes = ['agreeLicense', 'agreeTerms', 'agreePrivacy'];
+            let isValid = true;
+
+            checkboxes.forEach(checkbox => {
+                const element = document.getElementById(checkbox);
+                if (!element.checked) {
+                    isValid = false;
+                }
+            });
+
+            document.getElementById('agreementBtn').disabled = !isValid;
+            return isValid;
+        }
+
+        function nextStep() {
+            if (currentStep === 1) {
+                if (!validateRegistration()) {
+                    alert('Please fill in all required fields.');
+                    return;
+                }
+            } else if (currentStep === 2) {
+                if (!validateAgreement()) {
+                    alert('Please accept all agreements to continue.');
+                    return;
+                }
+            }
+
+            if (currentStep < totalSteps) {
+                // Hide current step
+                if (currentStep === 1) {
+                    document.getElementById('registrationStep').classList.add('hidden');
+                } else if (currentStep === 2) {
+                    document.getElementById('agreementStep').classList.add('hidden');
+                }
+                
+                currentStep++;
+                
+                // Show next step
+                if (currentStep === 2) {
+                    document.getElementById('agreementStep').classList.remove('hidden');
+                } else if (currentStep === 3) {
+                    document.getElementById('downloadStep').classList.remove('hidden');
+                }
+                
+                updateProgress();
+            }
+        }
+
+        function previousStep() {
+            // Prevent going back if download has been completed
+            if (downloadCompleted) {
+                alert('You cannot go back after downloading the software. The agreement has been finalized.');
+                return;
+            }
+            
+            if (currentStep > 1) {
+                // Hide current step
+                if (currentStep === 2) {
+                    document.getElementById('agreementStep').classList.add('hidden');
+                } else if (currentStep === 3) {
+                    document.getElementById('downloadStep').classList.add('hidden');
+                }
+                
+                currentStep--;
+                
+                // Show previous step
+                if (currentStep === 1) {
+                    document.getElementById('registrationStep').classList.remove('hidden');
+                } else if (currentStep === 2) {
+                    document.getElementById('agreementStep').classList.remove('hidden');
+                }
+                
+                updateProgress();
+            }
+        }
+
+        let downloadCompleted = false;
+
+        function trackDownload() {
+            // Mark download as completed
+            downloadCompleted = true;
+            
+            // Get user data from form
+            const userData = {
+                name: document.getElementById('fullName').value,
+                email: document.getElementById('email').value,
+                company: document.getElementById('company').value,
+                department: document.getElementById('department').value,
+                purpose: document.getElementById('purpose').value || 'Not specified',
+                downloadTime: new Date().toISOString(),
+                version: '1.0.0',
+                userAgent: navigator.userAgent
+            };
+
+            // Store in localStorage for admin dashboard
+            let downloads = JSON.parse(localStorage.getItem('GLERP_Downloads') || '[]');
+            downloads.push(userData);
+            localStorage.setItem('GLERP_Downloads', JSON.stringify(downloads));
+
+            // Log to console for debugging
+            console.log('Download tracked and stored:', userData);
+            console.log('Total downloads in storage:', downloads.length);
+            
+            // You can also send this data to your server for tracking
+            // fetch('/api/track-download', {
+            //     method: 'POST',
+            //     headers: { 'Content-Type': 'application/json' },
+            //     body: JSON.stringify(userData)
+            // });
+        }
+
+        // Add event listeners for agreement checkboxes
+        document.addEventListener('DOMContentLoaded', function() {
+            const checkboxes = ['agreeLicense', 'agreeTerms', 'agreePrivacy'];
+            checkboxes.forEach(checkbox => {
+                document.getElementById(checkbox).addEventListener('change', validateAgreement);
+            });
+        });
+
+        // Initialize progress
+        updateProgress();
+    </script>
+</body>
+</html> 
