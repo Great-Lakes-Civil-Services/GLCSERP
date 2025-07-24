@@ -1,23 +1,30 @@
-{
-  "version": "1.0.0",
-  "buildNumber": 1,
-  "releaseDate": "2025-07-23",
-  "changelog": [
-    {
-      "version": "1.0.0",
-      "date": "2025-07-23",
-      "changes": [
-        "Initial release of GLERP",
-        "Complete WPF-based ERP system",
-        "User authentication with MFA",
-        "Job management system",
-        "Multi-window support",
-        "Modern UI with navigation",
-        "Database integration with PostgreSQL",
-        "Role-based permissions",
-        "Activity logging and audit trail",
-        "Multi-monitor support"
-      ]
-    }
-  ]
-} 
+﻿{
+    "version":  "1.0.1",
+    "buildNumber":  2,
+    "releaseDate":  "2025-07-24",
+    "changelog":  [
+                      {
+                          "date":  "2025-07-24",
+                          "version":  "1.0.1",
+                          "changes":  [
+                                          "Initial automated release"
+                                      ]
+                      },
+                      {
+                          "version":  "1.0.0",
+                          "date":  "2025-07-23",
+                          "changes":  [
+                                          "Initial release of GLERP",
+                                          "Complete WPF-based ERP system",
+                                          "User authentication with MFA",
+                                          "Job management system",
+                                          "Multi-window support",
+                                          "Modern UI with navigation",
+                                          "Database integration with PostgreSQL",
+                                          "Role-based permissions",
+                                          "Activity logging and audit trail",
+                                          "Multi-monitor support"
+                                      ]
+                      }
+                  ]
+}
