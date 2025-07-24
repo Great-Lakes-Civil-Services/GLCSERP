@@ -46,19 +46,18 @@ jobs:
     - name: Create release package
       run: |
         $version = "${{ github.event.inputs.version || github.ref_name }}"
-        $version = $version.Replace("v", "")
         
         # Create ZIP packages
-        Compress-Archive -Path "./Release/*" -DestinationPath "./GLERP-v$version-Standalone.zip" -Force
-        Compress-Archive -Path "./Release-x86/*" -DestinationPath "./GLERP-v$version-Standalone-x86.zip" -Force
+        Compress-Archive -Path "./Release/*" -DestinationPath "./GLERP-$version-Standalone.zip" -Force
+        Compress-Archive -Path "./Release-x86/*" -DestinationPath "./GLERP-$version-Standalone-x86.zip" -Force
         
     - name: Update version info
       run: |
         $version = "${{ github.event.inputs.version || github.ref_name }}"
-        $version = $version.Replace("v", "")
+        $versionNumber = $version.Replace("v", "")
         
         $versionInfo = @{
-          version = $version
+          version = $versionNumber
           buildNumber = [int](Get-Date -UFormat %s)
           releaseDate = Get-Date -Format "yyyy-MM-dd"
           buildCommit = "${{ github.sha }}"
@@ -71,10 +70,10 @@ jobs:
       uses: softprops/action-gh-release@v1
       with:
         files: |
-          GLERP-v${{ github.event.inputs.version || github.ref_name }}-Standalone.zip
-          GLERP-v${{ github.event.inputs.version || github.ref_name }}-Standalone-x86.zip
+          GLERP-${{ github.event.inputs.version || github.ref_name }}-Standalone.zip
+          GLERP-${{ github.event.inputs.version || github.ref_name }}-Standalone-x86.zip
         body: |
-          ## GLERP v${{ github.event.inputs.version || github.ref_name }}
+          ## GLERP ${{ github.event.inputs.version || github.ref_name }}
           
           ### What's New
           - Automated release pipeline
@@ -96,8 +95,8 @@ jobs:
           4. Set up MFA on first login
           
           ### Download
-          - **Windows x64**: GLERP-v${{ github.event.inputs.version || github.ref_name }}-Standalone.zip
-          - **Windows x86**: GLERP-v${{ github.event.inputs.version || github.ref_name }}-Standalone-x86.zip
+          - **Windows x64**: GLERP-${{ github.event.inputs.version || github.ref_name }}-Standalone.zip
+          - **Windows x86**: GLERP-${{ github.event.inputs.version || github.ref_name }}-Standalone-x86.zip
           
           ### Support
           - Email: support@greatlakescivilservices.com
