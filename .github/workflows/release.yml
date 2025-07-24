@@ -11,6 +11,10 @@ on:
         required: true
         default: '1.0.1'
 
+permissions:
+  contents: write
+  packages: write
+
 jobs:
   build-and-release:
     runs-on: windows-latest
@@ -108,14 +112,15 @@ jobs:
     - name: Update download page
       run: |
         $version = "${{ github.event.inputs.version || github.ref_name }}"
-        $version = $version.Replace("v", "")
+        $versionNumber = $version.Replace("v", "")
         
-        # Update download page with new version
-        if (Test-Path "./GLERP_Download_Page.html") {
-          $downloadPage = Get-Content "./GLERP_Download_Page.html" -Raw
-          $downloadPage = $downloadPage -replace "v1\.0\.0", "v$version"
-          $downloadPage = $downloadPage -replace "GLERP-v1\.0\.0-Standalone\.zip", "GLERP-v$version-Standalone.zip"
-          $downloadPage | Out-File "./GLERP_Download_Page.html" -Encoding UTF8
+        # Create a simple download page update
+        $downloadPagePath = "./GLERP_Download_Page.html"
+        if (Test-Path $downloadPagePath) {
+            $content = Get-Content $downloadPagePath -Raw
+            $content = $content -replace "v1\.0\.\d+", "v$versionNumber"
+            $content = $content -replace "GLERP-v1\.0\.\d+-Standalone", "GLERP-$version-Standalone"
+            $content | Out-File $downloadPagePath -Encoding UTF8
         }
         
     - name: Deploy to hosting
