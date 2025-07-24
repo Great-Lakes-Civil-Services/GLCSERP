@@ -1,4 +1,5 @@
 using System;
+using System.Threading.Tasks;
 using System.Windows.Input;
 using CivilProcessERP.Services;
 using CivilProcessERP.Helpers;
@@ -38,9 +39,9 @@ namespace CivilProcessERP.ViewModels
         {
             _autoUpdater = new AutoUpdater();
             
-            CheckForUpdatesCommand = new RelayCommand(async () => await CheckForUpdatesAsync());
-            InstallUpdateCommand = new RelayCommand(async () => await InstallUpdateAsync());
-            RemindLaterCommand = new RelayCommand(() => RemindLater());
+            CheckForUpdatesCommand = new RelayCommand(async (object? _) => await CheckForUpdatesAsync());
+            InstallUpdateCommand = new RelayCommand(async (object? _) => await InstallUpdateAsync());
+            RemindLaterCommand = new RelayCommand((object? _) => RemindLater());
         }
         
         private async Task CheckForUpdatesAsync()
