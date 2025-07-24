@@ -1,8 +1,15 @@
 ﻿{
-    "version":  "1.0.6",
-    "buildNumber":  7,
+    "version":  "1.0.7",
+    "buildNumber":  8,
     "releaseDate":  "2025-07-24",
     "changelog":  [
+                      {
+                          "date":  "2025-07-24",
+                          "version":  "1.0.7",
+                          "changes":  [
+                                          "Bug fixes and improvements"
+                                      ]
+                      },
                       {
                           "date":  "2025-07-24",
                           "version":  "1.0.6",
