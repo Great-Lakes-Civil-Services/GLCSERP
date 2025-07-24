@@ -33,10 +33,10 @@ jobs:
     - name: Run tests
       run: dotnet test --no-build --verbosity normal
       
-    - name: Publish standalone
+    - name: Publish application
       run: |
-        dotnet publish --configuration Release --output ./Release --self-contained true --runtime win-x64 --no-build
-        dotnet publish --configuration Release --output ./Release-x86 --self-contained true --runtime win-x86 --no-build
+        dotnet publish --configuration Release --output ./Release --runtime win-x64 --no-build
+        dotnet publish --configuration Release --output ./Release-x86 --runtime win-x86 --no-build
         
     - name: Create release package
       run: |
@@ -79,6 +79,7 @@ jobs:
           
           ### System Requirements
           - Windows 10/11 (64-bit)
+          - .NET 9.0 Runtime
           - 4 GB RAM minimum
           - 500 MB disk space
           - Internet connection for database connectivity
