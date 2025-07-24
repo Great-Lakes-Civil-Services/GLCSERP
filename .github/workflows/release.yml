@@ -35,13 +35,13 @@ jobs:
       
     - name: Build for specific runtimes
       run: |
-        dotnet build --configuration Release --runtime win-x64 --no-restore
-        dotnet build --configuration Release --runtime win-x86 --no-restore
+        dotnet build CivilProcessERP.csproj --configuration Release --runtime win-x64 --no-restore
+        dotnet build CivilProcessERP.csproj --configuration Release --runtime win-x86 --no-restore
       
     - name: Publish application
       run: |
-        dotnet publish --configuration Release --output ./Release --runtime win-x64
-        dotnet publish --configuration Release --output ./Release-x86 --runtime win-x86
+        dotnet publish CivilProcessERP.csproj --configuration Release --output ./Release --runtime win-x64
+        dotnet publish CivilProcessERP.csproj --configuration Release --output ./Release-x86 --runtime win-x86
         
     - name: Create release package
       run: |
