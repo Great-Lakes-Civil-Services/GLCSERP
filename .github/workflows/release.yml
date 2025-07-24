@@ -33,10 +33,15 @@ jobs:
     - name: Run tests
       run: dotnet test --no-build --verbosity normal
       
+    - name: Build for specific runtimes
+      run: |
+        dotnet build --configuration Release --runtime win-x64 --no-restore
+        dotnet build --configuration Release --runtime win-x86 --no-restore
+      
     - name: Publish application
       run: |
-        dotnet publish --configuration Release --output ./Release --runtime win-x64 --no-build
-        dotnet publish --configuration Release --output ./Release-x86 --runtime win-x86 --no-build
+        dotnet publish --configuration Release --output ./Release --runtime win-x64
+        dotnet publish --configuration Release --output ./Release-x86 --runtime win-x86
         
     - name: Create release package
       run: |
