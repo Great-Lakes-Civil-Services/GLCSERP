@@ -1,0 +1,125 @@
+name: GLERP Release Pipeline
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version'
+        required: true
+        default: '1.0.1'
+
+jobs:
+  build-and-release:
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '9.0.x'
+        
+    - name: Restore dependencies
+      run: dotnet restore
+      
+    - name: Build application
+      run: dotnet build --configuration Release --no-restore
+      
+    - name: Run tests
+      run: dotnet test --no-build --verbosity normal
+      
+    - name: Publish standalone
+      run: |
+        dotnet publish --configuration Release --output ./Release --self-contained true --runtime win-x64 --no-build
+        dotnet publish --configuration Release --output ./Release-x86 --self-contained true --runtime win-x86 --no-build
+        
+    - name: Create release package
+      run: |
+        $version = "${{ github.event.inputs.version || github.ref_name }}"
+        $version = $version.Replace("v", "")
+        
+        # Create ZIP packages
+        Compress-Archive -Path "./Release/*" -DestinationPath "./GLERP-v$version-Standalone.zip" -Force
+        Compress-Archive -Path "./Release-x86/*" -DestinationPath "./GLERP-v$version-Standalone-x86.zip" -Force
+        
+    - name: Update version info
+      run: |
+        $version = "${{ github.event.inputs.version || github.ref_name }}"
+        $version = $version.Replace("v", "")
+        
+        $versionInfo = @{
+          version = $version
+          buildNumber = [int](Get-Date -UFormat %s)
+          releaseDate = Get-Date -Format "yyyy-MM-dd"
+          buildCommit = "${{ github.sha }}"
+          buildBranch = "${{ github.ref_name }}"
+        }
+        
+        $versionInfo | ConvertTo-Json | Out-File "./Release/version.json" -Encoding UTF8
+        
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: |
+          GLERP-v${{ github.event.inputs.version || github.ref_name }}-Standalone.zip
+          GLERP-v${{ github.event.inputs.version || github.ref_name }}-Standalone-x86.zip
+        body: |
+          ## GLERP v${{ github.event.inputs.version || github.ref_name }}
+          
+          ### What's New
+          - Automated release pipeline
+          - Improved build process
+          - Enhanced error handling
+          - Multi-platform support (x64 and x86)
+          
+          ### System Requirements
+          - Windows 10/11 (64-bit)
+          - 4 GB RAM minimum
+          - 500 MB disk space
+          - Internet connection for database connectivity
+          
+          ### Installation
+          1. Download and extract the ZIP file
+          2. Run CivilProcessERP.exe
+          3. Enter database credentials
+          4. Set up MFA on first login
+          
+          ### Download
+          - **Windows x64**: GLERP-v${{ github.event.inputs.version || github.ref_name }}-Standalone.zip
+          - **Windows x86**: GLERP-v${{ github.event.inputs.version || github.ref_name }}-Standalone-x86.zip
+          
+          ### Support
+          - Email: support@greatlakescivilservices.com
+          - Documentation: [Link to docs]
+          
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        
+    - name: Update download page
+      run: |
+        $version = "${{ github.event.inputs.version || github.ref_name }}"
+        $version = $version.Replace("v", "")
+        
+        # Update download page with new version
+        if (Test-Path "./GLERP_Download_Page.html") {
+          $downloadPage = Get-Content "./GLERP_Download_Page.html" -Raw
+          $downloadPage = $downloadPage -replace "v1\.0\.0", "v$version"
+          $downloadPage = $downloadPage -replace "GLERP-v1\.0\.0-Standalone\.zip", "GLERP-v$version-Standalone.zip"
+          $downloadPage | Out-File "./GLERP_Download_Page.html" -Encoding UTF8
+        }
+        
+    - name: Deploy to hosting
+      run: |
+        # Upload updated files to your hosting provider
+        # This could be Netlify, Vercel, or your own server
+        echo "Deploying updated download page..."
+        
+    - name: Notify team
+      run: |
+        # Send notifications to team about new release
+        echo "Release v${{ github.event.inputs.version || github.ref_name }} completed!" 

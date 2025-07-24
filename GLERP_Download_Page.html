@@ -342,7 +342,7 @@
                 
                 <div class="agreement-box">
                     <h4>GLERP Software License Agreement</h4>
-                    <p><strong>Effective Date:</strong> December 19, 2024</p>
+                    <p><strong>Effective Date:</strong> July 23, 2025</p>
                     <p><strong>Software:</strong> GLERP (Great Lakes Civil Services ERP) v1.0.0</p>
                     <p><strong>Company:</strong> Great Lakes Civil Services</p>
                     
@@ -392,13 +392,19 @@
             <div id="downloadStep" class="form-section hidden">
                 <h3>📥 Download GLERP</h3>
                 <p>Thank you for registering! You can now download GLERP v1.0.0.</p>
+                <div class="info-section" style="background: #d4edda; border-color: #c3e6cb; color: #155724;">
+                    <h3>✅ Agreement Finalized</h3>
+                    <p><strong>Your license agreement has been accepted and finalized.</strong> You cannot modify your agreement after downloading the software.</p>
+                </div>
                 
                 <div class="info-section">
                     <h3>📋 Download Information</h3>
-                    <p><strong>File:</strong> GLERP-v1.0.0.zip</p>
-                    <p><strong>Size:</strong> 80.5 MB</p>
+                    <p><strong>File:</strong> GLERP-v1.0.0-Standalone.zip</p>
+                    <p><strong>Size:</strong> ~77 MB (Standalone)</p>
                     <p><strong>Version:</strong> 1.0.0</p>
                     <p><strong>Release Date:</strong> December 19, 2024</p>
+                    <p><strong>Type:</strong> Standalone (No .NET Runtime required)</p>
+                    <p><strong>Installation:</strong> Extract ZIP and run CivilProcessERP.exe</p>
                 </div>
 
                 <div class="info-section">
@@ -408,14 +414,15 @@
                         <li>4 GB RAM minimum (8 GB recommended)</li>
                         <li>500 MB available disk space</li>
                         <li>Internet connection for database connectivity</li>
+                        <li><strong>No .NET Runtime installation required!</strong></li>
                     </ul>
                 </div>
 
-                <a href="https://github.com/Great-Lakes-Civil-Services/GLCSERP/releases/download/v1.0.0/GLERP-v1.0.0.zip" class="download-btn" id="downloadBtn" onclick="trackDownload()">
-                    🚀 Download GLERP v1.0.0
+                <a href="https://github.com/Great-Lakes-Civil-Services/GLCSERP/releases/download/v1.0.0/GLERP-v1.0.0-Standalone.zip" class="download-btn" id="downloadBtn" onclick="trackDownload()">
+                    🚀 Download GLERP v1.0.0-Standalone.zip (Standalone)
                 </a>
 
-                <button type="button" class="download-btn" onclick="previousStep()" style="background: #6c757d; margin-top: 10px;">Back to Agreement</button>
+                <!-- Back button removed for download step - users cannot go back after download -->
             </div>
         </div>
     </div>
@@ -492,37 +499,82 @@
             }
 
             if (currentStep < totalSteps) {
-                document.getElementById('step' + currentStep + 'Step').classList.add('hidden');
+                // Hide current step
+                if (currentStep === 1) {
+                    document.getElementById('registrationStep').classList.add('hidden');
+                } else if (currentStep === 2) {
+                    document.getElementById('agreementStep').classList.add('hidden');
+                }
+                
                 currentStep++;
-                document.getElementById('step' + currentStep + 'Step').classList.remove('hidden');
+                
+                // Show next step
+                if (currentStep === 2) {
+                    document.getElementById('agreementStep').classList.remove('hidden');
+                } else if (currentStep === 3) {
+                    document.getElementById('downloadStep').classList.remove('hidden');
+                }
+                
                 updateProgress();
             }
         }
 
         function previousStep() {
+            // Prevent going back if download has been completed
+            if (downloadCompleted) {
+                alert('You cannot go back after downloading the software. The agreement has been finalized.');
+                return;
+            }
+            
             if (currentStep > 1) {
-                document.getElementById('step' + currentStep + 'Step').classList.add('hidden');
+                // Hide current step
+                if (currentStep === 2) {
+                    document.getElementById('agreementStep').classList.add('hidden');
+                } else if (currentStep === 3) {
+                    document.getElementById('downloadStep').classList.add('hidden');
+                }
+                
                 currentStep--;
-                document.getElementById('step' + currentStep + 'Step').classList.remove('hidden');
+                
+                // Show previous step
+                if (currentStep === 1) {
+                    document.getElementById('registrationStep').classList.remove('hidden');
+                } else if (currentStep === 2) {
+                    document.getElementById('agreementStep').classList.remove('hidden');
+                }
+                
                 updateProgress();
             }
         }
 
+        let downloadCompleted = false;
+
         function trackDownload() {
-            // Track download analytics
+            // Mark download as completed
+            downloadCompleted = true;
+            
+            // Get user data from form
             const userData = {
                 name: document.getElementById('fullName').value,
                 email: document.getElementById('email').value,
                 company: document.getElementById('company').value,
                 department: document.getElementById('department').value,
+                purpose: document.getElementById('purpose').value || 'Not specified',
                 downloadTime: new Date().toISOString(),
+                version: '1.0.0',
                 userAgent: navigator.userAgent
             };
 
-            // Send analytics data (replace with your analytics endpoint)
-            console.log('Download tracked:', userData);
+            // Store in localStorage for admin dashboard
+            let downloads = JSON.parse(localStorage.getItem('GLERP_Downloads') || '[]');
+            downloads.push(userData);
+            localStorage.setItem('GLERP_Downloads', JSON.stringify(downloads));
+
+            // Log to console for debugging
+            console.log('Download tracked and stored:', userData);
+            console.log('Total downloads in storage:', downloads.length);
             
-            // You can send this data to your server for tracking
+            // You can also send this data to your server for tracking
             // fetch('/api/track-download', {
             //     method: 'POST',
             //     headers: { 'Content-Type': 'application/json' },

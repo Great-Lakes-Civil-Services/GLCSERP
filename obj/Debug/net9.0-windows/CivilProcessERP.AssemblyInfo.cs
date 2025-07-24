@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("CivilProcessERP")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+bcef6f0b8bf5d8ba42af33e15879c0e5366030b8")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+301cb23dec176abb3aab584e30c6bb02c245f321")]
 [assembly: System.Reflection.AssemblyProductAttribute("CivilProcessERP")]
 [assembly: System.Reflection.AssemblyTitleAttribute("CivilProcessERP")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
