@@ -16,7 +16,8 @@ if "%1"=="" (
 )
 
 set BUMP_TYPE=%1
-set MESSAGE=%2
+shift
+set MESSAGE=%*
 
 if "%MESSAGE%"=="" (
     set MESSAGE="Bug fixes and improvements"
@@ -26,7 +27,7 @@ echo Creating %BUMP_TYPE% release...
 echo Message: %MESSAGE%
 echo.
 
-powershell -ExecutionPolicy Bypass -File "scripts/manage-release.ps1" -BumpType %BUMP_TYPE% -Message %MESSAGE%
+powershell -ExecutionPolicy Bypass -File "scripts/release.ps1" -BumpType %BUMP_TYPE% -Message "%MESSAGE%"
 
 if %errorlevel% equ 0 (
     echo.

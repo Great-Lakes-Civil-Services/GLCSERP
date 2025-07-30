@@ -44,12 +44,17 @@ namespace CivilProcessERP.Views
             EditUserButton.Visibility = _loggedInUserPermissions.Contains("EditUser") ? Visibility.Visible : Visibility.Collapsed;
             DeleteUserButton.Visibility = _loggedInUserPermissions.Contains("DeleteUser") ? Visibility.Visible : Visibility.Collapsed;
             ToggleUserStatusButton.Visibility = _loggedInUserPermissions.Contains("ToggleUserStatus") ? Visibility.Visible : Visibility.Collapsed;
+            
+            // TEMPORARY: Always show process server buttons for testing
+            //ToggleProcessServerButton.Visibility = Visibility.Visible; // _loggedInUserPermissions.Contains("ToggleProcessServerStatus") ? Visibility.Visible : Visibility.Collapsed;
+            ManageProcessServerStatusButton.Visibility = Visibility.Visible; // _loggedInUserPermissions.Contains("ManageProcessServerStatus") ? Visibility.Visible : Visibility.Collapsed;
+            
             AssignPermissionsButton.Visibility = _loggedInUserPermissions.Contains("AssignGroups") ? Visibility.Visible : Visibility.Collapsed;
             ManageOrgsButton.Visibility = _loggedInUserPermissions.Contains("ToggleOrganizationStatus") ? Visibility.Visible : Visibility.Collapsed;
             DeleteGroupButton.Visibility = _loggedInUserPermissions.Contains("DeleteGroups") ? Visibility.Visible : Visibility.Collapsed;
             ManagePermissionsButton.Visibility = _loggedInUserPermissions.Contains("AddPermissions") ? Visibility.Visible : Visibility.Collapsed;
             ManageRolePermissionsButton.Visibility = _loggedInUserPermissions.Contains("ManageRolePermissions") ? Visibility.Visible : Visibility.Collapsed;
-}
+        }
 
         // ✅ Navigate to CreateUserView as a new full tab/page
         private void CreateUserButton_Click(object sender, RoutedEventArgs e)
@@ -154,6 +159,38 @@ namespace CivilProcessERP.Views
             if (mainWindow != null)
             {
                 mainWindow.MainContentControl.Content = new FreezeOrganizationView();
+            }
+            else
+            {
+                System.Windows.MessageBox.Show("Main window not found.", "Error", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+            }
+            await Task.CompletedTask;
+        }
+
+        private async void ToggleProcessServerButton_Click(object sender, RoutedEventArgs e)
+        {
+            Console.WriteLine("[DEBUG] Toggle Process Server Status clicked — navigating to view...");
+            var mainWindow = Window.GetWindow(this) as MainWindow;
+            if (mainWindow != null)
+            {
+                var togglePage = new ManageProcessServerStatusView();
+                mainWindow.MainContentControl.Content = togglePage;
+            }
+            else
+            {
+                System.Windows.MessageBox.Show("Main window not found.", "Error", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+            }
+            await Task.CompletedTask;
+        }
+
+        private async void ManageProcessServerStatusButton_Click(object sender, RoutedEventArgs e)
+        {
+            Console.WriteLine("[DEBUG] Manage Process Server Status clicked — navigating to view...");
+            var mainWindow = Window.GetWindow(this) as MainWindow;
+            if (mainWindow != null)
+            {
+                var managePage = new ManageProcessServerStatusView();
+                mainWindow.MainContentControl.Content = managePage;
             }
             else
             {

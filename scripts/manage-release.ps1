@@ -76,4 +76,4 @@ Write-Host "Next steps:" -ForegroundColor Cyan
 Write-Host "1. Review changes: git log --oneline -5" -ForegroundColor White
 Write-Host "2. Push changes: git push" -ForegroundColor White
 Write-Host "3. Push tags: git push --tags" -ForegroundColor White
-Write-Host "4. Monitor release: https://github.com/Great-Lakes-Civil-Services/GLCSERP/releases" -ForegroundColor White 
+Write-Host "4. Monitor release on GitHub" -ForegroundColor White 
