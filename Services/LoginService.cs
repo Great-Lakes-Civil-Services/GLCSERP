@@ -35,7 +35,7 @@ public class LoginService
                 EntityNumber = reader.GetInt32(reader.GetOrdinal("entitynumber")),
                 MfaLastVerifiedAt = reader.IsDBNull(reader.GetOrdinal("mfa_last_verified_at")) 
                     ? (DateTime?)null 
-                    : reader.GetDateTime(reader.GetOrdinal("mfa_last_verified_at"))
+                    : reader.GetDateTime(reader.GetOrdinal("mfa_last_verified_at")),
             };
         }
 

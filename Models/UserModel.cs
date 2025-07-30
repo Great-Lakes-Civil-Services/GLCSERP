@@ -35,5 +35,7 @@ namespace CivilProcessERP.Models
         
 public DateTime? MfaLastVerifiedAt { get; set; }
 
+public bool ProcessServerStatus { get; set; }
+
     }
 }

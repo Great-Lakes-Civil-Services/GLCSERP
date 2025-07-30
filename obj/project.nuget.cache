@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "dgSpecHash": "qubvEme4IGA=",
+  "dgSpecHash": "HVMeCuQkhJE=",
   "success": true,
   "projectFilePath": "C:\\Users\\GLCS\\CivilProcessERP\\CivilProcessERP.csproj",
   "expectedPackageFiles": [
@@ -81,8 +81,11 @@
     "C:\\Users\\GLCS\\.nuget\\packages\\system.text.json\\9.0.2\\system.text.json.9.0.2.nupkg.sha512",
     "C:\\Users\\GLCS\\.nuget\\packages\\system.threading.channels\\7.0.0\\system.threading.channels.7.0.0.nupkg.sha512",
     "C:\\Users\\GLCS\\.nuget\\packages\\microsoft.netcore.app.runtime.win-x64\\9.0.7\\microsoft.netcore.app.runtime.win-x64.9.0.7.nupkg.sha512",
+    "C:\\Users\\GLCS\\.nuget\\packages\\microsoft.netcore.app.runtime.win-x86\\9.0.7\\microsoft.netcore.app.runtime.win-x86.9.0.7.nupkg.sha512",
     "C:\\Users\\GLCS\\.nuget\\packages\\microsoft.windowsdesktop.app.runtime.win-x64\\9.0.7\\microsoft.windowsdesktop.app.runtime.win-x64.9.0.7.nupkg.sha512",
-    "C:\\Users\\GLCS\\.nuget\\packages\\microsoft.aspnetcore.app.runtime.win-x64\\9.0.7\\microsoft.aspnetcore.app.runtime.win-x64.9.0.7.nupkg.sha512"
+    "C:\\Users\\GLCS\\.nuget\\packages\\microsoft.windowsdesktop.app.runtime.win-x86\\9.0.7\\microsoft.windowsdesktop.app.runtime.win-x86.9.0.7.nupkg.sha512",
+    "C:\\Users\\GLCS\\.nuget\\packages\\microsoft.aspnetcore.app.runtime.win-x64\\9.0.7\\microsoft.aspnetcore.app.runtime.win-x64.9.0.7.nupkg.sha512",
+    "C:\\Users\\GLCS\\.nuget\\packages\\microsoft.aspnetcore.app.runtime.win-x86\\9.0.7\\microsoft.aspnetcore.app.runtime.win-x86.9.0.7.nupkg.sha512"
   ],
   "logs": []
 }

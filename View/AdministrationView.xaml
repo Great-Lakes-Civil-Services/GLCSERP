@@ -15,6 +15,7 @@
                 <Button x:Name="EditUserButton" Content="Edit User" Background="DodgerBlue" Foreground="White" Margin="5" Click="EditUserButton_Click"/>
                 <Button x:Name="DeleteUserButton" Content="Delete User" Background="DarkRed" Foreground="White" Margin="5" Click= "DeleteUserButton_Click"/>
                 <Button x:Name="ToggleUserStatusButton" Content="Enable/Disable User" Background="Gray" Foreground="White" Margin="5" Click= "ToggleUserStatusButton_Click"/>
+                <Button x:Name="ManageProcessServerStatusButton" Content="Manage Process Server Status" Background="DarkOrange" Foreground="White" Margin="5" Click="ManageProcessServerStatusButton_Click"/>
                 <Button x:Name="AssignPermissionsButton" Content="Assign Permissions" Background="Orange" Foreground="White" Margin="5" Click = "AssignPermissionsButton_Click"/>
                 <Button x:Name="ManageOrgsButton" Content="Manage Organizations" Background="SlateBlue" Foreground="White" Margin="5" Click = "FreezeOrgButton_Click"/>
                 <Button x:Name="DeleteGroupButton"
